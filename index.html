@@ -690,11 +690,181 @@ function makeShop() {
   B(g, 2.3, 1.6, 0.1, C.glassWarm, 2.3, 0.75, 1.52, { shadow: false });
   B(g, 1.2, 2.0, 0.12, C.wood, 0, 0.2, 1.53, { shadow: false });
   win(g, -2.4, 4.5, 1.52, 0, 0.9, 1.1); win(g, 0, 4.5, 1.52, 0, 0.9, 1.1); win(g, 2.4, 4.5, 1.52, 0, 0.9, 1.1);
-  B(g, 0.8, 0.6, 0.8, C.wood, -3.6, 0.2, 3.0); B(g, 0.6, 0.5, 0.6, C.wood, -2.8, 0.2, 3.4);
-  add(g, new THREE.CylinderGeometry(0.4, 0.45, 0.9, 10), C.wood, 3.6, 0.65, 3.1);
-  pot(g, -1.0, 0.2, 2.9, 0.8, true); pot(g, 1.0, 0.2, 2.9, 0.8);
   assets.push({ key: 'shop', g, walls: [A], h: 7, size: 10 });
 }
+// ---- shop fronts: each kind of shop shows what it sells (props in front and on the roof, same plot) ----
+// One batch per kind, so a new kind costs only a few draws. Shops with no special look keep the crates and pots.
+const SHOP_KINDS = [['coffee', /coffee|caf[eé]/i], ['florist', /florist|flower/i], ['mechanic', /mechanic|car repair|garage/i], ['baker', /baker|bakery|bread/i],
+  ['smith', /blacksmith|gunsmith|smith/i], ['gym', /gym|fitness|boxing/i], ['dojo', /self-defen|dojo|karate|martial|kung fu/i], ['doctor', /doctor|clinic|nurse|pharmac|medic/i],
+  ['snooker', /snooker|pool hall|billiard/i], ['pub', /tavern|\bpub|bar\b|brew|inn\b/i], ['restaurant', /restaurant|chef|cook|food|diner/i], ['hat', /\bhat/i],
+  ['tailor', /tailor|cloth|fashion|dress/i], ['wood', /carpenter|builder|construct|wood/i], ['engineer', /engineer|inventor/i], ['finance', /financ|adviser|advisor|account/i],
+  ['trader', /merchant|trader|supplier|store|seller/i]];
+const shopStyle = j => { const k = SHOP_KINDS.find(([, re]) => re.test(j || '')); return k ? k[0] : 'plain'; };
+const propAsset = (g, key) => assets.push({ key, g, walls: [wallMat('#ffffff')], h: 7, size: 10 });
+const SHOP_PROPS = {
+  plain() { const g = new THREE.Group();
+    B(g, 0.8, 0.6, 0.8, C.wood, -3.6, 0.2, 3.0); B(g, 0.6, 0.5, 0.6, C.wood, -2.8, 0.2, 3.4);
+    add(g, new THREE.CylinderGeometry(0.4, 0.45, 0.9, 10), C.wood, 3.6, 0.65, 3.1);
+    pot(g, -1.0, 0.2, 2.9, 0.8, true); pot(g, 1.0, 0.2, 2.9, 0.8); propAsset(g, 'p_plain'); },
+  coffee() { const g = new THREE.Group(), NE = { edge: false };
+    // giant coffee cup on the roof
+    add(g, new THREE.CylinderGeometry(1.25, 1.25, 0.15, 20), '#f6f0e2', 0, 6.85, -0.4);
+    add(g, new THREE.CylinderGeometry(0.95, 0.75, 1.5, 18), '#f6f0e2', 0, 7.65, -0.4);
+    add(g, new THREE.CylinderGeometry(0.88, 0.88, 0.06, 18), '#5a3a24', 0, 8.38, -0.4, NE);
+    add(g, new THREE.TorusGeometry(0.42, 0.12, 6, 12), '#f6f0e2', 1.0, 7.65, -0.4, NE);
+    B(g, 1.9, 0.32, 0.06, '#c8603f', 0, 7.45, 0.37, NE);                        // red band on the cup
+    // two little tables with umbrellas and stools
+    [[-2.7, 3.4, 1], [3.7, 2.9, 0]].forEach(([x, z, sx], i) => { add(g, new THREE.CylinderGeometry(0.06, 0.06, 0.8, 6), C.iron, x, 0.6, z, NE);   // the owner stands at x 1.9
+      add(g, new THREE.CylinderGeometry(0.55, 0.55, 0.08, 14), '#f6f0e2', x, 1.02, z);
+      add(g, new THREE.CylinderGeometry(0.04, 0.04, 1.5, 6), C.iron, x, 1.75, z, NE);
+      add(g, new THREE.ConeGeometry(1.25, 0.5, 8), i ? '#2f7a68' : '#c8603f', x, 2.6, z);
+      (sx ? [[-0.8, 0], [0.8, 0]] : [[0, -0.8], [0, 0.8]]).forEach(([dx, dz]) => add(g, new THREE.CylinderGeometry(0.22, 0.22, 0.5, 10), C.wood, x + dx, 0.45, z + dz)); });
+    // menu board by the door
+    B(g, 0.7, 1.0, 0.08, '#2f2b28', 1.1, 0.2, 2.4, { rx: -0.15 }); propAsset(g, 'p_coffee'); },
+  florist() { const g = new THREE.Group(), NE = { edge: false }, cols = ['#d9435a', '#f29bb8', '#f2c230', '#8f6cc8', '#ffffff', '#ef7a3a'];
+    // buckets of flowers along the front (door left free)
+    [-3.5, -2.55, -1.6, 1.6, 2.55, 3.5].forEach((x, i) => { const z = 2.4 + (i % 2) * 0.5;
+      add(g, new THREE.CylinderGeometry(0.36, 0.3, 0.6, 10), '#6f8d86', x, 0.5, z);
+      for (let k = 0; k < 5; k++) add(g, new THREE.IcosahedronGeometry(0.2, 0), cols[(i + k) % cols.length], x + Math.cos(k * 1.3) * 0.2, 0.95 + (k % 2) * 0.15, z + Math.sin(k * 1.3) * 0.2, NE);
+      add(g, new THREE.IcosahedronGeometry(0.3, 0), '#5e9a4e', x, 0.82, z, NE); });
+    // flower boxes under the upstairs windows
+    [-2.4, 0, 2.4].forEach((x, i) => { B(g, 1.2, 0.3, 0.35, C.wood, x, 3.9, 1.72);
+      for (let k = 0; k < 4; k++) add(g, new THREE.IcosahedronGeometry(0.16, 0), cols[(i * 2 + k) % cols.length], x - 0.45 + k * 0.3, 4.3, 1.75, NE); });
+    // a big flower on the roof
+    add(g, new THREE.CylinderGeometry(0.08, 0.08, 1.4, 6), '#47684a', 0, 7.4, -0.4, NE);
+    for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; add(g, new THREE.SphereGeometry(0.42, 10, 8), '#f29bb8', Math.cos(a) * 0.55, 8.2 + Math.sin(a) * 0.55, -0.4, NE); }
+    add(g, new THREE.SphereGeometry(0.36, 10, 8), '#f2c230', 0, 8.2, -0.15, NE); propAsset(g, 'p_florist'); },
+  mechanic() { const g = new THREE.Group(), NE = { edge: false };
+    // car parked in front (sideways), red body, glass cabin, black wheels
+    const car = new THREE.Group(); car.position.set(-1.75, 0.2, 3.55); g.add(car);
+    B(car, 3.6, 0.75, 1.7, '#c8403a', 0, 0.3, 0); B(car, 1.9, 0.65, 1.5, '#c8403a', -0.2, 1.05, 0);
+    B(car, 1.95, 0.5, 1.52, C.glass, -0.2, 1.1, 0, NE);
+    [[-1.15, 0.85], [1.15, 0.85], [-1.15, -0.85], [1.15, -0.85]].forEach(([x, z]) => add(car, new THREE.CylinderGeometry(0.38, 0.38, 0.3, 12), C.iron, x, 0.38, z, { rx: Math.PI / 2, edge: false }));
+    B(car, 0.08, 0.2, 0.4, '#f2e6a0', 1.8, 0.6, 0.5, NE); B(car, 0.08, 0.2, 0.4, '#f2e6a0', 1.8, 0.6, -0.5, NE);
+    // stack of tyres and a tool box
+    for (let k = 0; k < 3; k++) add(g, new THREE.TorusGeometry(0.42, 0.18, 6, 14), C.iron, 3.6, 0.38 + k * 0.34, 3.2, { rx: Math.PI / 2, edge: false });
+    B(g, 0.9, 0.55, 0.5, '#c8603f', 3.3, 0.2, 2.1);
+    // big tyre sign on the roof
+    add(g, new THREE.TorusGeometry(0.85, 0.32, 8, 18), C.iron, 0, 7.9, -0.4, NE);
+    add(g, new THREE.CylinderGeometry(0.55, 0.55, 0.2, 14), '#bfc3c7', 0, 7.9, -0.4, { rx: Math.PI / 2, edge: false });
+    B(g, 0.25, 0.8, 0.25, '#bfc3c7', 0, 6.7, -0.4, NE); propAsset(g, 'p_mechanic'); },
+  baker() { const g = new THREE.Group(), NE = { edge: false }, BR = '#c98a3a', BR2 = '#a8662a';
+    const loaf = (p, x, y, z, s = 1, ry = 0) => { const m = add(p, new THREE.SphereGeometry(0.5, 12, 8), BR, x, y, z, { ry, edge: false }); m.scale.set(1.5 * s, 0.6 * s, 0.75 * s); return m; };
+    // giant loaf on the roof with score marks
+    const big = new THREE.Group(); big.position.set(0, 7.3, -0.4); g.add(big);
+    { const m = add(big, new THREE.SphereGeometry(1, 16, 10), BR, 0, 0, 0, NE); m.scale.set(1.9, 0.75, 0.95); }
+    [-0.8, 0, 0.8].forEach(x => B(big, 0.12, 0.08, 0.9, BR2, x, 0.66, 0, { edge: false, ry: 0.5 }));
+    // bread stands on both sides of the door
+    [-2.6, 2.6].forEach(x => { B(g, 1.8, 0.8, 0.9, C.wood, x, 0.2, 2.6); B(g, 1.9, 0.08, 1.0, '#f6f0e2', x, 1.0, 2.6, NE);
+      loaf(g, x - 0.5, 1.2, 2.45, 0.8); loaf(g, x + 0.45, 1.2, 2.75, 0.8, 0.6);
+      add(g, new THREE.SphereGeometry(0.22, 10, 8), '#e0b060', x + 0.2, 1.22, 2.35, NE); });
+    // little chimney with the oven
+    B(g, 0.7, 1.4, 0.7, '#b5543a', -3.0, 6.6, -3.2); propAsset(g, 'p_baker'); },
+  // NOTE: the owner stands at x 1.9, z 3.6 (local); props keep clear of that spot. Roof props sit around (0, 6.7, -0.4).
+  smith() { const g = new THREE.Group(), NE = { edge: false };
+    // anvil on a stump, forge chimney with smoke, big hammer on the roof
+    add(g, new THREE.CylinderGeometry(0.45, 0.5, 0.7, 10), C.wood, -2.6, 0.55, 3.1);
+    B(g, 1.1, 0.35, 0.45, '#55504a', -2.6, 0.9, 3.1); B(g, 0.5, 0.2, 0.35, '#55504a', -2.0, 1.1, 3.1, NE);
+    B(g, 0.9, 2.2, 0.9, '#8a5a3a', 3.0, 6.6, -3.0); [[3.0, 9.2, 0.45], [3.3, 9.9, 0.6], [3.0, 10.7, 0.75]].forEach(([x, y, r]) => add(g, new THREE.IcosahedronGeometry(r, 0), '#cfcac2', x, y, -3.0, NE));
+    B(g, 0.24, 2.2, 0.24, C.wood, 0, 6.7, -0.4, { rz: 0.35 }); B(g, 1.5, 0.65, 0.65, '#55504a', -0.38, 8.5, -0.4, { rz: 0.35 });
+    B(g, 0.6, 0.5, 0.6, C.wood, -3.6, 0.2, 2.4); propAsset(g, 'p_smith'); },
+  gym() { const g = new THREE.Group(), NE = { edge: false };
+    // giant dumbbell on the roof
+    add(g, new THREE.CylinderGeometry(0.15, 0.15, 3.0, 8), '#bfc3c7', 0, 7.4, -0.4, { rz: Math.PI / 2, edge: false });
+    [-1.3, 1.3].forEach(x => add(g, new THREE.CylinderGeometry(0.7, 0.7, 0.5, 14), C.iron, x, 7.4, -0.4, { rz: Math.PI / 2 }));
+    // punching bag on a frame, weight bench
+    B(g, 0.12, 2.6, 0.12, C.iron, -3.6, 0.2, 3.0, NE); B(g, 1.4, 0.12, 0.12, C.iron, -3.0, 2.8, 3.0, NE);
+    add(g, new THREE.CylinderGeometry(0.32, 0.32, 1.2, 12), '#c8403a', -2.5, 1.85, 3.0); B(g, 0.03, 0.4, 0.03, C.iron, -2.5, 2.45, 3.0, NE);
+    B(g, 0.5, 0.45, 1.6, C.iron, 3.6, 0.2, 2.6); add(g, new THREE.CylinderGeometry(0.05, 0.05, 1.6, 6), '#bfc3c7', 3.6, 1.2, 2.3, { rz: Math.PI / 2, edge: false });
+    [2.8, 4.4].forEach(x => add(g, new THREE.CylinderGeometry(0.3, 0.3, 0.12, 12), C.iron, x, 1.2, 2.3, { rz: Math.PI / 2, edge: false })); propAsset(g, 'p_gym'); },
+  dojo() { const g = new THREE.Group(), NE = { edge: false };
+    // training mat with a wooden practice dummy, a little dojo roof on top
+    B(g, 3.0, 0.06, 2.2, '#3f5866', -2.2, 0.2, 3.2, NE); B(g, 2.6, 0.07, 1.8, '#c8603f', -2.2, 0.21, 3.2, NE);
+    add(g, new THREE.CylinderGeometry(0.28, 0.32, 2.0, 10), C.wood, -2.2, 1.25, 3.2);
+    [[0.6, 1.6], [-0.6, 1.3], [0.6, 1.0]].forEach(([a, y]) => B(g, 0.9, 0.12, 0.12, C.wood, -2.2 + a * 0.6, y, 3.2, { ry: a }));
+    const roof = new THREE.Group(); roof.position.set(0, 6.7, -0.4); g.add(roof);
+    B(roof, 0.25, 1.2, 0.25, '#b5543a', -1.6, 0, 0); B(roof, 0.25, 1.2, 0.25, '#b5543a', 1.6, 0, 0);
+    B(roof, 4.4, 0.3, 0.4, '#b5543a', 0, 1.2, 0); B(roof, 3.6, 0.2, 0.3, '#2f2b28', 0, 0.8, 0, NE);
+    add(roof, new THREE.CylinderGeometry(0.45, 0.45, 0.1, 18), '#c8403a', 0, 0.45, 0.2, { rx: Math.PI / 2, edge: false }); propAsset(g, 'p_dojo'); },
+  doctor() { const g = new THREE.Group(), NE = { edge: false };
+    // white sign with a red cross on the roof, a waiting bench, two plants
+    B(g, 2.6, 2.6, 0.3, '#f6f0e2', 0, 6.7, -0.4); B(g, 1.8, 0.55, 0.06, '#d63a3a', 0, 7.72, -0.22, NE); B(g, 0.55, 1.8, 0.06, '#d63a3a', 0, 7.1, -0.22, NE);
+    B(g, 2.2, 0.45, 0.6, C.wood, -2.6, 0.2, 2.6); B(g, 2.2, 0.6, 0.12, C.wood, -2.6, 0.65, 2.3);
+    pot(g, -1.0, 0.2, 2.9, 0.8, true); pot(g, 3.6, 0.2, 2.6, 0.8); propAsset(g, 'p_doctor'); },
+  pub() { const g = new THREE.Group(), NE = { edge: false };
+    // giant beer mug on the roof, barrels and an outside bench table
+    add(g, new THREE.CylinderGeometry(0.85, 0.85, 1.7, 16), '#e6a93a', 0, 7.6, -0.4);
+    add(g, new THREE.CylinderGeometry(0.92, 0.92, 0.35, 16), '#fbf6ec', 0, 8.55, -0.4, NE); add(g, new THREE.SphereGeometry(0.4, 10, 8), '#fbf6ec', 0.35, 8.75, -0.3, NE);
+    add(g, new THREE.TorusGeometry(0.45, 0.13, 6, 12), '#e6a93a', 1.0, 7.6, -0.4, NE);
+    [[-3.6, 3.0], [-3.6, 2.1]].forEach(([x, z]) => { add(g, new THREE.CylinderGeometry(0.42, 0.42, 0.95, 12), C.wood, x, 0.68, z); add(g, new THREE.TorusGeometry(0.43, 0.04, 4, 14), C.iron, x, 0.9, z, { rx: Math.PI / 2, edge: false }); });
+    B(g, 1.6, 0.1, 0.8, C.wood, -1.6, 0.9, 3.4); B(g, 0.1, 0.7, 0.6, C.wood, -2.3, 0.2, 3.4, NE); B(g, 0.1, 0.7, 0.6, C.wood, -0.9, 0.2, 3.4, NE);
+    B(g, 1.6, 0.08, 0.3, C.wood, -1.6, 0.5, 2.8); B(g, 1.6, 0.08, 0.3, C.wood, -1.6, 0.5, 4.0);
+    B(g, 0.08, 0.08, 1.0, C.iron, 3.7, 3.0, 2.0, NE); B(g, 0.06, 0.8, 0.9, '#7a2f18', 3.7, 2.2, 2.4); propAsset(g, 'p_pub'); },
+  snooker() { const g = new THREE.Group(), NE = { edge: false };
+    // big 8-ball on the roof, a snooker cue rack and a small table outside
+    add(g, new THREE.SphereGeometry(1.1, 18, 12), '#1e1a18', 0, 7.9, -0.4);
+    add(g, new THREE.CylinderGeometry(0.5, 0.5, 0.05, 16), '#fbf6ec', 0, 8.05, 0.66, { rx: Math.PI / 2, edge: false });
+    B(g, 0.22, 0.4, 0.04, '#1e1a18', 0, 7.85, 0.7, NE);
+    B(g, 2.4, 0.7, 1.3, C.wood, -2.3, 0.2, 3.2); B(g, 2.2, 0.08, 1.1, '#2f8a4a', -2.3, 0.9, 3.2, NE);
+    [['#d63a3a', -2.8, 3.0], ['#f2c230', -2.2, 3.4], ['#fbf6ec', -1.7, 3.1]].forEach(([c, x, z]) => add(g, new THREE.SphereGeometry(0.1, 8, 6), c, x, 1.06, z, NE));
+    [3.3, 3.5, 3.7].forEach(x => B(g, 0.06, 2.2, 0.06, '#c9922e', x, 0.2, 1.7, { rz: 0.08, edge: false })); propAsset(g, 'p_snooker'); },
+  restaurant() { const g = new THREE.Group(), NE = { edge: false };
+    // plate with a silver dome on the roof, tables with checked cloths, a menu board
+    add(g, new THREE.CylinderGeometry(1.5, 1.4, 0.15, 20), '#f6f0e2', 0, 6.85, -0.4);
+    add(g, new THREE.SphereGeometry(1.1, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), '#c9ccd0', 0, 6.92, -0.4);
+    add(g, new THREE.SphereGeometry(0.16, 8, 6), '#c9ccd0', 0, 8.1, -0.4, NE);
+    [[-2.8, 3.3], [-0.6, 3.6]].forEach(([x, z]) => { B(g, 1.1, 0.75, 1.1, C.wood, x, 0.2, z); B(g, 1.25, 0.06, 1.25, '#d94a4a', x, 0.95, z, NE);
+      add(g, new THREE.CylinderGeometry(0.22, 0.2, 0.08, 10), '#f6f0e2', x - 0.2, 1.04, z, NE);
+      [[-0.85, 0], [0.85, 0]].forEach(([dx]) => B(g, 0.45, 0.5, 0.45, C.wood, x + dx, 0.2, z)); });
+    B(g, 0.7, 1.0, 0.08, '#2f2b28', 3.6, 0.2, 2.4, { rx: -0.15 }); propAsset(g, 'p_restaurant'); },
+  hat() { const g = new THREE.Group(), NE = { edge: false };
+    // giant top hat on the roof, hat stands at the front
+    add(g, new THREE.CylinderGeometry(1.6, 1.6, 0.15, 20), '#2f2b28', 0, 6.85, -0.4);
+    add(g, new THREE.CylinderGeometry(1.0, 1.0, 1.7, 18), '#2f2b28', 0, 7.75, -0.4);
+    add(g, new THREE.CylinderGeometry(1.02, 1.02, 0.3, 18), '#c8403a', 0, 7.1, -0.4, NE);
+    [[-3.2, '#6a4a8c'], [-2.2, '#c9922e'], [3.6, '#2f7a68']].forEach(([x, c]) => { B(g, 0.08, 1.4, 0.08, C.wood, x, 0.2, 2.7, NE);
+      add(g, new THREE.CylinderGeometry(0.45, 0.45, 0.06, 12), c, x, 1.65, 2.7, NE); add(g, new THREE.CylinderGeometry(0.25, 0.28, 0.35, 12), c, x, 1.85, 2.7, NE); }); propAsset(g, 'p_hat'); },
+  tailor() { const g = new THREE.Group(), NE = { edge: false };
+    // giant spool of thread on the roof, two dress dummies at the front
+    [-0.9, 0.9].forEach(x => add(g, new THREE.CylinderGeometry(1.0, 1.0, 0.25, 16), C.wood, x, 7.7, -0.4, { rz: Math.PI / 2 }));
+    add(g, new THREE.CylinderGeometry(0.75, 0.75, 1.6, 16), '#d84a7a', 0, 7.7, -0.4, { rz: Math.PI / 2, edge: false });
+    B(g, 1.0, 0.5, 0.5, C.wood, 0, 6.7, -0.4, NE);
+    [[-3.2, '#6a4a8c'], [-2.0, '#2f7a68']].forEach(([x, c]) => { B(g, 0.08, 1.0, 0.08, C.wood, x, 0.2, 3.0, NE);
+      add(g, new THREE.CylinderGeometry(0.28, 0.42, 1.1, 10), c, x, 1.75, 3.0); add(g, new THREE.SphereGeometry(0.15, 8, 6), C.wood, x, 2.4, 3.0, NE); }); propAsset(g, 'p_tailor'); },
+  wood() { const g = new THREE.Group(), NE = { edge: false };
+    // stack of planks, a sawhorse, a ladder against the wall, logs on the roof
+    for (let k = 0; k < 4; k++) B(g, 2.4, 0.18, 0.9, k % 2 ? '#a8733f' : '#c08a52', -2.4, 0.2 + k * 0.19, 3.3);
+    B(g, 1.4, 0.15, 0.3, C.wood, 3.4, 0.9, 2.7); [[-0.5, 0.2], [0.5, -0.2]].forEach(([dx, rz]) => { B(g, 0.08, 0.8, 0.08, C.wood, 3.4 + dx, 0.15, 2.55, { rz, edge: false }); B(g, 0.08, 0.8, 0.08, C.wood, 3.4 + dx, 0.15, 2.85, { rz, edge: false }); });
+    const lad = new THREE.Group(); lad.position.set(-3.75, 0.2, 1.9); lad.rotation.x = -0.18; g.add(lad);
+    [-0.35, 0.35].forEach(x => B(lad, 0.1, 4.6, 0.1, '#c08a52', x, 0, 0, NE)); for (let k = 0; k < 8; k++) B(lad, 0.7, 0.08, 0.08, '#c08a52', 0, 0.4 + k * 0.55, 0, NE);
+    [[-0.5, 6.95], [0.5, 6.95], [0, 7.6]].forEach(([x, y]) => add(g, new THREE.CylinderGeometry(0.42, 0.42, 3.2, 12), '#9a6a3c', x, y, -0.4, { rz: Math.PI / 2 }));
+    propAsset(g, 'p_wood'); },
+  engineer() { const g = new THREE.Group(), NE = { edge: false };
+    // big gear on the roof, a drawing board with a blueprint
+    const gear = new THREE.Group(); gear.position.set(0, 8.0, -0.4); g.add(gear);
+    add(gear, new THREE.CylinderGeometry(1.0, 1.0, 0.35, 18), '#9aa3ab', 0, 0, 0, { rx: Math.PI / 2 });
+    for (let k = 0; k < 10; k++) { const a = k * Math.PI / 5; B(gear, 0.4, 0.4, 0.3, '#9aa3ab', Math.cos(a) * 1.1, Math.sin(a) * 1.1 - 0.2, 0, { rz: a, edge: false }); }
+    add(gear, new THREE.CylinderGeometry(0.35, 0.35, 0.4, 12), '#55504a', 0, 0, 0, { rx: Math.PI / 2, edge: false });
+    B(g, 0.3, 1.3, 0.3, '#9aa3ab', 0, 6.7, -0.4, NE);
+    B(g, 0.08, 1.2, 0.08, C.wood, -2.6, 0.2, 3.0, NE); B(g, 1.4, 1.0, 0.08, '#2f5f9a', -2.6, 1.3, 3.0, { rx: -0.35 });
+    [0.3, 0, -0.3].forEach(y => B(g, 1.0, 0.03, 0.02, '#e8eef5', -2.6, 1.8 + y * 0.9, 3.05 - y * 0.3, { rx: -0.35, edge: false }));
+    B(g, 0.8, 0.6, 0.8, C.wood, -3.6, 0.2, 2.0); propAsset(g, 'p_engineer'); },
+  finance() { const g = new THREE.Group(), NE = { edge: false };
+    // big briefcase on the roof, a bench and tidy plants
+    B(g, 2.4, 1.6, 0.7, '#5a3a24', 0, 6.7, -0.4); B(g, 2.42, 0.1, 0.72, '#c9922e', 0, 7.7, -0.4, NE);
+    B(g, 0.9, 0.12, 0.15, '#2f2b28', 0, 8.3, -0.4, NE); B(g, 0.12, 0.35, 0.15, '#2f2b28', -0.4, 8.0, -0.4, NE); B(g, 0.12, 0.35, 0.15, '#2f2b28', 0.4, 8.0, -0.4, NE);
+    B(g, 2.0, 0.45, 0.6, '#3f5866', -2.6, 0.2, 2.6); B(g, 2.0, 0.6, 0.12, '#3f5866', -2.6, 0.65, 2.3);
+    add(g, new THREE.ConeGeometry(0.4, 1.6, 8), '#3d6b3a', -0.9, 1.15, 2.4); B(g, 0.6, 0.4, 0.6, C.sand2, -0.9, 0.2, 2.4);
+    add(g, new THREE.ConeGeometry(0.4, 1.6, 8), '#3d6b3a', 3.6, 1.15, 2.4); B(g, 0.6, 0.4, 0.6, C.sand2, 3.6, 0.2, 2.4); propAsset(g, 'p_finance'); },
+  trader() { const g = new THREE.Group(), NE = { edge: false };
+    // hand cart with sacks, stacked crates, crates on the roof
+    const cart = new THREE.Group(); cart.position.set(-2.4, 0.2, 3.2); g.add(cart);
+    B(cart, 2.0, 0.5, 1.1, C.wood, 0, 0.55, 0); [-0.6, 0.6].forEach(z => add(cart, new THREE.CylinderGeometry(0.45, 0.45, 0.12, 12), C.wood, 0.4, 0.45, z * 1.0, { rx: Math.PI / 2 }));
+    B(cart, 0.08, 0.08, 1.4, C.wood, -1.6, 0.85, 0.3, { ry: 0.2, edge: false });
+    [[-0.5, 0], [0.3, 0.2], [-0.1, -0.25]].forEach(([x, z], i) => add(cart, new THREE.SphereGeometry(0.4, 10, 8), i === 1 ? '#c9b07a' : '#d8c08a', x, 1.3, z, NE));
+    B(g, 0.9, 0.8, 0.9, C.wood, 3.5, 0.2, 2.3); B(g, 0.7, 0.6, 0.7, '#a8733f', 3.5, 1.0, 2.3);
+    [[-1.0, 0], [0.1, 0], [-0.45, 1]].forEach(([x, row]) => B(g, 1.0, 0.9, 1.0, row ? '#a8733f' : C.wood, x, 6.7 + row * 0.9, -0.4)); propAsset(g, 'p_trader'); }
+};
 function makeOpenSpot() {
   const g = new THREE.Group(), A = wallMat('#ffd66b');
   B(g, 10, 0.2, 10, '#d8c7a0', 0, 0, 0, { shadow: false });
@@ -717,9 +887,9 @@ MARKET.forEach(([x, z]) => {
 });
 const shops = [], openSpots = [];
 const batchSets = {};
-function drawBatch(name, make, items, colorOf, scale) {
+function drawBatch(name, make, items, colorOf, scale, opt = {}) {
   const old = batchSets[name];
-  if (old) { old.parts.forEach(m => scene.remove(m)); scene.remove(old.lines); scene.remove(old.pick); const i = pickables.indexOf(old.pick); if (i >= 0) pickables.splice(i, 1); }
+  if (old) { old.parts.forEach(m => scene.remove(m)); scene.remove(old.lines); if (old.pick) { scene.remove(old.pick); const i = pickables.indexOf(old.pick); if (i >= 0) pickables.splice(i, 1); } }
   if (!items.length) { delete batchSets[name]; return; }
   const T = make.__t || (make.__t = makeTemplate(make));
   const N = items.length, up = new THREE.Vector3(0, 1, 0), sc = new THREE.Vector3(scale, scale, scale), col = new THREE.Color();
@@ -731,6 +901,7 @@ function drawBatch(name, make, items, colorOf, scale) {
   items.forEach((it, i) => { const o = i * L.length; for (let k = 0; k < L.length; k += 3) { v.set(L[k], L[k + 1], L[k + 2]).applyMatrix4(mats[i]); out[o + k] = v.x; out[o + k + 1] = v.y; out[o + k + 2] = v.z; } });
   const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(out, 3)); lg.computeBoundingSphere();
   const lines = new THREE.LineSegments(lg, ink); scene.add(lines);
+  if (opt.pick === false) { batchSets[name] = { parts, lines, pick: null }; return; }
   const box = new THREE.BoxGeometry(10, 7, 10); box.translate(0, 3.5, 0);
   const pick = new THREE.InstancedMesh(box, new THREE.MeshBasicMaterial({ visible: false }), N);
   items.forEach((it, i) => pick.setMatrixAt(i, mats[i])); pick.instanceMatrix.needsUpdate = true; pick.userData.items = items; scene.add(pick); pickables.push(pick);
@@ -798,6 +969,7 @@ function buildMarket(hs) {
     shops.push(s); h.shopRef = s; });
   marketSlots.forEach((sl, i) => { if (!taken.has(i)) openSpots.push({ ...sl }); });
   drawBatch('shops', makeShop, shops, s => s.color, 1);
+  Object.keys(SHOP_PROPS).forEach(k => drawBatch('prop_' + k, SHOP_PROPS[k], shops.filter(s => shopStyle(s.job) === k), () => '#ffffff', 1, { pick: false }));
   drawBatch('open', makeOpenSpot, openSpots, () => '#ffd66b', 1);
 }
 function selectShop(s) {
@@ -1371,8 +1543,32 @@ function batchOf(parts, n, shadow) { return parts.map(p => { const im = new THRE
 function colourBatch(batch, items, pick) { const c = new THREE.Color(); batch.forEach(b => { items.forEach((it, i) => { c.set(b.vary >= 0 ? pick(it, b.vary) : b.color); b.im.setColorAt(i, c); }); if (b.im.instanceColor) b.im.instanceColor.needsUpdate = true; }); }
 const peopleObjs = []; let walkers = [], owners = [], peopleTags = [];
 const PM = new THREE.Matrix4(), PQ = new THREE.Quaternion(), PS = new THREE.Vector3(1.1, 1.1, 1.1), PP = new THREE.Vector3(), UPV = new THREE.Vector3(0, 1, 0), PE = new THREE.Euler();
+// walking paths: a list of points; closed = a loop, open = walk to the end and turn back
+function mkPath(pts, closed) { const P = closed ? pts.concat([pts[0]]) : pts, seg = []; let L = 0;
+  for (let i = 0; i < P.length - 1; i++) { const dx = P[i + 1][0] - P[i][0], dz = P[i + 1][1] - P[i][1], l = Math.hypot(dx, dz); seg.push({ x: P[i][0], z: P[i][1], dx: dx / l, dz: dz / l, a: L, l }); L += l; }
+  return { seg, L, closed }; }
+function pathPoint(p, s, side) { let back = false;
+  if (p.closed) s = ((s % p.L) + p.L) % p.L; else { s = ((s % (2 * p.L)) + 2 * p.L) % (2 * p.L); if (s > p.L) { s = 2 * p.L - s; back = true; } }
+  let g = p.seg[p.seg.length - 1]; for (const q of p.seg) if (s < q.a + q.l) { g = q; break; }
+  const t = s - g.a; return { x: g.x + g.dx * t - g.dz * side, z: g.z + g.dz * t + g.dx * side, ang: Math.atan2(g.dx, g.dz) + (back ? Math.PI : 0) }; }
+const PATHS = {
+  ring: r => mkPath([[-r, r], [r, r], [r, -r], [-r, -r]], true),
+  school: {
+    // from the lane-3 road down the link road to the school gate and back; and along the district road
+    walk: [{ p: mkPath([[0, 146], [0, EDU.school.z - 20]], false), w: 3 }, { p: mkPath([[-EDU.x, EDU.z0], [EDU.x, EDU.z0]], false), w: 1 }],
+    // students: round the football pitch behind the school, by the swings, and across the front yard
+    yard: [{ p: mkPath([[1, 231], [17, 231], [17, 241], [1, 241]], true), w: 3 }, { p: mkPath([[-14, 231], [-4, 231], [-4, 241], [-14, 241]], true), w: 1 },
+           { p: mkPath([[-7, 206.3], [9, 206.3]], false), w: 1.5 }]
+  },
+  district: sg => { const x = d => sg * (DIST.x0 + d), H = DIST.zMax, px = DIST.step * 1.5, c = DIST.cross[1];
+    return [{ p: mkPath([[x(0), -H], [x(DIST.step * DIST.pairs), -H], [x(DIST.step * DIST.pairs), H], [x(0), H]], true), w: 2 },        // round the district
+      { p: mkPath([[x(DIST.step), -c], [x(2 * DIST.step), -c], [x(2 * DIST.step), c], [x(DIST.step), c]], true), w: 2 },              // round the park block
+      { p: mkPath([[x(px - 13), -25], [x(px + 13), -25], [x(px + 13), 25], [x(px - 13), 25]], true), w: 3 },                           // inside the park
+      { p: mkPath([[sg * (DIST.roadIn + 2), 0], [x(0), 0], [x(0), -c], [x(DIST.step * DIST.pairs), -c]], false), w: 1 }]; }               // the main road in, then a cross street
+};
 function buildPeople() {
   peopleObjs.forEach(o => scene.remove(o.im)); peopleObjs.length = 0; peopleTags.forEach(t => t.remove()); peopleTags = [];
+  PS.set(1.1, 1.1, 1.1);
   // ---- shop owners (static, at their shop door) ----
   const kindOf = j => /chef|baker|cook/i.test(j) ? 'chef' : /blacksmith|gunsmith|mechanic|carpenter|builder|engineer/i.test(j) ? 'smith' : /merchant|arms|financial|doctor/i.test(j) ? 'plain' : 'apron';
   ['chef', 'smith', 'plain', 'apron'].forEach(kind => {
@@ -1382,14 +1578,25 @@ function buildPeople() {
     b.forEach(x => x.im.instanceMatrix.needsUpdate = true);
     colourBatch(b, list, (s, v) => { const k = hashStr(s.owner.user); return v === 0 ? (kind === 'chef' ? '#f3efe6' : SHIRTS[k % SHIRTS.length]) : v === 1 ? SKINS[(k >> 2) % SKINS.length] : HAIRS[(k >> 4) % HAIRS.length]; });
   });
-  // ---- walkers: real citizens picked at random, walking the ring roads and the spokes ----
+  // ---- walkers: real citizens on foot. Same total as before (100 laptop / 50 phone), shared out:
+  //      about 60% in the middle district, 20% at the school (students + school staff), 20% in the East/West districts
   const pool = homes.filter(h => h.status === 'active' && !h.shopRef);
   const pickN = Math.min(PEOPLE_MAX, pool.length), picked = [];
   let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  const idx = pool.map((_, i) => i).sort(() => rnd() - 0.5).slice(0, pickN);
-  const rings = []; for (let r = 48; r <= (openRoadsTo + 1) * S; r += 24) rings.push(r);
-  idx.forEach((pi, k) => { const h = pool[pi]; const r = rings[Math.floor(rnd() * rings.length)];
-    picked.push({ h, r, side: rnd() < 0.5 ? -2.2 : 2.2, s: rnd() * 8 * r, dir: rnd() < 0.5 ? -1 : 1, speed: 1.1 + rnd() * 0.7, phase: rnd() * 6.28, mode: 'loop', spoke: null }); });
+  const order = pool.map((_, i) => i).sort(() => rnd() - 0.5).map(i => pool[i]), used = new Set();
+  const take = (n, pref) => { const out = []; (pref ? order.filter(pref) : []).concat(order).forEach(h => { if (out.length < n && !used.has(h)) { used.add(h); out.push(h); } }); return out; };
+  const pickPath = list => { let t = rnd() * list.reduce((a, q) => a + q.w, 0); for (const q of list) { t -= q.w; if (t <= 0) return q.p; } return list[0].p; };
+  const addW = (h, list, o = {}) => { const p = pickPath(list); picked.push({ h, p, side: o.side !== undefined ? o.side : (rnd() < 0.5 ? -2.2 : 2.2), s: rnd() * 2 * p.L, dir: rnd() < 0.5 ? -1 : 1, speed: (o.speed || 1.1) + rnd() * 0.7, phase: rnd() * 6.28, k: o.k || 1.1 }); };
+  // middle district: the square ring roads (as before)
+  const ringPaths = []; for (let r = 48; r <= (openRoadsTo + 1) * S; r += 24) ringPaths.push({ p: PATHS.ring(r), w: 1 });
+  // East/West districts: only the sides that have homes
+  const sides = [1, -1].filter(sg => homes.some(h => sg * h.x > DIST.roadIn + 4));
+  const nDist = sides.length ? Math.round(pickN * 0.2) : 0, nSchool = Math.round(pickN * 0.2), nMid = pickN - nDist - nSchool;
+  take(nSchool, h => /teacher|principal|librarian|school/i.test(h.job)).forEach((h, i) => {
+    if (i < nSchool * 0.35) addW(h, PATHS.school.walk, { side: i % 2 ? -1.6 : 1.6 });                       // walking to and from school
+    else addW(h, PATHS.school.yard, { side: (rnd() - 0.5) * 1.2, k: /teacher|principal|librarian|school/i.test(h.job) ? 1.1 : 0.82, speed: 1.4 }); });  // students in the yard
+  sides.forEach(sg => take(Math.round(nDist / sides.length), h => sg * h.x > DIST.roadIn + 4).forEach(h => addW(h, PATHS.district(sg))));
+  take(nMid).forEach(h => addW(h, ringPaths));
   walkers = picked;
   const bodyParts = batchOf(bodyB(), walkers.length, true), legL = batchOf(legB(), walkers.length, false), legR = batchOf(legB(), walkers.length, false);
   [...bodyParts, ...legL, ...legR].forEach(x => peopleObjs.push(x));
@@ -1398,21 +1605,16 @@ function buildPeople() {
   colourBatch(bodyParts, walkers, pickW); const pantsOf = w => PANTS[(hashStr(w.h.user) >> 6) % PANTS.length]; colourBatch(legL, walkers, pantsOf); colourBatch(legR, walkers, pantsOf);
   for (let i = 0; i < 6; i++) { const el = document.createElement('div'); el.className = 'lbl walker'; el.hidden = true; homeLabels.appendChild(el); peopleTags.push(el); }
 }
-// a point on the square loop of half-size r, s = distance along it (perimeter 8r), offset to the pavement
-function loopPoint(r, s, side) { const P = 8 * r; s = ((s % P) + P) % P; let x, z, hd;
-  if (s < 2 * r) { x = -r + s; z = r; hd = 0; } else if (s < 4 * r) { x = r; z = r - (s - 2 * r); hd = 1; } else if (s < 6 * r) { x = r - (s - 4 * r); z = -r; hd = 2; } else { x = -r; z = -r + (s - 6 * r); hd = 3; }
-  const dir = [[1, 0], [0, -1], [-1, 0], [0, 1]][hd]; return { x: x - dir[1] * side, z: z + dir[0] * side, ang: Math.atan2(dir[0], dir[1]) }; }
 function updatePeople(dt, now) {
   if (!walkers.length || !walkers.batches) return;
   const { body, legL, legR } = walkers.batches, t = now / 1000;
   walkers.forEach((w, i) => {
     w.s += w.dir * w.speed * dt;
-    const p = loopPoint(w.r, w.s, w.side), ang = p.ang + (w.dir < 0 ? Math.PI : 0);
+    const p = pathPoint(w.p, w.s, w.side), ang = p.ang + (w.dir < 0 ? Math.PI : 0), k = w.k;
     const sw = Math.sin(t * 7 * w.speed + w.phase), bob = Math.abs(sw) * 0.06;
-    PP.set(p.x, 0.12 + bob, p.z); PQ.setFromAxisAngle(UPV, ang); PM.compose(PP, PQ, PS); body.forEach(b => b.im.setMatrixAt(i, PM));
-    const hip = new THREE.Vector3(0, 0.82 + bob, 0);
-    [[legL, -0.14, sw], [legR, 0.14, -sw]].forEach(([bt, x, a]) => { const off = new THREE.Vector3(x * 1.1, 0, 0).applyAxisAngle(UPV, ang);
-      PP.set(p.x + off.x, 0.12 + 0.77 + bob, p.z + off.z); PE.set(a * 0.5, ang, 0, 'YXZ'); PQ.setFromEuler(PE); PM.compose(PP, PQ, PS); bt.forEach(b => b.im.setMatrixAt(i, PM)); });
+    PS.set(k, k, k); PP.set(p.x, 0.12 + bob, p.z); PQ.setFromAxisAngle(UPV, ang); PM.compose(PP, PQ, PS); body.forEach(b => b.im.setMatrixAt(i, PM));
+    [[legL, -0.14, sw], [legR, 0.14, -sw]].forEach(([bt, x, a]) => { const off = new THREE.Vector3(x * k, 0, 0).applyAxisAngle(UPV, ang);
+      PP.set(p.x + off.x, 0.12 + 0.7 * k + bob, p.z + off.z); PE.set(a * 0.5, ang, 0, 'YXZ'); PQ.setFromEuler(PE); PM.compose(PP, PQ, PS); bt.forEach(b => b.im.setMatrixAt(i, PM)); });
     w.x = p.x; w.z = p.z;
   });
   [...body, ...legL, ...legR].forEach(b => b.im.instanceMatrix.needsUpdate = true);
