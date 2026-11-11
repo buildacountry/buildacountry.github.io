@@ -2765,7 +2765,6 @@ RS.blocks.forEach(([z0, z1, style], bi) => { const S2 = RS.SPEC[style], n = Math
   [0, 1].forEach(c => { for (let i = 0; i < n; i++) if (!RS.BIZ.some(([bz, bc]) => bc === c && bz === z0 + off + S2.step * (i + 0.5))) RS.blds.push({ style, block: bi + 1, x: S2.x[c], z: z0 + off + S2.step * (i + 0.5), ry: c ? Math.PI / 2 : -Math.PI / 2, col: c }); }); });
 // Inland rows (Dev's sketch, 11 Nov; roads in drawRiversideInland): the same flat buildings, two columns per row (one faces each lane),
 // blocks between the cross streets; the middle (between the -226 and +226 roads) stays open. They fill after the river strip, row by row.
-RS.blds = RS.blds.filter(b => b.block !== 1);   // Dev, 12 Nov: the far-north waterfront block (by the sea) stays empty for now; it opens later for future citizens
 RS.INLAND = { rows: [[640, 785], [785, 930], [930, 1075]], blocks: [[-690, -600], [-600, -535], [-535, -470], [-470, -400], [-400, -320], [310, 390], [390, 470], [470, 530], [530, 585]] };   // Dev, 12 Nov: the two block columns next to the central area (-320..-226, 226..310) stay empty for now
 RS.INLAND.rows.forEach(([r0, r1], ri) => RS.INLAND.blocks.forEach(([z0, z1], k) => { const n = Math.max(1, Math.floor((z1 - z0 - 2) / 31)), sp = (z1 - z0) / n, style = (k + ri) % 2 ? 'terrace' : 'garden', block = 7 + ri * RS.INLAND.blocks.length + k, m = (r0 + r1) / 2;
   // each row has its own inner lane down the middle (Dev, 11 Nov): four lines of buildings, two face the main lanes, two face the inner lane.
@@ -2936,6 +2935,12 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
   RSX.lanes.forEach(x => rdD(5, L + 5, x, ZC));                                                       // the new long lanes
   [RSX.z0, RSX.z1, -226, 226].forEach(z => rdD(xb - xa, 5, (xa + xb) / 2, z));                         // ends + the two bridge roads, all the way in
   RSX.streets.forEach(z => rdD(xb - xa, 5, (xa + xb) / 2, z));                                         // block streets through all three rows
+  // 12 Nov: join the two ends to the waterfront. The first lane (x 640) and the waterfront road now run to the inland end roads,
+  // and both end roads carry on across the strip to the waterfront road (no dead ends by the sea or at the south end).
+  { const lz0 = RS.z0 - 9, lz1 = RS.z1 + 9, wr = RS.road + 3.5, wEnd = RS.z1 + 20;
+    rdD(5, lz0 - (RSX.z0 - 2.5), RS.lanes[0], (lz0 + RSX.z0 - 2.5) / 2); rdD(5, RSX.z1 + 2.5 - lz1, RS.lanes[0], (lz1 + RSX.z1 + 2.5) / 2);
+    [RSX.z0, RSX.z1].forEach(z => rdD(xa - wr, 5, (wr + xa) / 2, z));
+    rdD(7, RSX.z1 + 2.5 - wEnd, RS.road, (wEnd + RSX.z1 + 2.5) / 2); }
   rdD(785 - 2.5 - xa, 5, (xa + 782.5) / 2, 0); rdD(1075 - 2.5 - 932.5, 5, (932.5 + 1072.5) / 2, 0);   // Central Bridge road: first row + far row
   [[712.5], [857.5], [1002.5]].forEach(([x]) => [[RSX.z0, -226], [226, RSX.z1]].forEach(([za, zb]) => rdD(4, zb - za - 5, x, (za + zb) / 2)));   // the inner lane down the middle of each row
   window.RSX_OBJ = bakeKeep(g, 'riverside');
