@@ -94,6 +94,10 @@ dl.facts{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5
 #pp .row{width:min(92vw,380px)}#pp .push{border-color:var(--goldlt);box-shadow:0 4px 0 #000}#pp .push.g{border-color:var(--golddk);box-shadow:0 4px 0 var(--golddk)}
 @media (prefers-reduced-motion:reduce){.pg.out{animation:fade .01s linear forwards}.push{transition:none}}
 </style>
+<script>
+// Login link from the DM: index.html#k=<one-time code>. Take it out of the address at once, before any other script runs.
+(function () { var m = /^#k=([A-Za-z0-9_-]{20,100})$/.exec(location.hash); if (!m) return; window.__vinKey = m[1]; try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { location.hash = ''; } })();
+</script>
 <script data-goatcounter="https://buildacountry.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
@@ -184,7 +188,27 @@ function neighbours(h) {
   const d = o => h.a === 'R' ? Math.abs(o.floor - h.floor) + Math.abs(o.n - h.n) / 1000 : Math.hypot(o.x - h.x, o.z - h.z);
   return pool.map(o => [d(o), o]).filter(e => h.a === 'R' || e[0] < 40).sort((a, b) => a[0] - b[0]).slice(0, 2).map(e => e[1]);
 }
-const session = () => { try { const s = JSON.parse(store.get('vin_session') || 'null'); return s && s.user ? String(s.user).toLowerCase() : ''; } catch (e) { return ''; } };   // set by the login link (build item 4)
+// ---------- login (item 4): DM KEY → private link → Supabase gives this phone a session for 90 days ----------
+// The page keeps only its own session code. It is NOT a proof by itself: every feature that matters asks Supabase who owns it.
+const LOGIN_URL = 'https://whhohzvvxhzpcsdcyuks.supabase.co/functions/v1/vin-login';
+const loginApi = body => fetch(LOGIN_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
+const readSession = () => { try { const s = JSON.parse(store.get('vin_session') || 'null'); return s && s.user && s.token && (!s.exp || new Date(s.exp) > new Date()) ? s : null; } catch (e) { return null; } };
+const session = () => { const s = readSession(); return s ? String(s.user).toLowerCase() : ''; };
+const clearSession = () => { try { localStorage.removeItem('vin_session'); } catch (e) {} };
+let loginState = '';   // '' | 'working' | 'bad' | 'offline' | 'in'
+async function loginWithKey(code) {
+  loginState = 'working'; tab = 'me'; render();
+  try { const r = await loginApi({ action: 'login', code });
+    if (r && r.ok && r.user && r.token) { store.set('vin_session', JSON.stringify({ user: r.user, token: r.token, exp: r.expires })); loginState = 'in'; track('site-login-ok'); }
+    else { loginState = 'bad'; track('site-login-bad'); } }
+  catch (e) { loginState = 'offline'; }
+  tab = 'me'; render();
+}
+async function checkSession() {   // quiet check on every visit: a session that Supabase no longer knows is forgotten here too
+  const s = readSession(); if (!s) return;
+  try { const r = await loginApi({ action: 'me', token: s.token }); if (r && r.ok === false && r.error === 'no session') { clearSession(); render(true); } } catch (e) {}
+}
+async function logout() { const s = readSession(); clearSession(); loginState = ''; found = found && lookup(found.user); render(); track('site-logout'); if (s) try { await loginApi({ action: 'logout', token: s.token }); } catch (e) {} }
 const myHome = () => byUser.get(session()) || null;
 const DIWALI_DAY = 8;   // 8 Nov 2026 = Day 8
 const statusOf = h => (h.cn > 0 && h.cn <= 5000) ? 'Founding citizen' : 'Citizen';
@@ -265,13 +289,20 @@ const P = {
   me() {
     const h = myHome(), tiles = [['coin', 'Wallet', ''], ['', 'Knocks', '🚪'], ['', 'Guestbook', '❤️'], ['', 'Host a party', '🎉'], ['brush', 'Customise look', ''], ['users', 'Housemate', '']];
     const tileHTML = `<div class="grid2">${tiles.map(t => `<div class="tile off">${t[2] ? `<span class="e" aria-hidden="true">${t[2]}</span>` : ic(t[0])}<span>${t[1]}</span></div>`).join('')}</div>`;
-    if (h) return `<div class="doc" style="display:flex;gap:14px;align-items:center"><button class="cover" style="width:92px;flex:none;background-image:url(passport-cover.jpg)" data-a="pp-open" data-u="${esc(h.user)}" aria-label="Open your passport"></button>
+    if (h) return `${loginState === 'in' ? `<div class="doc" style="background:var(--navy);color:var(--goldlt);border-color:var(--navy)"><div class="h" style="color:#fff">Welcome home, @${esc(h.user)}</div><div style="font-size:13px;margin-top:2px">You are logged in on this phone.</div></div>` : ''}<div class="doc" style="display:flex;gap:14px;align-items:center"><button class="cover" style="width:92px;flex:none;background-image:url(passport-cover.jpg)" data-a="pp-open" data-u="${esc(h.user)}" aria-label="Open your passport"></button>
         <div style="flex:1;min-width:0"><div class="k">Passport of Vinland</div><div class="h" style="font-size:20px;overflow-wrap:anywhere">@${esc(h.user)}</div><div class="sub">Citizen № ${num(h.cn)} · ${esc(statusOf(h))}</div><div class="row" style="margin-top:10px"><button class="push g sm" data-a="pp-open" data-u="${esc(h.user)}">Open passport</button></div></div></div>
-      ${tileHTML}<div class="row" style="margin-top:14px"><a class="push p" href="${mapLink(h)}" data-a="go-map">${ic('map', 17)}My home on map</a></div>`;
+      ${tileHTML}<div class="row" style="margin-top:14px"><a class="push p" href="${mapLink(h)}" data-a="go-map">${ic('map', 17)}My home on map</a></div>
+      <div class="row" style="margin-top:22px"><button class="push sm" style="flex:1" data-a="logout">Log out</button></div><p class="sub" style="text-align:center;margin-top:10px">This phone remembers you for 90 days.</p>`;
     return `<div class="doc" style="display:flex;gap:14px;align-items:center"><div class="cover" style="width:92px;flex:none;background-image:url(passport-cover.jpg)" aria-hidden="true"></div>
         <div style="flex:1;min-width:0"><label class="h" for="pq">Your passport</label><div class="sub">Type your username to open it</div>
         <form class="field" data-a="pp-form" style="margin-top:8px"><input id="pq" type="search" autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="@yourusername" value="${esc(lastUser)}"><button class="push g" style="flex:0 0 72px" type="submit">Open</button></form><p class="err" id="pperr"></p></div></div>
-      <div class="doc frame" style="text-align:center"><div style="color:var(--gold)">${ic('key', 26)}</div><div class="h" style="margin-top:4px">Login opens soon</div><p class="p">You will DM KEY to @buildacountry and get your private link. Then your wallet, knocks and guestbook live here.</p></div>
+      <div class="doc frame" style="text-align:center"><div style="color:var(--gold)">${ic('key', 26)}</div>
+        ${loginState === 'working' ? `<div class="h" style="margin-top:4px">Opening your door…</div><p class="p">One moment.</p>`
+        : `<div class="h" style="margin-top:4px">${session() && !dataOK ? 'Loading your home…' : 'Log in to your life in Vinland'}</div>
+        ${loginState === 'bad' ? `<p class="err" role="alert">That link has expired or was already used. DM KEY again for a new one.</p>` : loginState === 'offline' ? `<p class="err" role="alert">We could not reach Vinland. Check your internet, then DM KEY again for a new link.</p>` : session() && dataOK ? `<p class="err" role="alert">We could not find a home for @${esc(session())}. Follow @buildacountry and comment HOME.</p>` : ''}
+        <p class="p">DM KEY to @buildacountry. We will send your private link. It works once, for 15 minutes.</p>
+        <div class="row" style="margin-top:12px"><a class="push g" href="https://ig.me/m/buildacountry" target="_blank" rel="noopener" data-a="go-ig">DM KEY on Instagram</a></div>
+        <p class="sub" style="margin-top:10px">Never share your link with anyone.</p>`}</div>
       ${tileHTML}`;
   }
 };
@@ -421,6 +452,7 @@ document.addEventListener('click', e => {
   else if (a === 'pp-share') ppShare();
   else if (a === 'go-map') track('site-open-map');
   else if (a === 'go-ig') track('site-open-ig');
+  else if (a === 'logout') logout();
   else if (a === 'sup-open') supOpen();
   else if (a === 'sup-close') supClose();
   else if (a === 'sup-pay') track(el.dataset.t);
@@ -452,6 +484,7 @@ useNotices(null); useDemands(store.get('vin_demands')); useCitizens(store.get('v
 render(); if (location.hash === '#support') supOpen();
 { let u = ''; try { u = new URLSearchParams(location.search).get('u') || ''; } catch (e) {} if (u && dataOK) find(u); else if (u) qText = u; }   // index.html?u=username opens that home card
 load().then(() => { if (qText && !found && !miss && dataOK && tab === 'home') find(qText); });
+if (window.__vinKey) { const k = window.__vinKey; window.__vinKey = null; loginWithKey(k); } else checkSession();
 })();
 </script>
 </body>
