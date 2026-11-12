@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=Poppins:wght@400;500;600&display=swap">
 <style>
-/* Vinland site (12 Nov): design "State Papers" + chunky press-down buttons. No 3D on this page: the map lives in map.html. */
+/* Vinland site (12 Nov): design "State Papers" + chunky press-down buttons. No 3D on this page: the map lives in map/ (Vinland Maps). */
 :root{--navy:#14233f;--navydk:#08101f;--navy2:#1e3157;--gold:#c9a24a;--golddk:#96772c;--goldlt:#ecd9a4;--paper:#f6ecd6;--sheet:#fffaf0;--ink:#1a2238;--mute:#6f6650;--rule:#dccb9f;--stamp:#b3402e;--terra:#b8693f;--page:#f4e6d2;
   --serif:Lora,Georgia,'Times New Roman',serif;--sans:Poppins,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box;margin:0}
@@ -286,7 +286,7 @@ function stampsOf(h) { const out = [], when = dayDate(h.joined).toUpperCase();
 // ---------- pages ----------
 const TABS = [['home', 'home', 'Home'], ['town', 'town', 'Town'], ['times', 'news', 'Times'], ['parliament', 'parl', 'Parliament'], ['me', 'user', 'Me']];
 let tab = 'home', found = null, miss = '', suggest = [], qText = '', lastUser = store.get('vin_last') || '';
-const mapLink = h => 'map.html?home=' + (h.status === 'hidden' || h.villa ? h.n : encodeURIComponent(h.user));
+const mapLink = h => 'map/?home=' + (h.status === 'hidden' || h.villa ? h.n : encodeURIComponent(h.user));
 function homeCard(h) {
   const own = !!session() && h.user.toLowerCase() === session(), nb = neighbours(h), sup = (ST.support[h.user.toLowerCase()] || 0) >= 2;
   return `<div style="margin-top:16px;padding-top:14px;border-top:1px dashed var(--rule);position:relative">
@@ -312,13 +312,13 @@ const P = {
         <div class="row" style="margin-top:12px"><a class="push g" href="${IG}" target="_blank" rel="noopener" data-a="go-ig">Follow + comment HOME</a></div></div>` : ''}</div>
     ${dataOK && next ? `<div class="doc"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap"><div class="h">${esc(next[1])}</div><div class="sub">${num(next[0] - live)} more citizens to unlock</div></div><div class="ruler" role="img" aria-label="${num(live)} of ${num(next[0])} citizens"><i style="width:${Math.max(2, Math.min(100, live / next[0] * 100)).toFixed(1)}%"></i></div></div>` : ''}
     ${nw.length ? `<div class="sec">Latest headlines</div>${nw.map(n => `<button class="doc" data-a="tab" data-t="times" style="display:block;width:100%;text-align:left"><span class="pill">${esc(n.date)}</span><span class="h" style="display:block;margin-top:2px">${esc(headline(n.notice)[0])}</span></button>`).join('')}` : ''}
-    <div class="row" style="margin-top:14px"><a class="push p" href="map.html" data-a="go-map">${ic('map', 17)}Open the map</a></div>`;
+    <div class="row" style="margin-top:14px"><a class="push p" href="map/" data-a="go-map">${ic('map', 17)}Open the map</a></div>`;
   },
   town() {
     if (!dataOK) return wait();
     const occ = d => homes.filter(h => h.status !== 'abandoned' && !h.villa && h.district === d).length;
     const grp = [['m', 'Market'], ['se', 'New Market'], ['beach', 'Beach shops']].map(([k, name]) => { const list = shops.filter(s => s.area === k), total = ST.market.filter(a => a === k).length; return [name, list, total]; });
-    const row = (n, job, h, staff) => `<a class="li" href="map.html?shop=${encodeURIComponent(h.user)}" style="text-decoration:none"><span class="n">${n}</span><span style="flex:1;min-width:0"><b style="font:600 14px var(--serif);display:block">${esc(job)}</b><span class="sub" style="overflow-wrap:anywhere">@${esc(h.user)}${staff && staff.length ? ' · with ' + staff.map(w => '@' + esc(w.user)).join(', ') : ''}</span></span>${ic('chev', 16)}</a>`;
+    const row = (n, job, h, staff) => `<a class="li" href="map/?shop=${encodeURIComponent(h.user)}" style="text-decoration:none"><span class="n">${n}</span><span style="flex:1;min-width:0"><b style="font:600 14px var(--serif);display:block">${esc(job)}</b><span class="sub" style="overflow-wrap:anywhere">@${esc(h.user)}${staff && staff.length ? ' · with ' + staff.map(w => '@' + esc(w.user)).join(', ') : ''}</span></span>${ic('chev', 16)}</a>`;
     return `<div class="sec" style="margin-top:0">Districts</div>
       ${['Central', 'Riverside'].map(d => { const o = occ(d), full = o >= CAP[d]; return `<div class="doc"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div class="h" style="font-size:19px">${d}</div><div class="sub">${num(o)} of ${num(CAP[d])} homes lived in</div></div><span class="tag${full ? '' : ' on'}">${full ? 'Full' : 'Moving in now'}</span></div><div class="bar2"><i style="width:${Math.min(100, o / CAP[d] * 100).toFixed(1)}%"></i></div></div>`; }).join('')}
       <div class="sec">Shops</div>
@@ -327,7 +327,7 @@ const P = {
       <p class="sub" style="margin:2px 2px 0">Want a shop? Comment the job you want under our latest reel. Real jobs only.</p>
       <div class="sec">Famous places</div>
       <div class="grid2">${PLACES.map(p => `<div class="doc" style="margin:0;padding:12px"><div class="h" style="font-size:14.5px">${esc(p[0])}</div><div class="sub" style="margin-top:3px">${esc(p[1])}</div></div>`).join('')}</div>
-      <div class="row" style="margin-top:16px"><a class="push p" href="map.html" data-a="go-map">${ic('map', 17)}Open the map</a></div>
+      <div class="row" style="margin-top:16px"><a class="push p" href="map/" data-a="go-map">${ic('map', 17)}Open the map</a></div>
       <div class="doc frame" style="margin-top:22px"><div class="h">Support Vinland</div><p class="p">Homes are free forever. Villas, upgrades and thank-you packs are optional, and they never buy votes, jobs, titles or power.</p><div class="row" style="margin-top:12px"><button class="push g" data-a="sup-open">See upgrades and support</button></div></div>`;
   },
   times() {
