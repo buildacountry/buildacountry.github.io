@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Vinland · a country built by its followers</title>
+<meta name="description" content="Follow @buildacountry and comment HOME: your home appears in Vinland with your name on it. Find your home, read the Vinland Times, open the map.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Vinland · find your home">
+<meta property="og:description" content="A country built by its followers. Follow and your home appears here.">
+<meta property="og:url" content="https://buildacountry.github.io/">
+<meta property="og:image" content="https://buildacountry.github.io/preview.jpg">
+<meta name="theme-color" content="#14233f">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=Poppins:wght@400;500;600&display=swap">
+<style>
+/* Vinland site (12 Nov): design "State Papers" + chunky press-down buttons. No 3D on this page: the map lives in map.html. */
+:root{--navy:#14233f;--navydk:#08101f;--navy2:#1e3157;--gold:#c9a24a;--golddk:#96772c;--goldlt:#ecd9a4;--paper:#f6ecd6;--sheet:#fffaf0;--ink:#1a2238;--mute:#6f6650;--rule:#dccb9f;--stamp:#b3402e;--terra:#b8693f;--page:#f4e6d2;
+  --serif:Lora,Georgia,'Times New Roman',serif;--sans:Poppins,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;margin:0}
+html{background:var(--navy)}
+body{min-height:100vh;background:repeating-linear-gradient(135deg,transparent 0 11px,rgba(201,162,74,.08) 11px 12px),var(--paper);color:var(--ink);font:400 14px/1.45 var(--sans);-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+button,input{font:inherit;color:inherit}button{cursor:pointer;touch-action:manipulation}a{color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.app{max-width:480px;margin:0 auto;min-height:100vh;position:relative;background:inherit;overflow-x:clip}
+.scr *{min-width:0;overflow-wrap:break-word}
+.top{position:sticky;top:0;z-index:5;min-height:calc(68px + var(--st));padding:var(--st) 16px 0;background:var(--navy);color:var(--goldlt);display:flex;align-items:center;gap:10px;border-bottom:3px double var(--gold)}
+.top h1{font:500 21px/1 var(--serif);letter-spacing:.22em;color:var(--gold)}.top small{font-size:11px;opacity:.85;display:block;margin-top:5px}
+.push{min-height:48px;border-radius:13px;display:flex;align-items:center;justify-content:center;gap:7px;font:600 13.5px var(--sans);border:1.5px solid var(--navy);color:var(--navy);background:var(--sheet);box-shadow:0 4px 0 var(--navy);flex:1;padding:0 12px;text-decoration:none;transition:transform .06s,box-shadow .06s;user-select:none}
+.push:active{transform:translateY(4px);box-shadow:0 0 0 var(--navy)}
+.push.p{background:var(--navy);color:var(--goldlt);border-color:var(--navydk);box-shadow:0 4px 0 var(--navydk)}.push.p:active{box-shadow:0 0 0 var(--navydk)}
+.push.g{background:var(--gold);border-color:var(--golddk);box-shadow:0 4px 0 var(--golddk)}.push.g:active{box-shadow:0 0 0 var(--golddk)}
+.push.sm{min-height:40px;flex:0 0 auto;box-shadow:0 3px 0 var(--navy)}.push.sm:active{transform:translateY(3px)}
+.push[disabled]{opacity:.55;box-shadow:none;transform:none;cursor:default}
+.login{margin-left:auto;flex:0 0 auto;min-height:40px;padding:0 14px;box-shadow:0 3px 0 var(--golddk);max-width:46%;overflow:hidden;white-space:nowrap}
+.scr{padding:16px 16px calc(96px + var(--sb))}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:5;background:var(--sheet);border-top:1px solid var(--rule);display:flex;padding:8px 8px calc(12px + var(--sb));gap:2px}
+.nav button{flex:1;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10.5px;color:#8a8170;border-radius:12px;border:0;background:none}
+.nav .on{background:var(--navy);color:var(--goldlt);font-weight:600;box-shadow:0 4px 0 var(--navydk);transform:translateY(-2px)}
+.doc{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;padding:14px;margin-bottom:12px;position:relative;box-shadow:0 1px 0 #e6dbbd,0 6px 14px -10px rgba(20,35,63,.5)}
+.doc.frame{outline:1px solid var(--gold);outline-offset:-5px;padding:18px}
+.h{font:700 17px/1.25 var(--serif)}.sub{font-size:12px;color:var(--mute)}.p{font-size:13px;color:#4a4636;margin-top:4px}
+.field{display:flex;gap:8px;margin-top:10px}.field input{flex:1;min-width:0;height:48px;border:1.5px solid var(--navy);border-radius:13px;padding:0 14px;font-size:16px;background:#fff}
+.k{font-size:10.5px;color:var(--mute);letter-spacing:.04em;text-transform:uppercase}.v{font:700 16px/1.25 var(--serif)}
+.row{display:flex;gap:10px}.sec{font:700 13px var(--serif);letter-spacing:.14em;color:var(--mute);margin:16px 2px 8px;display:flex;align-items:center;gap:8px;text-transform:uppercase}.sec:after{content:"";flex:1;height:1px;background:var(--rule)}
+.stamp{position:absolute;border:2px solid var(--stamp);color:var(--stamp);border-radius:50%;width:66px;height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;font:600 8px/1.2 var(--sans);letter-spacing:.08em;text-align:center;transform:rotate(-14deg);opacity:.82}
+.stamp:before{content:"";position:absolute;inset:3px;border:1px solid var(--stamp);border-radius:50%}.stamp b{font-size:13px;letter-spacing:.02em}
+.ruler{height:14px;border:1px solid var(--navy);border-radius:2px;margin-top:8px;background:repeating-linear-gradient(90deg,transparent 0 9px,rgba(20,35,63,.25) 9px 10px);position:relative}.ruler i{position:absolute;left:0;top:0;bottom:0;background:var(--gold);opacity:.9}
+.who{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}.who button{background:#f1e6c8;border:0;border-radius:20px;padding:5px 11px;font-size:12px;font-weight:500}
+.pill{display:inline-block;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute)}
+.tag{font:600 10.5px var(--sans);padding:3px 9px;border-radius:20px;background:#f1e6c8;color:#5c4513;white-space:nowrap}.tag.on{background:var(--navy);color:var(--goldlt)}
+.err{font-size:12.5px;color:#a32d2d;margin-top:6px}
+.mast{text-align:center;border-bottom:3px double var(--navy);padding-bottom:8px;margin-bottom:14px}.mast b{font:700 27px/1.1 var(--serif);display:block}
+.bar2{height:6px;background:#efe3c4;border-radius:6px;overflow:hidden;margin-top:5px}.bar2 i{display:block;height:100%;background:var(--gold)}
+.li{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid #efe3c4}.li:first-of-type{border-top:0}.li .n{font:700 13px var(--serif);min-width:30px;color:var(--mute)}
+details{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;margin-bottom:10px}summary{list-style:none;padding:13px 14px;display:flex;align-items:center;gap:8px;cursor:pointer;min-height:48px}summary::-webkit-details-marker{display:none}summary .h{flex:1;font-size:15px}details[open] summary{border-bottom:1px solid #efe3c4}details .in{padding:2px 14px 6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;min-height:62px;display:flex;align-items:center;gap:9px;padding:8px 12px;font:600 13px var(--sans);text-align:left;position:relative;text-decoration:none}
+.tile small{display:block;font:400 11px var(--sans);color:var(--mute)}.tile .e{font-size:19px;line-height:1}.tile svg{color:var(--gold);flex:none}
+.tile.off{color:#7d7663}.tile.off:after{content:"Soon";position:absolute;top:6px;right:8px;font:600 9.5px var(--sans);letter-spacing:.05em;color:var(--mute);background:#f1e6c8;border-radius:20px;padding:1px 7px}
+ol.laws{padding:0;list-style:none;counter-reset:l}ol.laws li{counter-increment:l;display:flex;gap:10px;padding:9px 0;border-top:1px solid #efe3c4}ol.laws li:first-child{border-top:0}ol.laws li:before{content:counter(l);font:700 15px var(--serif);color:var(--gold);min-width:18px}ol.laws b{font:600 13.5px var(--serif);display:block}ol.laws small{color:var(--mute);font-size:12px}
+.cover{display:block;border:0;padding:0;background:var(--navy) center/cover no-repeat;border-radius:4px 10px 10px 4px;box-shadow:3px 0 0 #e9dcc2,5px 0 0 #d9c7a6,0 12px 18px -10px rgba(8,16,31,.75);aspect-ratio:620/868}
+.load{padding:60px 0;text-align:center;color:var(--mute);font:500 15px var(--serif)}
+/* ---------- login result (full screen) + login card ---------- */
+#lr{position:fixed;inset:0;z-index:30;background:var(--navy);color:var(--goldlt);overflow-y:auto;display:flex;align-items:center;justify-content:center;padding:calc(20px + var(--st)) 20px calc(20px + var(--sb))}
+#lr[hidden],#lc[hidden]{display:none}
+.lrbox{width:100%;max-width:400px;text-align:center}
+.lrbox h2{font:700 25px/1.25 var(--serif);color:#fff;margin:14px 0 6px;overflow-wrap:anywhere}.lrbox p{font-size:14px;line-height:1.5}
+.lrbox .lrcover{width:132px;margin:6px auto 0;aspect-ratio:620/868;border-radius:4px 10px 10px 4px;background:var(--navy2) url(passport-cover.jpg) center/cover;box-shadow:3px 0 0 #e9dcc2,5px 0 0 #d9c7a6,0 14px 24px -10px #000}
+.steps{list-style:none;padding:0;margin:20px auto 4px;text-align:left;max-width:300px;font-size:13.5px}.steps li{display:flex;gap:10px;align-items:center;padding:6px 0}
+.steps i{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 13px var(--sans);font-style:normal;border:1.5px solid #6d7a95;color:#9aa6bd}
+.steps .ok i{background:var(--gold);border-color:var(--gold);color:var(--navy)}.steps .bad i{background:#c4543d;border-color:#c4543d;color:#fff}.steps .now i{border-color:var(--gold);color:var(--gold)}.steps .bad{color:#ffd9cf}
+.lrnote{background:rgba(236,217,164,.12);border:1px solid rgba(201,162,74,.5);border-radius:10px;padding:12px 14px;margin-top:18px;font-size:13px;text-align:left}
+.lrdet{font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;color:#9aa6bd;margin-top:14px;overflow-wrap:anywhere}
+#lr .push{border-color:var(--goldlt);box-shadow:0 4px 0 #000;color:var(--goldlt);background:transparent}#lr .push.g{color:var(--navy);background:var(--gold);border-color:var(--golddk);box-shadow:0 4px 0 var(--golddk)}
+#lr .col{display:flex;flex-direction:column;gap:12px;margin-top:22px}
+#lc{position:fixed;inset:0;z-index:25}.lcbg{position:absolute;inset:0;background:rgba(8,16,31,.55)}
+.lcbox{position:absolute;left:50%;transform:translateX(-50%);top:calc(76px + var(--st));width:calc(100% - 24px);max-width:420px;background:var(--sheet);border:1px solid var(--rule);outline:1px solid var(--gold);outline-offset:-5px;border-radius:8px;padding:20px 18px 18px;box-shadow:0 16px 30px -12px rgba(8,16,31,.7)}
+.lcbox .x{position:absolute;right:8px;top:8px;width:40px;height:40px;border:0;background:none;font-size:22px;color:var(--navy)}
+/* ---------- Support Vinland (full-screen sheet, no 3D) ---------- */
+#sup{position:fixed;inset:0;z-index:15;background:repeating-linear-gradient(135deg,transparent 0 11px,rgba(201,162,74,.08) 11px 12px),var(--paper);overflow-y:auto;-webkit-overflow-scrolling:touch}
+#sup[hidden]{display:none}
+#sup .in{max-width:480px;margin:0 auto;padding:0 16px calc(28px + var(--sb))}
+#sup .bar{position:sticky;top:0;z-index:2;margin:0 -16px 16px;min-height:calc(60px + var(--st));padding:var(--st) 16px 0;background:var(--navy);color:var(--gold);display:flex;align-items:center;gap:10px;border-bottom:3px double var(--gold)}
+#sup .bar b{font:500 19px var(--serif);letter-spacing:.06em;flex:1}
+#sup .bar button{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--gold);background:none;color:var(--goldlt);font-size:20px;line-height:1}
+.eimg{aspect-ratio:4/3;background:#e9dcc2;border-radius:4px;overflow:hidden;margin:-4px -4px 12px;position:relative}.eimg img{width:100%;height:100%;object-fit:cover;display:block}
+.eimg .tag{position:absolute;left:8px;top:8px}
+dl.facts{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5px;margin-top:8px}dl.facts dt{color:var(--mute)}dl.facts dd{margin:0}
+.pay{display:flex;gap:10px;margin-top:12px}.pay>div{flex:1;min-width:0}.pay small{display:block;font-size:11px;color:var(--mute);margin-bottom:4px}.pay .push{width:100%}
+/* ---------- passport (full screen) ---------- */
+#pp{position:fixed;inset:0;z-index:20;background:#0b1528;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:calc(12px + var(--st)) 16px calc(16px + var(--sb));color:var(--goldlt)}
+#pp[hidden],#ppshare[hidden],#ppnote[hidden]{display:none}
+#ppx{position:absolute;top:calc(10px + var(--st));right:12px;width:44px;height:44px;border-radius:50%;border:1.5px solid var(--gold);background:none;color:var(--goldlt);font-size:20px;line-height:1}
+.stage{perspective:1400px;width:min(92vw,380px,calc((100vh - 230px) * .716));width:min(92vw,380px,calc((100dvh - 230px) * .716))}
+.book{position:relative;aspect-ratio:358/500;cursor:pointer;--u:3.58px}   /* --u = 1% of the booklet width (set in JS), so the page scales like a real printed page on every phone */
+.pg{position:absolute;inset:0;border-radius:calc(1.6 * var(--u)) calc(3.6 * var(--u)) calc(3.6 * var(--u)) calc(1.6 * var(--u));overflow:hidden;background:var(--page) var(--guil) center/cover;color:var(--navy);box-shadow:-3px 0 0 #d9c7a6,-6px 0 0 #e9dcc2,0 14px 24px -12px rgba(0,0,0,.7);transform-origin:left center;backface-visibility:hidden}
+.pg.cv{background:var(--navy) center/cover no-repeat;box-shadow:3px 0 0 #e9dcc2,6px 0 0 #d9c7a6,0 14px 24px -12px rgba(0,0,0,.7)}
+.pg.out{animation:flip .42s ease-in forwards;z-index:2}.lite .pg.out{animation:fade .16s linear forwards}
+@keyframes flip{to{transform:rotateY(-96deg);opacity:.2}}@keyframes fade{to{opacity:0}}
+.pin{position:absolute;inset:0;padding:calc(5 * var(--u)) calc(5 * var(--u)) calc(4 * var(--u));display:flex;flex-direction:column;font-size:calc(3.9 * var(--u))}
+.pk{font:600 calc(2.35 * var(--u)) var(--sans);letter-spacing:.1em;color:#8a6a4a;text-transform:uppercase}.pv{font:700 calc(4.2 * var(--u))/1.2 var(--serif);margin-bottom:calc(1.9 * var(--u));overflow-wrap:anywhere}
+.mrz{font:calc(3.35 * var(--u))/1.45 ui-monospace,'SF Mono','Cascadia Mono','Roboto Mono',Menlo,Consolas,'Courier New',monospace;letter-spacing:.04em;white-space:nowrap;overflow:hidden;margin-top:auto;padding-top:calc(2.5 * var(--u));border-top:1px solid rgba(20,35,63,.25)}
+.slot{display:flex;align-items:center;justify-content:center}.slot svg{width:calc(31 * var(--u));height:calc(31 * var(--u));mix-blend-mode:multiply;opacity:.88}
+.empty{border:1.5px dashed rgba(20,35,63,.35);border-radius:calc(2.8 * var(--u));width:calc(33 * var(--u));height:calc(28 * var(--u));display:flex;align-items:center;justify-content:center;text-align:center;font:italic 500 calc(3.6 * var(--u))/1.2 var(--serif);color:rgba(20,35,63,.55)}
+.dots{display:flex;justify-content:center;gap:6px;margin:14px 0 12px}.dots button{border:0;background:none;color:#b9ad8a;font-size:12.5px;padding:8px 10px;border-bottom:2px solid transparent}.dots .on{color:#fff;border-color:var(--gold)}
+#pp .row{width:min(92vw,380px)}#pp .push{border-color:var(--goldlt);box-shadow:0 4px 0 #000}#pp .push.g{border-color:var(--golddk);box-shadow:0 4px 0 var(--golddk)}
+@media (prefers-reduced-motion:reduce){.pg.out{animation:fade .01s linear forwards}.push{transition:none}}
+</style>
+<script>
+// Login link from the DM: index.html#k=<one-time code>. Take it out of the address at once, before any other script runs.
+(function () { var m = /^#k=([A-Za-z0-9_-]{20,100})$/.exec(location.hash); if (!m) return; window.__vinKey = m[1]; try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { location.hash = ''; } })();
+</script>
+<script data-goatcounter="https://buildacountry.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+<div class="app">
+  <header class="top"><span id="crest"></span><div><h1>VINLAND</h1><small id="sub">A country built by its followers</small></div><button class="push g login" id="loginBtn" data-a="lc-open" aria-haspopup="dialog">Login</button></header>
+  <main class="scr" id="scr"><p class="load">Opening Vinland…</p></main>
+  <nav class="nav" id="nav" aria-label="Sections"></nav>
+</div>
+<div id="lr" hidden role="dialog" aria-modal="true" aria-labelledby="lrT"><div class="lrbox" id="lrIn"></div></div>
+<div id="lc" hidden role="dialog" aria-modal="true" aria-labelledby="lcT"><div class="lcbg" data-a="lc-close"></div><div class="lcbox" id="lcIn"></div></div>
+<div id="sup" hidden role="dialog" aria-modal="true" aria-label="Support Vinland"><div class="in" id="supIn"></div></div>
+<div id="pp" hidden role="dialog" aria-modal="true" aria-label="Vinland passport">
+  <button id="ppx" data-a="pp-close" aria-label="Close passport">×</button>
+  <div class="stage"><div class="book" id="book" data-a="pp-next"></div></div>
+  <div class="dots" id="ppdots"></div>
+  <p id="ppnote" hidden style="font-size:12.5px;color:#cfc3a0;text-align:center;margin:-4px 0 12px;max-width:min(92vw,380px)"></p>
+  <div class="row"><button class="push g" data-a="pp-share" id="ppshare">Share passport</button><button class="push sm" data-a="pp-close" style="min-height:48px;flex:0 0 104px;background:transparent;color:var(--goldlt)">Close</button></div>
+</div>
+<script src="vinland-static.js"></script>
+<script>
+(() => {
+'use strict';
+const ST = window.VIN_STATIC, IG = 'https://www.instagram.com/buildacountry/';
+const $ = s => document.querySelector(s), scr = $('#scr');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const num = n => Number(n).toLocaleString('en-IN');
+const track = name => { try { if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path: name, title: name, event: true }); } catch (e) {} };
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const hashStr = s => { let x = 7; for (let i = 0; i < s.length; i++) x = (x * 31 + s.charCodeAt(i)) % 9973; return x; };   // same as the map
+
+// ---------- icons (inline, no icon font) ----------
+const IC = { home: 'M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6', town: 'M3 21h18M5 21V8l5-3v16M10 21V11h9v10M13 14h3M13 17h3', news: 'M4 5h13v14H4zM17 9h3v8a2 2 0 0 1-2 2H6M7 9h7M7 12h7M7 15h4', parl: 'M3 21h18M4 10h16L12 4zM6 10v8M10 10v8M14 10v8M18 10v8M4 18h16', user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M4 21c0-4 4-6 8-6s8 2 8 6', search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14M20 20l-4-4', key: 'M8 15a4 4 0 1 0 0-8 4 4 0 0 0 0 8M12 11h9M18 11v3M21 11v2', map: 'M9 4L3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14', share: 'M12 15V4M8 8l4-4 4 4M5 13v6h14v-6', coin: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8', brush: 'M4 20c3 0 4-1 4-3a2 2 0 0 1 4 0M10 15l9-11 1 1-8 12', users: 'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6M3 20c0-3 3-5 6-5s6 2 6 5M16 5a3 3 0 0 1 0 6M17 15c2 .5 4 2 4 5', chev: 'M9 5l7 7-7 7' };
+const ic = (n, s = 20, w = 1.8) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${IC[n]}"/></svg>`;
+const crestPaths = c => `<path d="M40 4L6 18v36c0 20 14 32 34 42 20-10 34-22 34-42V18z" fill="none" stroke="${c}" stroke-width="4" stroke-linejoin="round"/><path d="M40 20l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z" fill="${c}"/><path d="M28 62V44h-3v-8h6v4h5v-4h8v4h5v-4h6v8h-3v18" fill="${c}"/><path d="M10 66c8-6 14-6 22 0s14 6 22 0 10-5 16-2M16 78c7-5 12-5 18 0s11 5 17 0 8-4 12-3" fill="none" stroke="${c}" stroke-width="5" stroke-linejoin="round"/>`;
+const crest = (s, c) => `<svg width="${s}" height="${s * 1.25}" viewBox="0 0 80 100" aria-hidden="true">${crestPaths(c)}</svg>`;
+const houseSVG = s => `<svg width="${s}" height="${s}" viewBox="0 0 96 96" fill="none" stroke="#14233f" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4 88h88"/><path d="M16 88V44h64v44z" fill="#fff6e2"/><path d="M8 46L48 12l40 34z" fill="#b8693f"/><rect x="40" y="60" width="16" height="28" rx="2" fill="#14233f"/><circle cx="52" cy="75" r="1.6" fill="#c9a24a" stroke="none"/><rect x="22" y="56" width="12" height="12" rx="2" fill="#cfe1e8"/><rect x="62" y="56" width="12" height="12" rx="2" fill="#cfe1e8"/><path d="M66 22v-9h8v16" fill="#fff6e2"/><circle cx="10" cy="80" r="7" fill="#9db88a"/><circle cx="86" cy="80" r="7" fill="#9db88a"/></svg>`;
+$('#crest').innerHTML = crest(26, '#c9a24a');
+
+// ---------- data (mirrors buildHomes / buildMarket in map.html; plots come from vinland-static.js) ----------
+const PL = ST ? ST.plots.split('\n').map(l => { const a = l.split(','); return { x: +a[0], z: +a[1], a: a[2], block: +a[3] || 0, bid: +a[4] || 0, label: a[5] || '', floor: +a[6] || 0 }; }) : [];
+const AREA = { F: 'Founder Square', M: 'Middle', E: 'East', W: 'West', NE: 'North-east', NW: 'North-west', S: 'South', SG: 'South, Garden Lane', SE: 'South-east', SW: 'South-west', NSE: 'North Shore east', NSW: 'North Shore west' };
+const CAP = { Central: PL.filter(p => p.a !== 'R').length, Riverside: PL.filter(p => p.a === 'R').length };
+const UNLOCKS = [[250, 'The fog clears'], [500, 'Citizen passports'], [1000, "Citizens' Plaza"], [10000, 'Vinland Tower']];   // same list as the map's old "Locked" tab
+const PLACES = [["Citizens' Plaza", "Every citizen's name is on a brick, around the flag."], ['Government Row', 'Parliament, the Passport office, the Post office and the Embassy.'], ['Vinland Beach', 'Beach shops along the sand, and the Resort.'], ['The Vinland Times', 'The newspaper office with the clock tower, at Central Bridge.'], ['Transport Hub', 'The station and the train line.'], ['Police HQ and Fire Station', 'Side by side, next to Government Row.'], ['Villa Lane', 'Villas built by hand, with the owner’s name.'], ['Riverside', 'The second district, across Central Bridge.']];
+let homes = [], byUser = new Map(), live = 0, pioneers = new Set(), shops = [], bigs = [], notices = [], demands = [], dataOK = false, loadErr = false;
+function parseCSV(text) {
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) { const c = text[i];
+    if (q) { if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (c === '"') q = false; else cell += c; }
+    else if (c === '"') q = true; else if (c === ',') { row.push(cell); cell = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; } else cell += c; }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  const head = (rows.shift() || []).map(h => h.trim().toLowerCase());
+  return rows.filter(r => r.some(v => v.trim() !== '')).map(r => Object.fromEntries(head.map((h, i) => [h, (r[i] || '').trim()])));
+}
+const cleanName = u => String(u || '').trim().replace(/^@/, '').replace(/\s+/g, '').slice(0, 30);
+const normStatus = v => { v = String(v || '').trim().toLowerCase(); return /^(abandon|left|unfollow|gone)/.test(v) ? 'abandoned' : /^(hid|private|anon)/.test(v) ? 'hidden' : 'active'; };
+const launch = () => new Date(ST.launch + 'T00:00:00+05:30');
+const joinedDay = v => { v = String(v || '').trim(); if (/^\d+$/.test(v)) return +v; const d = new Date(v); return isNaN(d) ? 0 : Math.max(0, Math.floor((d - launch()) / 864e5)); };
+const dayNumber = () => Math.max(0, Math.floor((Date.now() - launch()) / 864e5));
+const dayDate = d => new Date(launch().getTime() + d * 864e5).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
+function build(rows) {
+  const seen = new Set(), byNum = new Map(), noNum = [], villaRows = [], never = ST.never.map(x => x.toLowerCase());
+  rows.map(r => { const sh = String(r.shop || '').trim(); return { n: parseInt(String(r.number || '').replace(/[^\d]/g, ''), 10), user: cleanName(r.username), job: (r.profession || r.job || '').trim().slice(0, 24), status: normStatus(r.status), joined: joinedDay(r.joined),
+      shopCol: r.shop === undefined ? undefined : /^(y|yes|true|shop|\d+|staff\s*\d+)$/i.test(sh), shopNum: /b\d/i.test(sh) ? 0 : parseInt(sh.replace(/[^\d]/g, ''), 10) || 0, staff: !/b\d/i.test(sh) && /staff/i.test(sh), bigLot: +((/^(?:staff\s*)?b(\d+)$/i.exec(sh) || [])[1] || 0), bigStaff: /^staff\s*b\d/i.test(sh) }; })
+    .forEach(r => { const key = r.user.toLowerCase();
+      if (!r.user && r.status !== 'hidden') return; if (never.includes(key)) return; if (key && seen.has(key)) return; if (key) seen.add(key);
+      if (ST.villas[key] && r.status === 'active') { villaRows.push(r); return; }
+      if (r.n > 0 && !byNum.has(r.n)) byNum.set(r.n, r); else noNum.push(r); });
+  let free = 1; noNum.forEach(r => { while (byNum.has(free)) free++; r.n = free; byNum.set(free, r); });
+  homes = [...byNum.values()].filter(r => r.n <= PL.length).sort((a, b) => a.n - b.n).map(r => { const p = PL[r.n - 1]; return Object.assign(r, p, { cn: r.n, district: p.a === 'R' ? 'Riverside' : 'Central', area: p.a === 'R' ? 'Block ' + p.block : AREA[p.a] || '' }); });
+  villaRows.forEach(r => { const lot = ST.villas[r.user.toLowerCase()]; homes.push(Object.assign(r, { cn: r.n > 0 ? r.n : 0, n: 10000 + lot, villa: lot, a: 'V', district: 'Central', area: 'Villa Lane, plot ' + lot, x: 0, z: 0 })); });
+  const act = homes.filter(h => h.status !== 'abandoned'); live = act.length;
+  pioneers = new Set(act.slice().sort((a, b) => a.n - b.n).slice(0, ST.pioneers));
+  byUser = new Map(homes.filter(h => h.user && h.status !== 'hidden').map(h => [h.user.toLowerCase(), h]));
+  // market shops: a number in the shop column pins the spot, "yes" takes the first free one, the same number as an owner = staff
+  const hasCol = homes.some(h => h.shopCol !== undefined), jobsRe = new RegExp(ST.shopJobs, 'i'), slots = ST.market;
+  const owners = homes.filter(h => h.status === 'active' && h.job && (hasCol ? h.shopCol : jobsRe.test(h.job))), taken = new Map(), staffAt = new Map();
+  owners.filter(h => !h.staff).forEach(h => { const k = h.shopNum - 1; if (k >= 0 && k < slots.length && !taken.has(k)) taken.set(k, h); });
+  owners.forEach(h => { const k = h.shopNum - 1; if (k >= 0 && taken.has(k) && taken.get(k) !== h) { if (!staffAt.has(k)) staffAt.set(k, []); staffAt.get(k).push(h); } });
+  const isStaff = h => [...staffAt.values()].some(l => l.includes(h));
+  owners.forEach(h => { if (h.staff || [...taken.values()].includes(h) || isStaff(h)) return; let k = 0; while (taken.has(k)) k++; if (k < slots.length) taken.set(k, h); });
+  shops = [...taken.entries()].sort((a, b) => a[0] - b[0]).map(([i, h]) => ({ n: i + 1, area: slots[i], job: h.job, owner: h, staff: (staffAt.get(i) || []).slice(0, 2) }));
+  bigs = homes.filter(h => h.status === 'active' && h.bigLot && !h.bigStaff && h.job).sort((a, b) => a.bigLot - b.bigLot);
+  dataOK = true;
+}
+const shownName = h => h.status === 'hidden' ? 'Citizen #' + h.n : '@' + h.user;
+function neighbours(h) {
+  if (h.villa) return [];
+  const pool = homes.filter(o => o !== h && o.status === 'active' && !o.villa && (h.a === 'R' ? o.bid === h.bid : o.a !== 'R'));
+  const d = o => h.a === 'R' ? Math.abs(o.floor - h.floor) + Math.abs(o.n - h.n) / 1000 : Math.hypot(o.x - h.x, o.z - h.z);
+  return pool.map(o => [d(o), o]).filter(e => h.a === 'R' || e[0] < 40).sort((a, b) => a[0] - b[0]).slice(0, 2).map(e => e[1]);
+}
+// ---------- login (item 4): DM KEY → private link → Supabase gives this phone a session for 90 days ----------
+// The page keeps only its own session code. It is NOT a proof by itself: every feature that matters asks Supabase who owns it.
+const LOGIN_URL = 'https://whhohzvvxhzpcsdcyuks.supabase.co/functions/v1/vin-login';
+const loginApi = body => fetch(LOGIN_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
+let memSession = null;   // used when this browser will not keep anything (some in-app or private browsers)
+const readSession = () => { let s = null; try { s = JSON.parse(store.get('vin_session') || 'null'); } catch (e) {} s = s || memSession; return s && s.user && s.token && (!s.exp || new Date(s.exp) > new Date()) ? s : null; };
+const session = () => { const s = readSession(); return s ? String(s.user).toLowerCase() : ''; };
+const clearSession = () => { memSession = null; try { localStorage.removeItem('vin_session'); } catch (e) {} };
+const IN_IG = /Instagram|FBAN|FBAV/i.test(navigator.userAgent || '');   // Instagram / Facebook in-app browser: it keeps its own logins, apart from Chrome or Safari
+let loginState = '';   // '' | 'working' | 'in'
+// The full-screen login result. Every step is shown, so a login can never fail silently.
+const LR = { code: '', steps: [], user: '', why: '', det: '', saved: true };
+const STEP_NAMES = ['Checking your link', 'Saving your login on this phone', 'Checking with Vinland'];
+const WHY = {
+  used: ['This link was already used 3 times', 'Each link works 3 times. DM KEY to @buildacountry again for a new one.'],
+  expired: ['This link has expired', 'Links work for 24 hours. DM KEY to @buildacountry again for a new one.'],
+  unknown: ['This link is not valid', 'Please use the newest link from your DMs, or DM KEY again for a new one.'],
+  server: ['Vinland could not finish your login', 'Our side had a problem. Tap Try again. If it keeps happening, DM KEY again in a few minutes.'],
+  network: ['No internet connection', 'Your phone could not reach Vinland. Check your internet, then tap Try again. Your link still works.'],
+  check: ['Vinland did not recognise your login', 'Your login was made, but Vinland could not confirm it. DM KEY again for a new link.'],
+};
+function lrRender() {
+  const el = $('#lr'), st = LR.steps, done = st.length === 3 && st.every(x => x === 'ok'), failed = st.includes('bad'), h = LR.user && byUser.get(LR.user);
+  const list = `<ol class="steps" aria-label="Login steps">${STEP_NAMES.map((n, i) => `<li class="${st[i] || ''}"><i aria-hidden="true">${st[i] === 'ok' ? '✓' : st[i] === 'bad' ? '!' : i + 1}</i><span>${n}${st[i] === 'now' ? '…' : ''}</span></li>`).join('')}</ol>`;
+  let body;
+  if (done) body = `<div class="lrcover" aria-hidden="true"></div><h2 id="lrT">You're in, welcome home @${esc(LR.user)}</h2>
+      <p>${h ? `Citizen № ${num(h.cn)} · ${esc(homeLine(h))}` : 'Your home is on its way: new homes show on the site within about 5 minutes.'}</p>
+      ${LR.saved ? '' : '<div class="lrnote">This browser does not keep logins, so you stay logged in only until you close this page.</div>'}
+      ${IN_IG ? '<div class="lrnote"><b>Logged in here, inside Instagram.</b><br>You can open this same link in Chrome or Safari too (works 3 times, for 24 hours).</div>' : ''}
+      <div class="col">${h ? `<button class="push g" data-a="lr-passport">Open my passport</button>` : ''}<button class="push${h ? '' : ' g'}" data-a="lr-close">Go to my page</button></div>`;
+  else if (failed) { const w = WHY[LR.why] || WHY.server, retry = LR.why === 'network' || LR.why === 'server';
+    body = `<div style="font-size:40px;line-height:1" aria-hidden="true">🔑</div><h2 id="lrT">${w[0]}</h2><p>${w[1]}</p>${list}
+      <div class="col">${retry ? '<button class="push g" data-a="lr-retry">Try again</button>' : ''}<a class="push${retry ? '' : ' g'}" href="https://ig.me/m/buildacountry" target="_blank" rel="noopener" data-a="go-ig">DM KEY on Instagram</a><button class="push" data-a="lr-close">Close</button></div>
+      <p class="lrdet">Stopped at step ${st.indexOf('bad') + 1}: ${esc(LR.det)}</p>`; }
+  else body = `<div class="lrcover" aria-hidden="true"></div><h2 id="lrT">Opening your door…</h2>${list}`;
+  $('#lrIn').innerHTML = body; el.hidden = false; document.body.style.overflow = 'hidden';
+}
+function lrClose() { $('#lr').hidden = true; document.body.style.overflow = ''; LR.code = ''; tab = 'me'; render(); }
+async function loginWithKey(code) {
+  LR.code = code; LR.steps = ['now']; LR.user = ''; LR.why = ''; LR.det = ''; LR.saved = true; loginState = 'working'; lrRender();
+  const fail = (i, why, det) => { LR.steps[i] = 'bad'; LR.why = why; LR.det = det; loginState = ''; lrRender(); render(); track('site-login-fail-' + why); };
+  // step 1: swap the one-time code for a session
+  let r;
+  try { const res = await fetch(LOGIN_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'login', code }) });
+    try { r = await res.json(); } catch (e) { r = null; }
+    if (!r) return fail(0, 'server', 'server answered ' + res.status + ' without a result'); }
+  catch (e) { return fail(0, 'network', 'login call did not reach Vinland (' + (e && e.name || 'error') + ')'); }
+  if (!r.ok || !r.user || !r.token) return fail(0, WHY[r.error] ? r.error : 'server', r.error === 'server' ? 'error on Vinland\'s side' + (r.step === 2 ? ' while saving the login' : '') : 'server said ' + (r.error || 'no'));
+  LR.user = String(r.user).toLowerCase(); LR.steps = ['ok', 'now']; lrRender();
+  // step 2: keep the session on this phone (or in memory if the browser will not keep it)
+  const sess = { user: LR.user, token: r.token, exp: r.expires }, txt = JSON.stringify(sess);
+  store.set('vin_session', txt); LR.saved = store.get('vin_session') === txt; memSession = sess;
+  LR.steps = ['ok', 'ok', 'now']; lrRender();
+  // step 3: ask Vinland who owns this session (the same check every later feature uses)
+  try { const m = await loginApi({ action: 'me', token: r.token });
+    if (!m || !m.ok || String(m.user).toLowerCase() !== LR.user) { clearSession(); return fail(2, 'check', 'check said ' + ((m && m.error) || 'someone else')); } }
+  catch (e) { /* the login itself worked; only the extra check could not be reached */ }
+  LR.steps = ['ok', 'ok', 'ok']; loginState = 'in'; track('site-login-ok' + (IN_IG ? '-ig' : '')); lrRender(); render();
+}
+async function checkSession() {   // quiet check on every visit: a session that Supabase no longer knows is forgotten here too
+  const s = readSession(); if (!s) return;
+  try { const r = await loginApi({ action: 'me', token: s.token });
+    if (r && r.ok === false && r.error === 'no session') { clearSession(); render(true); }
+    else if (r && r.ok && r.expires) { s.exp = r.expires; store.set('vin_session', JSON.stringify(s)); if (memSession) memSession.exp = r.expires; } } catch (e) {}   // each visit: 90 days from today
+}
+async function logout() { const s = readSession(); clearSession(); loginState = ''; lcClose(); found = found && lookup(found.user); render(); track('site-logout'); if (s) try { await loginApi({ action: 'logout', token: s.token }); } catch (e) {} }
+const myHome = () => byUser.get(session()) || null;
+const DIWALI_DAY = 8;   // 8 Nov 2026 = Day 8
+const statusOf = h => (h.cn > 0 && h.cn <= 5000) ? 'Founding citizen' : 'Citizen';
+// Stamps: only what really happened and can be proved today. More stamps (first vote, Riverside on foot, parties) arrive with login.
+function stampsOf(h) { const out = [], when = dayDate(h.joined).toUpperCase();
+  if (pioneers.has(h)) out.push({ k: 'pioneer', top: 'PIONEER', mid: ['FIRST', '1,000'], bot: when, col: '#2c4a7c' });
+  if (h.cn > 0 && h.cn <= 5000) out.push({ k: 'founding', top: 'FOUNDING CITIZEN', mid: ['FIRST', '5,000'], bot: when, col: '#b3402e' });
+  if (h.joined <= DIWALI_DAY) out.push({ k: 'diwali', top: 'FESTIVAL OF LIGHTS', mid: ['DIWALI', '2026'], bot: dayDate(DIWALI_DAY).toUpperCase(), col: '#96602a' });   // Dev, 12 Nov: everyone who had moved in by 8 Nov
+  return out; }
+
+// ---------- pages ----------
+const TABS = [['home', 'home', 'Home'], ['town', 'town', 'Town'], ['times', 'news', 'Times'], ['parliament', 'parl', 'Parliament'], ['me', 'user', 'Me']];
+let tab = 'home', found = null, miss = '', suggest = [], qText = '', lastUser = store.get('vin_last') || '';
+const mapLink = h => 'map.html?home=' + (h.status === 'hidden' || h.villa ? h.n : encodeURIComponent(h.user));
+function homeCard(h) {
+  const own = !!session() && h.user.toLowerCase() === session(), nb = neighbours(h), sup = (ST.support[h.user.toLowerCase()] || 0) >= 2;
+  return `<div style="margin-top:16px;padding-top:14px;border-top:1px dashed var(--rule);position:relative">
+    <div class="h" style="font-size:19px;padding-right:64px;overflow-wrap:anywhere">${own ? 'Welcome home, @' + esc(h.user) : '@' + esc(h.user) + ' lives here'}</div>
+    <div class="stamp" style="right:-4px;top:${own ? 40 : 44}px"><span>CITIZEN</span><b>№ ${h.cn || '—'}</b><span>VINLAND</span></div>
+    <div style="display:flex;gap:12px;align-items:center;margin-top:8px">${houseSVG(78)}<div><div class="k">${h.villa ? 'Villa' : 'Home'}</div><div class="v" style="font-size:24px;line-height:1.1">${h.villa ? 'Plot ' + h.villa : '№ ' + num(h.n)}</div><div style="font-size:13px;margin-top:2px">${esc(h.villa ? 'Villa Lane, Central' : h.area + ', ' + h.district)}</div>${h.label ? `<div class="sub">${esc(h.label)}, building R${h.bid}</div>` : ''}</div></div>
+    ${h.job || sup ? `<div class="sub" style="margin-top:8px;color:var(--ink)">${h.job ? esc(h.job) : ''}${h.job && sup ? ' · ' : ''}${sup ? '⭐ Supporter of Vinland' : ''}</div>` : ''}
+    ${nb.length ? `<div class="k" style="margin-top:10px">${own ? 'Your neighbours' : 'Neighbours'}</div><div class="who">${nb.map(o => o.status === 'hidden' ? `<button disabled>Citizen #${o.n}</button>` : `<button data-a="find" data-u="${esc(o.user)}">@${esc(o.user)}</button>`).join('')}</div>` : ''}
+    <div class="row" style="margin-top:14px"><a class="push p" href="${mapLink(h)}" data-a="go-map">${ic('map', 17)}Open on map</a><button class="push" data-a="pp-open" data-i="1" data-u="${esc(h.user)}">${own ? ic('share', 17) + 'Share passport' : 'View passport'}</button></div></div>`;
+}
+function headline(t) { const m = /^(.{12,90}?)([:.!?])\s+(.*)$/s.exec(t); return m ? [m[1] + (m[2] === ':' || m[2] === '.' ? '' : m[2]), m[3].charAt(0).toUpperCase() + m[3].slice(1)] : [t, '']; }
+const news = () => notices.filter(n => !/^always$/i.test(n.date));
+const P = {
+  home() {
+    const next = UNLOCKS.find(u => u[0] > live), nw = news().slice(0, 2);
+    return `<div class="doc frame"><label class="h" for="q">Find your home</label><div class="sub">Type your Instagram username</div>
+      <form class="field" data-a="find-form"><input id="q" type="search" inputmode="text" autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="@yourusername" value="${esc(qText)}" enterkeyhint="search"><button class="push g" style="flex:0 0 96px" type="submit">${ic('search', 16)}Find</button></form>
+      ${!dataOK ? `<p class="err">${loadErr ? 'We could not reach the citizens list. Check your internet and try again.' : 'Loading the citizens list…'}</p>${loadErr ? '<div class="row" style="margin-top:8px"><button class="push sm" data-a="retry">Try again</button></div>' : ''}` : ''}
+      ${found ? homeCard(found) : ''}
+      ${miss ? `<div style="margin-top:16px;padding-top:14px;border-top:1px dashed var(--rule)"><div class="h" style="overflow-wrap:anywhere">No home for @${esc(miss)} yet</div>
+        ${suggest.length ? `<div class="k" style="margin-top:8px">Did you mean</div><div class="who">${suggest.map(o => `<button data-a="find" data-u="${esc(o.user)}">@${esc(o.user)}</button>`).join('')}</div>` : ''}
+        <p class="p">Follow @buildacountry and comment HOME on our latest reel. Your home is waiting.</p><p class="sub" style="margin-top:4px">Just got your home? It shows here in about 5 minutes.</p>
+        <div class="row" style="margin-top:12px"><a class="push g" href="${IG}" target="_blank" rel="noopener" data-a="go-ig">Follow + comment HOME</a></div></div>` : ''}</div>
+    ${dataOK && next ? `<div class="doc"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap"><div class="h">${esc(next[1])}</div><div class="sub">${num(next[0] - live)} more citizens to unlock</div></div><div class="ruler" role="img" aria-label="${num(live)} of ${num(next[0])} citizens"><i style="width:${Math.max(2, Math.min(100, live / next[0] * 100)).toFixed(1)}%"></i></div></div>` : ''}
+    ${nw.length ? `<div class="sec">Latest headlines</div>${nw.map(n => `<button class="doc" data-a="tab" data-t="times" style="display:block;width:100%;text-align:left"><span class="pill">${esc(n.date)}</span><span class="h" style="display:block;margin-top:2px">${esc(headline(n.notice)[0])}</span></button>`).join('')}` : ''}
+    <div class="row" style="margin-top:14px"><a class="push p" href="map.html" data-a="go-map">${ic('map', 17)}Open the map</a></div>`;
+  },
+  town() {
+    if (!dataOK) return wait();
+    const occ = d => homes.filter(h => h.status !== 'abandoned' && !h.villa && h.district === d).length;
+    const grp = [['m', 'Market'], ['se', 'New Market'], ['beach', 'Beach shops']].map(([k, name]) => { const list = shops.filter(s => s.area === k), total = ST.market.filter(a => a === k).length; return [name, list, total]; });
+    const row = (n, job, h, staff) => `<a class="li" href="map.html?shop=${encodeURIComponent(h.user)}" style="text-decoration:none"><span class="n">${n}</span><span style="flex:1;min-width:0"><b style="font:600 14px var(--serif);display:block">${esc(job)}</b><span class="sub" style="overflow-wrap:anywhere">@${esc(h.user)}${staff && staff.length ? ' · with ' + staff.map(w => '@' + esc(w.user)).join(', ') : ''}</span></span>${ic('chev', 16)}</a>`;
+    return `<div class="sec" style="margin-top:0">Districts</div>
+      ${['Central', 'Riverside'].map(d => { const o = occ(d), full = o >= CAP[d]; return `<div class="doc"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div class="h" style="font-size:19px">${d}</div><div class="sub">${num(o)} of ${num(CAP[d])} homes lived in</div></div><span class="tag${full ? '' : ' on'}">${full ? 'Full' : 'Moving in now'}</span></div><div class="bar2"><i style="width:${Math.min(100, o / CAP[d] * 100).toFixed(1)}%"></i></div></div>`; }).join('')}
+      <div class="sec">Shops</div>
+      ${grp.map(([name, list, total]) => `<details><summary><span class="h">${name}</span><span class="tag">${list.length} open${total - list.length > 0 ? ' · ' + (total - list.length) + ' free' : ''}</span></summary><div class="in">${list.map(s => row('№ ' + s.n, s.job, s.owner, s.staff)).join('') || '<p class="sub" style="padding:10px 0">No shop here yet.</p>'}</div></details>`).join('')}
+      ${bigs.length ? `<details><summary><span class="h">Big businesses</span><span class="tag">${bigs.length} open</span></summary><div class="in">${bigs.map(h => `<a class="li" href="${mapLink(h)}" style="text-decoration:none"><span class="n">Lot ${h.bigLot}</span><span style="flex:1;min-width:0"><b style="font:600 14px var(--serif);display:block">${esc(h.job)}</b><span class="sub">@${esc(h.user)}</span></span>${ic('chev', 16)}</a>`).join('')}</div></details>` : ''}
+      <p class="sub" style="margin:2px 2px 0">Want a shop? Comment the job you want under our latest reel. Real jobs only.</p>
+      <div class="sec">Famous places</div>
+      <div class="grid2">${PLACES.map(p => `<div class="doc" style="margin:0;padding:12px"><div class="h" style="font-size:14.5px">${esc(p[0])}</div><div class="sub" style="margin-top:3px">${esc(p[1])}</div></div>`).join('')}</div>
+      <div class="row" style="margin-top:16px"><a class="push p" href="map.html" data-a="go-map">${ic('map', 17)}Open the map</a></div>
+      <div class="doc frame" style="margin-top:22px"><div class="h">Support Vinland</div><p class="p">Homes are free forever. Villas, upgrades and thank-you packs are optional, and they never buy votes, jobs, titles or power.</p><div class="row" style="margin-top:12px"><button class="push g" data-a="sup-open">See upgrades and support</button></div></div>`;
+  },
+  times() {
+    const nw = news(), today = dayNumber(), joined = homes.filter(h => h.status !== 'abandoned' && h.joined === today).length;
+    return `<div class="mast"><b>The Vinland Times</b><span class="sub">Day ${today} edition · only real news</span></div>
+      ${nw.map((n, i) => { const [hd, body] = headline(n.notice); return `<article class="doc${i ? '' : ' frame'}"><span class="pill">${esc(n.date)}</span><div class="h" style="font-size:${i ? 16 : 20}px;margin:2px 0 4px">${esc(hd)}</div>${body ? `<p class="p">${esc(body)}</p>` : ''}</article>`; }).join('') || '<p class="load">No news yet today.</p>'}
+      ${dataOK ? `<div class="doc" style="text-align:center"><span class="pill">Today's number</span><div class="h" style="font-size:34px;line-height:1.1">${joined ? '+' + num(joined) : num(live)}</div><div class="sub">${joined ? 'new citizens moved in today' : 'citizens live in Vinland'}</div></div>` : ''}
+      <div class="doc" style="background:var(--navy);color:var(--goldlt);border-color:var(--navy)"><div class="h" style="color:#fff">Got news?</div><div style="font-size:13px;margin-top:2px">DM NEWS to @buildacountry</div><div class="row" style="margin-top:12px"><a class="push g" href="${IG}" target="_blank" rel="noopener" data-a="go-ig">Open Instagram</a></div></div>`;
+  },
+  parliament() {
+    const isBuilt = d => /^(built|opened|done)/i.test(d.status.trim()), todo = demands.filter(d => !isBuilt(d)).slice(0, 8), built = demands.filter(isBuilt), max = Math.max(1, ...todo.map(d => d.count + d.likes));
+    const dayOf = d => parseInt((d.status.match(/day (\d+)/i) || [])[1] || 0, 10);
+    return `<div class="doc frame"><span class="pill">Votes</span><div class="h" style="font-size:19px;margin-top:2px">No vote is open right now</div><p class="p">Votes run on our Instagram stories for now. Voting here opens with login: citizens only, one vote each.</p></div>
+      <div class="sec">Most asked by citizens</div>
+      <div class="doc">${todo.map(d => `<div class="li"><span style="font-size:20px" aria-hidden="true">${esc(d.emoji)}</span><span style="flex:1;min-width:0"><span style="display:flex;justify-content:space-between;gap:8px"><b style="font:600 14px var(--serif)">${esc(d.demand)}</b><span class="sub" style="white-space:nowrap">${d.count} asked${d.likes ? ' · ' + d.likes + ' likes' : ''}</span></span><span class="bar2" style="display:block"><i style="width:${Math.round((d.count + d.likes) / max * 100)}%"></i></span>${d.status && !/^waiting$/i.test(d.status) ? `<span class="sub">${esc(d.status)}</span>` : ''}</span></div>`).join('') || '<p class="sub">Nothing is waiting right now.</p>'}</div>
+      <p class="sub" style="margin:-4px 2px 0">Ask for a building in the comments of our latest reel.</p>
+      ${built.length ? `<div class="sec">Built because citizens asked</div><div class="doc">${built.sort((a, b) => dayOf(b) - dayOf(a)).slice(0, 6).map(d => `<div class="li"><span style="font-size:20px" aria-hidden="true">${esc(d.emoji)}</span><span style="flex:1;min-width:0"><b style="font:600 14px var(--serif)">${esc(d.demand)}</b><span class="sub" style="display:block">${esc(d.status.replace(/^(built|opened):?\s*/i, '').replace(/[()]/g, '') || 'Built')}${d.asked_by ? ' · asked by ' + esc(d.asked_by) : ''}</span></span><span class="tag">Built</span></div>`).join('')}</div>` : ''}
+      <div class="sec">Elections</div>
+      <div class="doc"><div class="h">No election is open yet</div><p class="p">Department chiefs are elected by all citizens, never appointed. Roles are jobs, not rulers.</p></div>
+      <div class="sec">The laws of Vinland</div>
+      <div class="doc"><ol class="laws">${ST.laws.map(l => `<li><div><b>${esc(l[0])}</b><small>${esc(l[1])}</small></div></li>`).join('')}</ol></div>`;
+  },
+  me() {
+    const h = myHome(), tiles = [['coin', 'Wallet', ''], ['', 'Knocks', '🚪'], ['', 'Guestbook', '❤️'], ['', 'Host a party', '🎉'], ['brush', 'Customise look', ''], ['users', 'Housemate', '']];
+    const tileHTML = `<div class="grid2">${tiles.map(t => `<div class="tile off">${t[2] ? `<span class="e" aria-hidden="true">${t[2]}</span>` : ic(t[0])}<span>${t[1]}</span></div>`).join('')}</div>`;
+    const su = session(), welcome = `<div class="doc" style="background:var(--navy);color:var(--goldlt);border-color:var(--navy)"><div class="h" style="color:#fff;overflow-wrap:anywhere">Welcome home, @${esc(su)}</div><div style="font-size:13px;margin-top:2px">You are logged in on this phone.${IN_IG ? ' (Inside Instagram: you can open your KEY link in Chrome or Safari too, it works 3 times for 24 hours.)' : ''}</div></div>`;
+    const out = `<div class="row" style="margin-top:22px"><button class="push sm" style="flex:1" data-a="logout">Log out</button></div><p class="sub" style="text-align:center;margin-top:10px">This phone remembers you for 90 days after your last visit.</p>`;
+    if (su && h) return `${welcome}<div class="doc" style="display:flex;gap:14px;align-items:center"><button class="cover" style="width:92px;flex:none;background-image:url(passport-cover.jpg)" data-a="pp-open" data-u="${esc(h.user)}" aria-label="Open your passport"></button>
+        <div style="flex:1;min-width:0"><div class="k">Passport of Vinland</div><div class="h" style="font-size:20px;overflow-wrap:anywhere">@${esc(h.user)}</div><div class="sub">Citizen № ${num(h.cn)} · ${esc(statusOf(h))}</div><div class="row" style="margin-top:10px"><button class="push g sm" data-a="pp-open" data-u="${esc(h.user)}">Open passport</button></div></div></div>
+      ${tileHTML}<div class="row" style="margin-top:14px"><a class="push p" href="${mapLink(h)}" data-a="go-map">${ic('map', 17)}My home on map</a></div>${out}`;
+    if (su) return `${welcome}<div class="doc frame" style="text-align:center"><div class="h">${dataOK ? 'Your home is on its way' : 'Loading your home…'}</div><p class="p">${dataOK ? 'New homes show on the site within about 5 minutes. Your passport appears here as soon as your home does.' : 'One moment.'}</p>${dataOK ? '<div class="row" style="margin-top:12px"><button class="push sm" style="flex:1" data-a="retry">Check again</button></div>' : ''}</div>${tileHTML}${out}`;
+    return `<div class="doc" style="display:flex;gap:14px;align-items:center"><div class="cover" style="width:92px;flex:none;background-image:url(passport-cover.jpg)" aria-hidden="true"></div>
+        <div style="flex:1;min-width:0"><label class="h" for="pq">Look at a passport</label><div class="sub">Type a citizen's username</div>
+        <form class="field" data-a="pp-form" style="margin-top:8px"><input id="pq" type="search" autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="@username" value="${esc(lastUser)}"><button class="push g" style="flex:0 0 72px" type="submit">Open</button></form><p class="err" id="pperr"></p></div></div>
+      <div class="doc frame" style="text-align:center"><div style="color:var(--gold)">${ic('key', 26)}</div>
+        <div class="h" style="margin-top:4px">${loginState === 'working' ? 'Opening your door…' : 'Log in to your life in Vinland'}</div>
+        <p class="p">DM KEY to @buildacountry. We will send your private link. It works for 24 hours, up to 3 times.</p>
+        <div class="row" style="margin-top:12px"><a class="push g" href="https://ig.me/m/buildacountry" target="_blank" rel="noopener" data-a="go-ig">DM KEY on Instagram</a></div>
+        <p class="sub" style="margin-top:10px">Never share your link with anyone. Logged in, you can share your own passport.</p></div>
+      ${tileHTML}`;
+  }
+};
+const wait = () => `<p class="load">${loadErr ? 'We could not reach the citizens list.' : 'Opening Vinland…'}</p>${loadErr ? '<div class="row"><button class="push" data-a="retry">Try again</button></div>' : ''}`;
+function render(keepScroll) {
+  const y = window.scrollY, su = session();
+  $('#sub').textContent = dataOK ? `Day ${dayNumber()}  |  ${num(live)} citizens` : 'A country built by its followers';
+  const lb = $('#loginBtn'); lb.innerHTML = su ? '@' + esc(su) : ic('key', 16) + 'Login';
+  $('#nav').innerHTML = TABS.map(t => `<button class="${t[0] === tab ? 'on' : ''}" data-a="tab" data-t="${t[0]}" aria-current="${t[0] === tab ? 'page' : 'false'}">${ic(t[1], 22)}${t[2]}</button>`).join('');
+  scr.innerHTML = P[tab]();
+  window.scrollTo(0, keepScroll ? y : 0);
+}
+function setTab(t, push) { if (!P[t]) t = 'home'; if (t !== tab) track('site-' + t); tab = t; if (push !== false) try { history.replaceState(null, '', t === 'home' ? location.pathname + location.search : '#' + t); } catch (e) {} render(); }
+function lookup(u) { u = cleanName(u).toLowerCase(); const h = byUser.get(u); return h && h.status === 'active' ? h : null; }
+function find(u) {
+  qText = String(u || '').trim(); const key = cleanName(qText).toLowerCase(); found = null; miss = ''; suggest = [];
+  if (!key) { render(true); const q = $('#q'); if (q) q.focus(); return; }
+  if (!dataOK) { render(true); return; }
+  const h = lookup(key);
+  if (h) { found = h; lastUser = h.user; store.set('vin_last', h.user); track('site-find-ok'); }
+  else { miss = key; suggest = [...byUser.values()].filter(o => o.status === 'active' && o.user.toLowerCase().includes(key)).slice(0, 4); track('site-find-miss'); }
+  if (tab !== 'home') tab = 'home'; render(true);
+  const el = scr.querySelector('.doc.frame'); if (el && el.getBoundingClientRect().bottom > innerHeight) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+
+// ---------- passport ----------
+const SKINS = ['#f1c9a5', '#e9b48a', '#c98e62', '#a8714a', '#8a5a3a'], HAIRS = ['#2f2b28', '#3a2a20', '#5a3a24', '#8a5a2b', '#c98b3a', '#1e1a18'], SHIRTS = ['#3f7fbf', '#c8603f', '#2f7a68', '#6a4a8c', '#c9922e', '#47684a', '#b5543a', '#3f5866', '#d88fb0'];   // same colours as the walk-mode people
+// The citizen's own character. Default look comes from the username (so faces differ); "Customise look" will overwrite it later.
+function lookOf(h) { const s = hashStr(h.user.toLowerCase()); return { skin: SKINS[s % SKINS.length], hair: HAIRS[(s >> 2) % HAIRS.length], shirt: SHIRTS[(s >> 4) % SHIRTS.length], cut: (s >> 1) % 5 }; }
+function faceSVG(h, xmlns) { const L = lookOf(h), hair = ['M27 52V34c0-8 6-12 12-12h32c8 0 12 5 12 12v18h-7V40H34v12z', 'M27 50V33c0-8 6-12 12-12h32c8 0 12 5 12 12v8H52l-18 6v3z', 'M25 96V34c0-8 6-13 14-13h32c8 0 14 5 14 13v62h-9V42H34v54z', 'M27 46V35c0-8 6-12 12-12h32c8 0 12 4 12 12v11h-6v-7H33v7zM43 23a12 9 0 0 1 24 0z', 'M30 40v-6c0-6 5-9 10-9h30c5 0 10 3 10 9v6z'][L.cut];
+  return `<svg ${xmlns ? 'xmlns="http://www.w3.org/2000/svg" ' : ''}viewBox="0 0 110 140" width="110" height="140"><rect width="110" height="140" fill="#d8e2e6"/><rect x="16" y="98" width="78" height="46" rx="6" fill="${L.shirt}"/><rect x="45" y="84" width="20" height="18" fill="${L.skin}"/><rect x="45" y="84" width="20" height="6" fill="#000" opacity=".12"/><rect x="29" y="30" width="52" height="58" rx="7" fill="${L.skin}"/><path d="${hair}" fill="${L.hair}"/><rect x="41" y="56" width="7" height="8" rx="2" fill="#1a2238"/><rect x="62" y="56" width="7" height="8" rx="2" fill="#1a2238"/><path d="M46 74q9 6 18 0" stroke="#000" stroke-opacity=".45" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`; }
+// One small security pattern (SVG), made once and reused on every passport page and in the share image.
+const GUIL = (() => { let e = ''; for (let i = 0; i < 18; i++) e += `<ellipse cx="250" cy="150" rx="150" ry="52" transform="rotate(${i * 10} 250 150)"/>`; for (let i = 0; i < 12; i++) e += `<ellipse cx="60" cy="430" rx="110" ry="34" transform="rotate(${i * 15} 60 430)"/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 358 500" width="716" height="1000"><defs><pattern id="w" width="30" height="9" patternUnits="userSpaceOnUse"><path d="M0 4.5q7.5 5 15 0t15 0" fill="none" stroke="#3f5f86" stroke-width=".4" opacity=".2"/></pattern></defs><rect width="358" height="500" fill="#f4e6d2"/><rect width="358" height="500" fill="url(#w)"/><g fill="none" stroke="#b8693f" stroke-width=".55" opacity=".36">${e}</g></svg>`; })();
+const GUIL_URL = 'data:image/svg+xml,' + encodeURIComponent(GUIL);
+document.documentElement.style.setProperty('--guil', `url("${GUIL_URL}")`);
+const stampSVG = (st, id, rot) => { const r = 52; return `<svg viewBox="-56 -56 112 112" style="transform:rotate(${rot}deg)"><defs><path id="${id}t" d="M-39 0A39 39 0 0 1 39 0"/><path id="${id}b" d="M-46 0A46 46 0 0 0 46 0"/></defs><g fill="none" stroke="${st.col}"><circle r="${r}" stroke-width="2.6"/><circle r="47.5" stroke-width=".9"/><circle r="31" stroke-width=".9"/></g><g fill="${st.col}" font-family="Poppins,sans-serif" font-weight="600" text-anchor="middle"><text font-size="${st.top.length > 10 ? 8.2 : 9}" letter-spacing="1.3"><textPath href="#${id}t" startOffset="50%">${st.top}</textPath></text><text font-size="7.6" letter-spacing="1.1"><textPath href="#${id}b" startOffset="50%">${st.bot}</textPath></text><text y="-2" font-size="8.5" letter-spacing="1">${st.mid[0]}</text><text y="12" font-size="${st.mid[1].length > 5 ? 11 : 14}">${st.mid[1]}</text></g></svg>`; };
+const mrz = h => { const pad = (s, n) => (s + '<'.repeat(n)).slice(0, n), u = h.user.toUpperCase().replace(/[^A-Z0-9]/g, '<'), area = (h.villa ? 'VILLA<LANE' : h.district.toUpperCase() + '<' + h.area.toUpperCase().replace(/[^A-Z0-9]+/g, '<'));
+  return [pad('P<VIN<' + u, 34), pad('VN' + String(h.cn || 0).padStart(6, '0') + '<VIN<' + area + '<<DAY' + String(h.joined).padStart(2, '0'), 34)]; };
+const homeLine = h => h.villa ? 'Villa Lane, plot ' + h.villa : h.area + ', ' + h.district;
+function pageHTML(h, i) {
+  if (i === 0) return `<div class="pg cv" style="background-image:url(passport-cover.jpg)"></div>`;
+  if (i === 1) { const st = stampsOf(h).find(s => s.k === 'founding'), m = mrz(h);
+    return `<div class="pg"><div class="pin">
+      <div style="display:flex;align-items:center;gap:calc(2.2 * var(--u));margin-bottom:calc(3.4 * var(--u))">${crest(20, '#14233f').replace('width="20" height="25"', 'style="width:calc(5.6 * var(--u));height:calc(7 * var(--u))"')}<div><div style="font:500 calc(4.8 * var(--u))/1 var(--serif);letter-spacing:.24em">VINLAND</div><div class="pk" style="margin-top:calc(.9 * var(--u))">Passport &nbsp; A home for its people</div></div><div style="margin-left:auto;text-align:right"><div class="pk">Passport №</div><div style="font:700 calc(3.9 * var(--u)) var(--serif);color:var(--stamp)">VN ${String(h.cn || 0).padStart(6, '0')}</div></div></div>
+      <div style="display:flex;gap:calc(3.9 * var(--u))"><div style="width:calc(30.7 * var(--u));flex:none"><div style="border:1.5px solid var(--navy);border-radius:calc(1.1 * var(--u));overflow:hidden;line-height:0">${faceSVG(h).replace('width="110" height="140"', 'style="width:100%;height:auto"')}</div>
+        <div style="font:italic 500 calc(5.4 * var(--u))/1 var(--serif);margin-top:calc(3.6 * var(--u));border-bottom:1px solid rgba(20,35,63,.5);padding:0 calc(.5 * var(--u)) calc(.8 * var(--u));white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(h.user)}</div><div class="pk" style="margin-top:calc(.9 * var(--u))">Signature</div></div>
+        <div style="flex:1;min-width:0"><div class="pk">Name</div><div class="pv" style="font-size:calc(${h.user.length > 16 ? 4.2 : 5.3} * var(--u))">@${esc(h.user)}</div><div class="pk">Citizen №</div><div class="pv">${h.cn ? num(h.cn) : '—'}</div><div class="pk">Home</div><div class="pv">${esc(homeLine(h))}</div><div class="pk">Nationality</div><div class="pv">Vinlandian</div><div class="pk">Moved in</div><div class="pv">Day ${h.joined}, ${dayDate(h.joined)}</div><div class="pk">Status</div><div class="pv" style="margin:0">${statusOf(h)}</div></div></div>
+      ${st ? `<div class="slot" style="position:absolute;right:calc(6 * var(--u));bottom:calc(21 * var(--u))"><span style="display:block;width:calc(25 * var(--u));height:calc(25 * var(--u))">${stampSVG(st, 'pf', -13).replace('<svg ', '<svg style="width:100%;height:100%;transform:rotate(-13deg)" ')}</span></div>` : ''}
+      <div class="mrz">${m.map(esc).join('<br>')}</div></div></div>`; }
+  const sts = stampsOf(h), rots = [-11, 8, -5, 9, -8, 6], cells = [];
+  for (let k = 0; k < 6; k++) cells.push(sts[k] ? `<div class="slot">${stampSVG(sts[k], 'ps' + k, rots[k])}</div>` : `<div class="slot"><div class="empty">Your next<br>stamp</div></div>`);
+  return `<div class="pg"><div class="pin"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:calc(1.5 * var(--u))"><div style="font:500 calc(4.2 * var(--u)) var(--serif);letter-spacing:.24em">STAMPS</div><div class="pk">${sts.length} collected</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;flex:1">${cells.join('')}</div>
+    <div style="display:flex;justify-content:space-between;font:italic 500 calc(3.3 * var(--u)) var(--serif);color:rgba(20,35,63,.7);border-top:1px solid rgba(20,35,63,.25);padding-top:calc(2 * var(--u))"><span>Stamps are earned, never bought.</span><span>3</span></div></div></div>`;
+}
+const pp = $('#pp'), book = $('#book'); let ppH = null, ppI = 0, ppBusy = false;
+const LITE = matchMedia('(prefers-reduced-motion: reduce)').matches || (navigator.deviceMemory && navigator.deviceMemory <= 3) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);   // weak phone: a quick fade, not a page turn
+function ppDots() { $('#ppdots').innerHTML = ['Cover', 'Photo page', 'Stamps'].map((t, i) => `<button class="${i === ppI ? 'on' : ''}" data-a="pp-go" data-i="${i}">${t}</button>`).join(''); const own = ppOwn(), b = $('#ppshare'), note = $('#ppnote');
+  b.hidden = ppI !== 0 && !own; b.innerHTML = ppI === 0 ? 'Tap to open' : ic('share', 17) + 'Share passport';
+  note.hidden = ppI === 0 || own; note.textContent = session() ? 'Only @' + ppH.user + ' can share this passport.' : 'Log in to share your own passport.'; }
+const ppOwn = () => !!(ppH && session() && session() === ppH.user.toLowerCase());   // anyone can look; only the owner, logged in, can share
+function ppShow(i, animate) {
+  if (ppBusy || !ppH) return; i = Math.max(0, Math.min(2, i)); const old = book.firstElementChild, fwd = i > ppI; ppI = i;
+  if (!old || !animate) { book.innerHTML = pageHTML(ppH, i); ppDots(); return; }
+  ppBusy = true; book.insertAdjacentHTML('afterbegin', pageHTML(ppH, i));
+  if (fwd) { old.classList.add('out'); } else { const nw = book.firstElementChild; book.appendChild(nw); nw.classList.add('out'); nw.style.animationDirection = 'reverse'; }
+  const done = () => { if (!ppBusy) return; ppBusy = false; book.innerHTML = pageHTML(ppH, ppI); };
+  (fwd ? old : book.lastElementChild).addEventListener('animationend', done, { once: true }); setTimeout(done, 600); ppDots();
+}
+const ppFit = () => { if (!pp.hidden) book.style.setProperty('--u', book.clientWidth / 100 + 'px'); }; addEventListener('resize', ppFit);
+function ppOpen(u, page) { const h = lookup(u); if (!h) return false; ppH = h; ppI = 0; pp.classList.toggle('lite', !!LITE); pp.hidden = false; document.body.style.overflow = 'hidden'; book.innerHTML = ''; ppFit(); ppShow(page || 0, false); track('site-passport'); return true; }
+function ppClose() { pp.hidden = true; document.body.style.overflow = ''; ppH = null; }
+{ let x0 = null; book.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true }); book.addEventListener('touchend', e => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 40) { book.dataset.sw = '1'; ppShow(ppI + (dx < 0 ? 1 : -1), true); setTimeout(() => delete book.dataset.sw, 350); } }, { passive: true }); }
+
+// "Share passport": the photo page as a 1080 × 1920 Instagram story picture, drawn in the browser. Nothing is uploaded.
+const img = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
+async function storyCanvas(h) {
+  const c = document.createElement('canvas'); c.width = 1080; c.height = 1920; const g = c.getContext('2d'), SER = 'Lora, Georgia, serif', SAN = 'Poppins, system-ui, sans-serif';
+  try { if (document.fonts) await Promise.all(['700 40px Lora', '500 40px Lora', 'italic 500 40px Lora', '600 20px Poppins'].map(f => document.fonts.load(f))); } catch (e) {}
+  const [gu, face, cr] = await Promise.all([img(GUIL_URL), img('data:image/svg+xml,' + encodeURIComponent(faceSVG(h, true))), img('data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 100" width="160" height="200">${crestPaths('#c9a24a')}</svg>`))]);
+  const sp = (t, x, y, ls, align) => { let w = 0; for (const ch of t) w += g.measureText(ch).width + ls; w -= ls; let cx = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x; g.textAlign = 'left'; for (const ch of t) { g.fillText(ch, cx, y); cx += g.measureText(ch).width + ls; } };
+  g.fillStyle = '#14233f'; g.fillRect(0, 0, 1080, 1920); g.strokeStyle = '#c9a24a'; g.lineWidth = 3; g.strokeRect(36, 36, 1008, 1848); g.lineWidth = 1; g.strokeRect(48, 48, 984, 1824);
+  g.drawImage(cr, 500, 96, 80, 100); g.fillStyle = '#c9a24a'; g.font = '500 76px ' + SER; sp('VINLAND', 540, 286, 22, 'center'); g.font = '500 30px ' + SER; sp('PASSPORT', 540, 340, 16, 'center');
+  const K = 2.5, X = 92.5, Y = 400, px = v => X + v * K, py = v => Y + v * K;   // the page is drawn in the same 358 × 500 space as the screen version
+  g.save(); g.beginPath(); if (g.roundRect) g.roundRect(X, Y, 358 * K, 500 * K, [14, 34, 34, 14]); else g.rect(X, Y, 358 * K, 500 * K); g.clip(); g.drawImage(gu, X, Y, 358 * K, 500 * K);
+  g.fillStyle = '#14233f'; g.textBaseline = 'alphabetic';
+  g.font = `500 ${17 * K}px ${SER}`; sp('VINLAND', px(46), py(33), 4 * K); g.fillStyle = '#8a6a4a'; g.font = `600 ${8.4 * K}px ${SAN}`; sp('PASSPORT   A HOME FOR ITS PEOPLE', px(46), py(46), .8 * K);
+  sp('PASSPORT №', px(340), py(25), .8 * K, 'right'); g.fillStyle = '#b3402e'; g.font = `700 ${14 * K}px ${SER}`; g.textAlign = 'right'; g.fillText('VN ' + String(h.cn || 0).padStart(6, '0'), px(340), py(41));
+  { const s = 20 * K / 80; g.save(); g.translate(px(18), py(18)); g.scale(s, s); const P2 = new Path2D('M40 4L6 18v36c0 20 14 32 34 42 20-10 34-22 34-42V18z'); g.strokeStyle = '#14233f'; g.lineWidth = 4; g.stroke(P2); g.fillStyle = '#14233f'; g.fill(new Path2D('M40 20l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z')); g.fill(new Path2D('M28 62V44h-3v-8h6v4h5v-4h8v4h5v-4h6v8h-3v18')); g.lineWidth = 5; g.stroke(new Path2D('M10 66c8-6 14-6 22 0s14 6 22 0 10-5 16-2M16 78c7-5 12-5 18 0s11 5 17 0 8-4 12-3')); g.restore(); }
+  g.drawImage(face, px(18), py(64), 110 * K, 140 * K); g.strokeStyle = '#14233f'; g.lineWidth = 3; g.strokeRect(px(18), py(64), 110 * K, 140 * K);
+  g.fillStyle = '#14233f'; g.textAlign = 'left'; g.font = `italic 500 ${19 * K}px ${SER}`; g.fillText(h.user.length > 12 ? h.user.slice(0, 11) + '…' : h.user, px(20), py(228), 108 * K); g.fillRect(px(18), py(234), 110 * K, 1.5); g.fillStyle = '#8a6a4a'; g.font = `600 ${8.4 * K}px ${SAN}`; sp('SIGNATURE', px(18), py(246), .8 * K);
+  const rows = [['NAME', '@' + h.user, 19], ['CITIZEN №', h.cn ? num(h.cn) : '—', 15], ['HOME', homeLine(h), 15], ['NATIONALITY', 'Vinlandian', 15], ['MOVED IN', `Day ${h.joined}, ${dayDate(h.joined)}`, 15], ['STATUS', statusOf(h), 15]]; let yy = 72;
+  rows.forEach(r => { g.fillStyle = '#8a6a4a'; g.font = `600 ${8.4 * K}px ${SAN}`; sp(r[0], px(142), py(yy), .8 * K); let fs = r[2]; g.fillStyle = '#14233f'; g.font = `700 ${fs * K}px ${SER}`; while (g.measureText(r[1]).width > 196 * K && fs > 9) { fs -= 1; g.font = `700 ${fs * K}px ${SER}`; } g.textAlign = 'left'; g.fillText(r[1], px(142), py(yy + 17 + (r[2] - 15) * .5)); yy += r[2] === 19 ? 47 : 43; });
+  const st = stampsOf(h).find(s => s.k === 'founding');
+  if (st) { g.save(); g.translate(px(282), py(372)); g.rotate(-13 * Math.PI / 180); g.scale(K * .85, K * .85); g.globalAlpha = .86; g.strokeStyle = g.fillStyle = st.col; [[52, 2.6], [47.5, .9], [31, .9]].forEach(([r, w]) => { g.lineWidth = w; g.beginPath(); g.arc(0, 0, r, 0, 7); g.stroke(); });
+    const arc = (t, r, top, fs, ls) => { g.font = `600 ${fs}px ${SAN}`; g.textAlign = 'center'; const ws = [...t].map(ch => g.measureText(ch).width + ls), tot = ws.reduce((a, b) => a + b, 0); let a = -tot / 2 / r; [...t].forEach((ch, i) => { const w = ws[i], ang = a + w / 2 / r; g.save(); if (top) { g.rotate(ang); g.fillText(ch, 0, -r); } else { g.rotate(-ang); g.fillText(ch, 0, r + fs * .72); } g.restore(); a += w / r; }); };
+    arc(st.top, 36.5, true, 8.2, 1.3); arc(st.bot, 37, false, 7.6, 1.1); g.textAlign = 'center'; g.font = `600 8.5px ${SAN}`; g.fillText(st.mid[0], 0, -2); g.font = `600 14px ${SAN}`; g.fillText(st.mid[1], 0, 12); g.restore(); }
+  g.fillStyle = 'rgba(20,35,63,.25)'; g.fillRect(px(18), py(446), 322 * K, 1.5); g.fillStyle = '#14233f'; g.textAlign = 'left'; g.font = `${12.2 * K}px ui-monospace, Menlo, Consolas, 'Courier New', monospace`; mrz(h).forEach((l, i) => { let cx = px(18); const step = 322 * K / 34; for (const ch of l) { g.fillText(ch, cx, py(464 + i * 18)); cx += step; } });
+  g.restore();
+  g.fillStyle = '#ecd9a4'; g.textAlign = 'center'; g.font = '600 46px ' + SER; g.fillText('Your home is waiting.', 540, 1736); g.fillStyle = '#fff'; g.font = '500 32px ' + SAN; g.fillText('Follow @buildacountry and comment HOME', 540, 1796);
+  return c;
+}
+async function ppShare() {
+  if (!ppH) return; if (ppI === 0) { ppShow(1, true); return; }
+  if (!ppOwn()) return;
+  const b = $('#ppshare'), h = ppH; b.disabled = true; b.textContent = 'Making your picture…';
+  try { const c = await storyCanvas(h), blob = await new Promise(ok => c.toBlob(ok, 'image/jpeg', .92)), name = 'vinland-passport-' + h.user + '.jpg', f = new File([blob], name, { type: 'image/jpeg' }); track('site-passport-share');
+    if (navigator.canShare && navigator.canShare({ files: [f] })) await navigator.share({ files: [f], title: 'My Vinland passport' }).catch(() => {});
+    else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
+  } catch (e) { b.textContent = 'Could not make the picture. Try again.'; b.disabled = false; setTimeout(ppDots, 2200); return; }
+  b.disabled = false; ppDots();
+}
+window.__vinStoryURL = async u => { const h = lookup(u); return h ? (await storyCanvas(h)).toDataURL('image/jpeg', .9) : null; };   // used only by the preview screenshots (tools/site_shots2.py)
+
+// ---------- the Login button: a small card ----------
+function lcOpen() { const u = session();
+  $('#lcIn').innerHTML = `<button class="x" data-a="lc-close" aria-label="Close">×</button>` + (u
+    ? `<div class="k">Logged in on this phone</div><div class="h" id="lcT" style="font-size:21px;margin-top:2px;overflow-wrap:anywhere">@${esc(u)}</div>
+       <div class="row" style="margin-top:16px"><button class="push p" data-a="lc-me">Go to my page</button></div><div class="row" style="margin-top:12px"><button class="push" data-a="logout">Log out</button></div>`
+    : `<div class="h" id="lcT" style="font-size:20px">Log in: DM KEY to @buildacountry</div><p class="p">We send you a private link. It works for 24 hours, up to 3 times (Instagram, Chrome, your laptop). Tap it and you are in.</p>
+       <div class="row" style="margin-top:16px"><a class="push g" href="https://ig.me/m/buildacountry" target="_blank" rel="noopener" data-a="go-ig">DM KEY on Instagram</a></div><p class="sub" style="margin-top:10px">Never share your link with anyone.</p>`);
+  $('#lc').hidden = false; }
+function lcClose() { $('#lc').hidden = true; }
+
+// ---------- Support Vinland: the old Real estate + Support content, inside the site (texts come from map.html via vinland-static.js) ----------
+const sup = $('#sup'); let supImgs = null;
+function payRow(tag) { const b = (href, t, label) => href ? `<a class="push g" href="${esc(href)}" target="_blank" rel="noopener" data-a="sup-pay" data-t="${t}">${label}</a>` : `<button class="push" disabled>Coming soon</button>`;
+  return `<div class="pay"><div><small>UPI</small>${b(ST.upi, tag + '-upi', 'Support')}</div><div><small>Card / PayPal</small>${b(ST.coffee, tag + '-coffee', 'Buy us a coffee ☕')}</div></div>`; }
+function supHTML() {
+  return `<div class="bar"><b>Support Vinland</b><button data-a="sup-close" aria-label="Close">×</button></div>
+    <div class="doc frame"><div class="h" style="font-size:19px">Every home here is free, for everyone, forever.</div><p class="p">That never changes. Support is optional and one-time. It pays for building Vinland, and it never buys votes, jobs, titles or power: citizens decide those.</p></div>
+    <div class="sec">Thank-you packs</div>
+    <div class="doc">${ST.packs.map(p => `<div class="li" style="align-items:flex-start"><span style="flex:1"><b style="font:600 14.5px var(--serif);display:block">${esc(p[0])}</b><span class="sub" style="font-size:12.5px">${esc(p[1].replace('Pick a new home in Real estate', 'Pick a new home from the list below'))}</span></span></div>`).join('')}${payRow('support')}</div>
+    <div class="sec">Homes</div>
+    ${ST.estates.map(e => { const free = e[7], soon = e[0] === 'skyscraper', price = ST.estatePrice[e[0]];
+      return `<article class="doc"><div class="eimg"><img data-k="${e[0]}" alt="${esc(e[1])}"${supImgs ? ` src="${supImgs[e[0]]}"` : ''}><span class="tag${free || soon ? '' : ' on'}">${free ? 'Free · every citizen' : soon ? 'Coming soon' : '⭐ Upgrade · open'}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div class="h" style="font-size:19px">${esc(e[1])}</div>${!free && !soon && price ? `<div class="sub"><b style="font:700 16px var(--serif);color:var(--ink)">${esc(price)}</b> one-time</div>` : ''}</div>
+        <p class="p">${esc(e[2])}</p><dl class="facts"><dt>Covers</dt><dd>${esc(e[3])}</dd><dt>Size</dt><dd>${esc(e[4])}</dd><dt>Where</dt><dd>${esc(e[5])}</dd><dt>Lives here</dt><dd>${esc(e[6])}</dd></dl>
+        <div class="who" style="margin-top:8px">${e[8].map(sp => `<span class="tag"${sp[1] ? '' : ' style="opacity:.6"'}>${esc(sp[0])}</span>`).join('')}</div>${!free && !soon ? payRow('estate-' + e[0]) : ''}</article>`; }).join('')}
+    <p class="p">After you pay, write your Instagram username and the pack or home you want. We add it by hand within 24 hours, with your name on it. If you move to a bigger home, your old home goes to a new citizen.</p>
+    <p class="p" style="margin-top:8px"><b>Under 18? Ask a parent first 🙏</b></p>
+    <div class="row" style="margin-top:16px"><button class="push p" data-a="sup-close">Back to Town</button></div>`;
+}
+function supOpen() { $('#supIn').innerHTML = supHTML(); sup.hidden = false; sup.scrollTop = 0; document.body.style.overflow = 'hidden'; track('site-support-open');
+  try { if (location.hash !== '#support') history.pushState(null, '', '#support'); } catch (e) {}
+  if (!supImgs && !window.VIN_SUPPORT_IMG) { const sc = document.createElement('script'); sc.src = 'vinland-support.js'; sc.onload = supPics; document.head.appendChild(sc); } else supPics(); }   // pictures load only now, never with the page
+function supPics() { supImgs = window.VIN_SUPPORT_IMG || null; if (supImgs) sup.querySelectorAll('img[data-k]').forEach(i => { if (!i.src) i.src = supImgs[i.dataset.k] || ''; }); }
+function supClose(fromHistory) { if (sup.hidden) return; sup.hidden = true; document.body.style.overflow = ''; if (!fromHistory) try { history.replaceState(null, '', '#town'); } catch (e) {} }
+
+// ---------- events ----------
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-a]'); if (!el) return; const a = el.dataset.a;
+  if (a === 'tab') setTab(el.dataset.t);
+  else if (a === 'find') find(el.dataset.u);
+  else if (a === 'retry') load();
+  else if (a === 'pp-open') { if (!ppOpen(el.dataset.u, +el.dataset.i || 0)) find(el.dataset.u); }
+  else if (a === 'pp-close') ppClose();
+  else if (a === 'pp-next') { if (!book.dataset.sw) ppShow(ppI === 2 ? 0 : ppI + 1, true); }
+  else if (a === 'pp-go') ppShow(+el.dataset.i, true);
+  else if (a === 'pp-share') ppShare();
+  else if (a === 'go-map') track('site-open-map');
+  else if (a === 'go-ig') track('site-open-ig');
+  else if (a === 'logout') logout();
+  else if (a === 'lc-open') lcOpen();
+  else if (a === 'lc-close') lcClose();
+  else if (a === 'lc-me') { lcClose(); setTab('me'); }
+  else if (a === 'lr-close') lrClose();
+  else if (a === 'lr-retry') { if (LR.code) loginWithKey(LR.code); }
+  else if (a === 'lr-passport') { const u = LR.user; $('#lr').hidden = true; document.body.style.overflow = ''; tab = 'me'; render(); ppOpen(u, 1); }
+  else if (a === 'sup-open') supOpen();
+  else if (a === 'sup-close') supClose();
+  else if (a === 'sup-pay') track(el.dataset.t);
+});
+document.addEventListener('submit', e => { const f = e.target.closest('form[data-a]'); if (!f) return; e.preventDefault();
+  if (f.dataset.a === 'find-form') find(f.querySelector('input').value);
+  else if (f.dataset.a === 'pp-form') { const v = f.querySelector('input').value, er = $('#pperr'); if (!cleanName(v)) { er.textContent = 'Type your username first.'; return; } if (!dataOK) { er.textContent = 'Still loading the citizens list. Try again in a moment.'; return; } if (!ppOpen(v)) { er.textContent = 'No home for @' + cleanName(v) + ' yet. Follow @buildacountry and comment HOME.'; } else { er.textContent = ''; lastUser = cleanName(v); store.set('vin_last', lastUser); } } });
+document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (!pp.hidden) ppClose(); else if (!$('#lc').hidden) lcClose(); else if (!sup.hidden) supClose(); });
+const onHash = () => { const t = location.hash.slice(1); if (t === 'support') { if (tab !== 'town') setTab('town', false); if (sup.hidden) supOpen(); return; } supClose(true); if (P[t] && t !== tab) setTab(t, false); };
+window.addEventListener('hashchange', onHash); window.addEventListener('popstate', onHash);
+
+// ---------- load: show the saved copy at once, then refresh from the sheet ----------
+const getText = async u => { if (!u) return null; try { const r = await fetch(u + (u.includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store' }); return r.ok ? await r.text() : null; } catch (e) { return null; } };
+function useNotices(t) { notices = ((t && parseCSV(t)) || parseCSV(ST.noticesFb)).filter(n => n.notice); }
+function useDemands(t) { let d = t && parseCSV(t); if (!d || !d.some(x => x.demand)) d = parseCSV(ST.demandsFb);
+  demands = d.filter(x => x.demand).map(x => ({ emoji: x.emoji || '•', demand: x.demand, count: parseInt(x.count || x.people, 10) || 1, asked_by: x.asked_by || '', status: x.status || 'Waiting', likes: parseInt(x.likes, 10) || 0 })).sort((a, b) => (b.count + b.likes) - (a.count + a.likes)); }
+function useCitizens(t) { const rows = t ? parseCSV(t) : []; if (!rows.length || !('username' in rows[0])) return false; build(rows); if (found) found = lookup(found.user); return true; }
+async function load() {
+  loadErr = false; if (!dataOK) render(true);
+  const [cT, dT, nT] = await Promise.all([getText(ST.sheet), getText(ST.demands), getText(ST.noticesUrl)]);
+  if (dT) { store.set('vin_demands', dT); useDemands(dT); } if (nT) useNotices(nT);
+  if (cT && cT !== store.get('vin_citizens') && useCitizens(cT)) store.set('vin_citizens', cT); else if (cT && !dataOK) useCitizens(cT);
+  if (!dataOK) loadErr = true;
+  if (!document.activeElement || !/^INPUT$/.test(document.activeElement.tagName) || !dataOK) render(true); else { $('#sub').textContent = `Day ${dayNumber()}  |  ${num(live)} citizens`; }
+}
+if (!ST) { scr.innerHTML = '<p class="load">Vinland could not load. Refresh to try again.</p>'; return; }
+useNotices(null); useDemands(store.get('vin_demands')); useCitizens(store.get('vin_citizens'));
+{ const t = location.hash.slice(1); if (P[t]) tab = t; else if (t === 'support') tab = 'town'; }
+render(); if (location.hash === '#support') supOpen();
+{ let u = ''; try { u = new URLSearchParams(location.search).get('u') || ''; } catch (e) {} if (u && dataOK) find(u); else if (u) qText = u; }   // index.html?u=username opens that home card
+load().then(() => { if (qText && !found && !miss && dataOK && tab === 'home') find(qText); });
+if (window.__vinKey) { const k = window.__vinKey; window.__vinKey = null; loginWithKey(k); } else checkSession();
+})();
+</script>
+</body>
+</html>
