@@ -129,6 +129,30 @@ a.ig{font-size:.84rem;font-weight:600;color:var(--terracotta);text-decoration:no
 .hsteps{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0;padding:0}.hsteps li{font-size:.75rem;padding:4px 8px;border-radius:999px;background:rgba(58,42,32,.06);opacity:.7}
 .hsteps li span{font-weight:700;margin-right:4px}.hsteps li.done{background:rgba(200,96,63,.14);opacity:1}.hsteps li.now{background:#c8603f;color:#fff}
 .lbl.place.hall{background:#fff7e8;color:#3a2a20;font-size:.72rem}
+
+/* ===== 12 Nov: 2D | 3D switch, loading screen, 2D plan (colours match the site: navy, gold, cream) ===== */
+#vload { position: fixed; inset: 0; z-index: 60; background: #f6ecd6; display: grid; place-items: center; text-align: center; color: #14233f; transition: opacity .35s; }
+#vload[hidden], #v2d[hidden], #vtoast[hidden], #c2[hidden], #r2[hidden] { display: none; }
+#vload .vbox { width: min(78vw, 300px); } #vload b { display: block; font: 700 23px/1.2 Lora, Georgia, serif; margin: 14px 0 4px; }
+#vload small { font: 13px Poppins, sans-serif; color: #6f6650; display: block; min-height: 1.5em; }
+#vload .bar { height: 12px; border: 1.5px solid #14233f; border-radius: 8px; overflow: hidden; margin-top: 14px; background: #fffaf0; } #vload .bar i { display: block; height: 100%; width: 4%; background: #c9a24a; transition: width .3s; }
+#vload button { margin-top: 22px; border: 0; background: none; color: #14233f; font: 500 13px Poppins, sans-serif; text-decoration: underline; padding: 10px; cursor: pointer; }
+#modeSw { position: fixed; z-index: 45; left: 12px; top: calc(env(safe-area-inset-top, 0px) + 72px); display: flex; padding: 3px; background: #fffaf0; border: 1.5px solid #14233f; border-radius: 12px; box-shadow: 0 3px 0 #14233f; }
+#modeSw button { border: 0; background: none; color: #14233f; min-width: 46px; height: 38px; border-radius: 9px; font: 600 13px Poppins, sans-serif; cursor: pointer; } #modeSw button[aria-pressed=true] { background: #14233f; color: #ecd9a4; }
+body.walking #modeSw, body.panel-open #modeSw, body.searching2d #modeSw, body.searching2d #v2d .z2 { display: none; }
+#vtoast { position: fixed; z-index: 55; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 24px); max-width: min(92vw, 420px); background: #14233f; color: #ecd9a4; font: 500 13px/1.4 Poppins, sans-serif; padding: 10px 14px; border-radius: 12px; text-align: center; }
+#v2d { position: fixed; inset: 0; z-index: 40; background: #86a548; font-family: Poppins, sans-serif; color: #14233f; }
+#plan { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+#v2d .b2 { position: absolute; left: 12px; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 12px); display: flex; gap: 8px; }
+#v2d .b2 a, #v2d .z2 button { width: 46px; height: 46px; flex: none; display: grid; place-items: center; background: #fffaf0; border: 1.5px solid #14233f; border-radius: 13px; box-shadow: 0 3px 0 #14233f; color: #14233f; font: 600 20px/1 Poppins, sans-serif; text-decoration: none; cursor: pointer; }
+#v2d .b2s { flex: 1; position: relative; min-width: 0; } #q2 { width: 100%; height: 46px; border: 1.5px solid #14233f; border-radius: 13px; padding: 0 14px; font: 16px Poppins, sans-serif; background: #fffaf0; color: #14233f; box-shadow: 0 3px 0 #14233f; }
+#r2 { position: absolute; left: 0; right: 0; top: 54px; background: #fffaf0; border: 1.5px solid #14233f; border-radius: 13px; overflow: hidden; } #r2 button { display: flex; justify-content: space-between; width: 100%; border: 0; border-top: 1px solid #efe3c4; background: none; padding: 12px 14px; font: 500 14px Poppins, sans-serif; color: #14233f; text-align: left; cursor: pointer; } #r2 button:first-child { border-top: 0; } #r2 span { color: #6f6650; font-size: 12px; } #r2 p { padding: 12px 14px; font-size: 13px; color: #6f6650; margin: 0; }
+#v2d .z2 { position: absolute; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 72px); display: grid; gap: 8px; }
+#c2 { position: absolute; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); max-width: 460px; margin: 0 auto; background: #fffaf0; border: 1px solid #dccb9f; outline: 1px solid #c9a24a; outline-offset: -5px; border-radius: 8px; padding: 16px 18px; box-shadow: 0 10px 24px -10px rgba(20, 35, 63, .55); }
+#c2 .k { font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; color: #6f6650; padding-right: 40px; } #c2 .t { font: 700 22px/1.2 Lora, Georgia, serif; } #c2 .u { font-size: 13.5px; margin-top: 2px; overflow-wrap: anywhere; }
+#c2 .x { position: absolute; right: 8px; top: 8px; width: 40px; height: 40px; border: 0; background: none; font-size: 22px; color: #14233f; cursor: pointer; }
+#c2 .row { display: flex; gap: 10px; margin-top: 14px; } #c2 .who { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; } #c2 .who button { background: #f1e6c8; border: 0; border-radius: 20px; padding: 6px 11px; font: 500 12px Poppins, sans-serif; color: #14233f; cursor: pointer; }
+#v2d .push { flex: 1; min-height: 46px; border-radius: 13px; display: flex; align-items: center; justify-content: center; font: 600 13.5px Poppins, sans-serif; border: 1.5px solid #14233f; color: #14233f; background: #fffaf0; box-shadow: 0 4px 0 #14233f; text-decoration: none; cursor: pointer; } #v2d .push:active { transform: translateY(4px); box-shadow: none; } #v2d .push.p { background: #14233f; color: #ecd9a4; border-color: #08101f; box-shadow: 0 4px 0 #08101f; }
 </style>
 <!-- visit counter (GoatCounter: no cookies, loads async, does not slow the page) -->
 <script data-goatcounter="https://buildacountry.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
@@ -136,7 +160,7 @@ a.ig{font-size:.84rem;font-weight:600;color:var(--terracotta);text-decoration:no
 <body>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Poppins:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Lora:wght@600;700&family=Poppins:wght@400;500;600&display=swap">
 <style>
 /* Layout: full-bleed 3D capital built from Dev's sketch; floating top bar, info card right (bottom sheet on phone), view buttons bottom-left. Single warm 4 pm look by choice. */
 :root { color-scheme: light; --sky: #f1dfbf; --card: rgba(251,246,236,.96); --line: rgba(80,60,40,.16); --ink: #2f2b28; --ink-dim: #6f6458; --terracotta: #c8603f; --copper: #4f9a86; --copper-ink: #12392f;
@@ -305,16 +329,208 @@ body.walking .topbar { pointer-events: none; }
 <div id="driveHud" hidden><div class="wtop"><span id="driveSpeed">0 km/h</span><button id="driveExit">✕ Exit drive</button></div><button id="driveHorn" aria-label="Horn">📯</button><div id="driveJoy" aria-label="Steering joystick"><span></span></div><div id="driveNear" hidden></div><div id="driveHint" hidden></div><div id="driveTags"></div></div>
 <div id="walkHud" hidden><div class="wtop"><span id="walkCount">Just you here</span><button id="walkExit">✕ Exit walk</button></div><div class="wemo" aria-label="Wave"><button data-emoji="👋" aria-label="Wave">👋</button><button data-emoji="🎉" aria-label="Celebrate">🎉</button><button data-emoji="🪔" aria-label="Diya">🪔</button><button data-emoji="❤️" aria-label="Love">❤️</button></div><div id="walkJoy" aria-label="Joystick"><span></span></div><div id="walkNear" hidden></div><div id="walkHint" hidden></div><div id="walkTags"></div></div>
 <div class="toast" id="toast" hidden></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<div id="v2d" hidden><canvas id="plan" aria-label="2D plan of Vinland. Drag to move, pinch to zoom, tap a home."></canvas>
+  <div class="b2"><a href="index.html" aria-label="Back to the Vinland site">←</a><div class="b2s"><input id="q2" type="search" placeholder="Search a citizen" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" aria-label="Search a citizen"><div id="r2" hidden></div></div></div>
+  <div class="z2"><button data-z="1" aria-label="Zoom in">+</button><button data-z="-1" aria-label="Zoom out">−</button></div>
+  <div id="c2" hidden aria-live="polite"></div></div>
+<div id="modeSw" role="group" aria-label="Map view"><button data-m="2d" aria-pressed="false">2D</button><button data-m="3d" aria-pressed="false">3D</button></div>
+<div id="vload" hidden><div class="vbox"><svg width="44" height="55" viewBox="0 0 80 100" aria-hidden="true"><path d="M40 4L6 18v36c0 20 14 32 34 42 20-10 34-22 34-42V18z" fill="none" stroke="#c9a24a" stroke-width="4" stroke-linejoin="round"/><path d="M40 20l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z" fill="#c9a24a"/><path d="M28 62V44h-3v-8h6v4h5v-4h8v4h5v-4h6v8h-3v18" fill="#c9a24a"/><path d="M10 66c8-6 14-6 22 0s14 6 22 0 10-5 16-2M16 78c7-5 12-5 18 0s11 5 17 0 8-4 12-3" fill="none" stroke="#c9a24a" stroke-width="5" stroke-linejoin="round"/></svg>
+  <b>Building Vinland…</b><small>Starting…</small><div class="bar"><i></i></div><button type="button">Open the quick 2D map instead</button></div></div>
+<div id="vtoast" hidden role="status"></div>
+<script src="vinland-static.js"></script>
 <script>
+// ================= MAP BOOT (12 Nov): 2D | 3D, loading screen, saved citizens list =================
+// This small script runs first. The 2D plan is plain canvas drawing (no 3D engine), so it opens at once.
+// The 3D world (window.VIN3D, further down) and the 3D engine are loaded only when 3D is wanted.
 (() => {
-if (!window.THREE) { document.getElementById('loading').textContent = 'The 3D map could not load. Refresh to try again.'; return; }
-const wrap = document.getElementById('scene');
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+'use strict';
+const ST = window.VIN_STATIC, $ = s => document.querySelector(s);
+const LS = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+let qs; try { qs = new URLSearchParams(location.search); } catch (e) { qs = { get: () => null }; }
 const PHONE = matchMedia('(max-width: 720px)').matches || matchMedia('(pointer: coarse)').matches;
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, PHONE ? 1.5 : 2));
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const WEAK = PHONE && ((navigator.deviceMemory && navigator.deviceMemory <= 3) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4));
+const hasGL = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl') || c.getContext('experimental-webgl')); } catch (e) { return false; } })();
+// Which view opens: the person's own choice wins; else laptop = 3D; phone = what the speed check found last time, or a first guess from the phone's memory / cores.
+function pickMode() { const v = qs.get('view'); if (v === '2d' || v === '3d') return v; if (!hasGL || !ST) return hasGL ? '3d' : '2d';
+  const c = LS.get('vin_map_mode'); if (c === '2d' || c === '3d') return c; if (!PHONE) return '3d';
+  const a = LS.get('vin_map_auto'); if (a === '2d' || a === '3d') return a; return WEAK ? '2d' : '3d'; }
+
+// ---------- citizens list: saved copy first (the site saves it too), fresh copy in the background ----------
+const C = { text: LS.get('vin_citizens'), p: null, subs: [] };
+const okCSV = t => !!t && /username/i.test(t.slice(0, 300));
+function refresh() { if (C.p || !ST || !ST.sheet) return C.p || Promise.resolve(null);
+  return C.p = fetch(ST.sheet + (ST.sheet.includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.text() : null)
+    .then(t => { if (!okCSV(t)) return null; if (t !== C.text) { C.text = t; LS.set('vin_citizens', t); C.subs.forEach(f => f(t)); } return t; }).catch(() => null); }
+const wantHome = (qs.get('home') || qs.get('shop') || '').trim().replace(/^@/, '').toLowerCase();
+const hasWanted = t => !wantHome || /^\d+$/.test(wantHome) || t.toLowerCase().includes(',' + wantHome + ',');   // a brand-new citizen may not be in the saved copy yet
+async function citizensText() { const p = refresh(); if (okCSV(C.text) && hasWanted(C.text)) return C.text; const t = await p; return t || (okCSV(C.text) ? C.text : null); }
+
+// ---------- loading screen ----------
+const vload = $('#vload'), T0 = performance.now();
+function progress(p, text) { if (!vload || vload.hidden) return; vload.querySelector('i').style.width = Math.max(4, Math.min(100, p)) + '%'; if (text) vload.querySelector('small').textContent = text; }
+function showLoad() { vload.hidden = false; vload.style.opacity = 1; progress(4, 'Starting…'); }
+function hideLoad() { if (vload.hidden) return; vload.style.opacity = 0; setTimeout(() => { vload.hidden = true; }, 380); }
+const toast = (msg, ms = 5200) => { const t = $('#vtoast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, ms); };
+
+// ---------- 3D start ----------
+const CDN = ['https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js', 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js'];
+const loadScript = src => new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+const nextPaint = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+let started3d = false, mode = null, samples = [], judged = false;
+async function start3D() {
+  if (started3d) return; started3d = true; showLoad();
+  try { progress(8, 'Loading the 3D engine…'); await loadScript(CDN[0]); progress(30); await loadScript(CDN[1]);
+    progress(40, 'Building the land…'); await nextPaint(); await nextPaint();
+    window.VIN3D(); }
+  catch (e) { started3d = false; hideLoad(); if (mode === '3d') { setMode('2d'); toast('3D could not start here. Showing the quick 2D map.'); } }
+}
+// Speed check on phones (only when the person has not chosen a view): the 3D map reports its real frame times for the first moments.
+function frameTime(ms) { if (judged || !PHONE || qs.get('view') || LS.get('vin_map_mode') || LS.get('vin_map_auto')) return; samples.push(ms);
+  if (samples.length < 45) return; judged = true; const s = samples.slice(8).sort((a, b) => a - b), med = s[s.length >> 1];
+  if (med > 50) { LS.set('vin_map_auto', '2d'); setMode('2d'); toast('3D is slow on this phone, so here is the quick 2D map. Tap 3D any time.'); } else LS.set('vin_map_auto', '3d'); }
+
+// ---------- 2D plan ----------
+const B = { x0: -480, z0: -900, x1: 1140, z1: 680 };   // the part of the world the plan picture covers, in metres (tools/export_plan.py reads this)
+window.VIN_PLAN = B;
+const V = { el: $('#v2d'), cv: $('#plan'), ctx: null, s: 1, cx: 300, cz: -100, W: 0, H: 0, dpr: 1, homes: [], blds: new Map(), byUser: new Map(), sel: null, img: null, dirty: false, ready: false, labels: [] };
+const AREA = { F: 'Founder Square', M: 'Middle', E: 'East', W: 'West', NE: 'North-east', NW: 'North-west', S: 'South', SG: 'South, Garden Lane', SE: 'South-east', SW: 'South-west', NSE: 'North Shore east', NSW: 'North Shore west' };
+const PL = ST ? ST.plots.split('\n').map(l => { const a = l.split(','); return { x: +a[0], z: +a[1], a: a[2], block: +a[3] || 0, bid: +a[4] || 0, label: a[5] || '', floor: +a[6] || 0 }; }) : [];
+function parseCSV(text) { const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) { const c = text[i];
+    if (q) { if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (c === '"') q = false; else cell += c; }
+    else if (c === '"') q = true; else if (c === ',') { row.push(cell); cell = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; } else cell += c; }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  const head = (rows.shift() || []).map(h => h.trim().toLowerCase());
+  return rows.filter(r => r.some(v => v.trim() !== '')).map(r => Object.fromEntries(head.map((h, i) => [h, (r[i] || '').trim()]))); }
+// same home numbering as buildHomes in the 3D code and build() in index.html
+function build2D(text) {
+  const seen = new Set(), byNum = new Map(), noNum = [], villas = [], never = ST.never.map(x => x.toLowerCase());
+  const st = v => { v = String(v || '').trim().toLowerCase(); return /^(abandon|left|unfollow|gone)/.test(v) ? 'abandoned' : /^(hid|private|anon)/.test(v) ? 'hidden' : 'active'; };
+  parseCSV(text).map(r => ({ n: parseInt(String(r.number || '').replace(/[^\d]/g, ''), 10), user: String(r.username || '').trim().replace(/^@/, '').replace(/\s+/g, '').slice(0, 30), job: (r.profession || r.job || '').trim().slice(0, 24), status: st(r.status) }))
+    .forEach(r => { const k = r.user.toLowerCase(); if (!r.user && r.status !== 'hidden') return; if (never.includes(k)) return; if (k && seen.has(k)) return; if (k) seen.add(k);
+      if (ST.villas[k] && r.status === 'active') { villas.push(r); return; } if (r.n > 0 && !byNum.has(r.n)) byNum.set(r.n, r); else noNum.push(r); });
+  let free = 1; noNum.forEach(r => { while (byNum.has(free)) free++; r.n = free; byNum.set(free, r); });
+  V.homes = [...byNum.values()].filter(r => r.n <= PL.length).sort((a, b) => a.n - b.n).map(r => { const p = PL[r.n - 1]; return Object.assign(r, p, { district: p.a === 'R' ? 'Riverside' : 'Central', area: p.a === 'R' ? 'Block ' + p.block : AREA[p.a] || '' }); });
+  villas.forEach(r => { const lot = ST.villas[r.user.toLowerCase()], L = (ST.lots || {})[lot]; if (L) V.homes.push(Object.assign(r, { n: 10000 + lot, villa: lot, a: 'V', x: L[0], z: L[1], district: 'Central', area: 'Villa Lane, plot ' + lot })); });
+  V.homes.forEach(h => { h.shown = h.status === 'hidden' ? 'Citizen #' + h.n : '@' + h.user; h.gold = (ST.support[h.user.toLowerCase()] || 0) >= 2; });
+  V.blds = new Map(); V.homes.filter(h => h.bid).forEach(h => { let b = V.blds.get(h.bid); if (!b) V.blds.set(h.bid, b = { bid: h.bid, x: h.x, z: h.z, block: h.block, list: [] }); b.list.push(h); });
+  V.byUser = new Map(V.homes.filter(h => h.user && h.status === 'active').map(h => [h.user.toLowerCase(), h]));
+  const cen = f => { const l = PL.filter(f); return l.length ? [l.reduce((a, p) => a + p.x, 0) / l.length, l.reduce((a, p) => a + p.z, 0) / l.length] : null; };
+  const c1 = cen(p => p.a !== 'R'), c2 = cen(p => p.a === 'R'); V.labels = [c1 && ['Central', c1[0], c1[1]], c2 && ['Riverside', c2[0], c2[1]], ST.coast && ['Vinland Beach', 0, (ST.coast.shore + ST.coast.beach0) / 2]].filter(Boolean);
+  V.ready = true; if (V.sel) V.sel = V.homes.find(h => h.n === V.sel.n) || null; V.dirty = true;
+}
+const X = x => (x - V.cx) * V.s + V.W / 2, Y = z => (z - V.cz) * V.s + V.H / 2;
+function fit() { V.dpr = Math.min(2, devicePixelRatio || 1); V.W = V.cv.clientWidth; V.H = V.cv.clientHeight; V.cv.width = Math.round(V.W * V.dpr); V.cv.height = Math.round(V.H * V.dpr); V.dirty = true; }
+function clampV() { const smin = Math.min(V.W / (B.x1 - B.x0), V.H / (B.z1 - B.z0)); V.s = Math.max(smin, Math.min(9, V.s));   // zoom out as far as the whole country, never past it
+  const hw = V.W / 2 / V.s, hh = V.H / 2 / V.s, mid = (a, b, h) => b - a <= 2 * h ? (a + b) / 2 : null, mx = mid(B.x0, B.x1, hw), mz = mid(B.z0, B.z1, hh);
+  V.cx = mx !== null ? mx : Math.max(B.x0 + hw, Math.min(B.x1 - hw, V.cx)); V.cz = mz !== null ? mz : Math.max(B.z0 + hh, Math.min(B.z1 - hh, V.cz)); }
+function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+function draw() {
+  V.dirty = false; if (V.ready && !window.__vinReady) window.__vinReady = performance.now(); const g = V.ctx, W = V.W, H = V.H, s = V.s; g.setTransform(V.dpr, 0, 0, V.dpr, 0, 0);
+  g.fillStyle = '#86a548'; g.fillRect(0, 0, W, H);   // same green as the land, so the edge of the picture never shows as a grey bar
+  if (V.img) { g.imageSmoothingQuality = 'high'; g.drawImage(V.img, X(B.x0), Y(B.z0), (B.x1 - B.x0) * s, (B.z1 - B.z0) * s); }
+  else { g.fillStyle = '#d7e3bd'; g.fillRect(X(B.x0), Y(B.z0), (B.x1 - B.x0) * s, (B.z1 - B.z0) * s); }
+  if (!V.ready) return;
+  const m = 14 / s + 8, x0 = V.cx - W / 2 / s - m, x1 = V.cx + W / 2 / s + m, z0 = V.cz - H / 2 / s - m, z1 = V.cz + H / 2 / s + m, vis = h => h.x > x0 && h.x < x1 && h.z > z0 && h.z < z1;
+  const hs = V.homes.filter(h => !h.bid && vis(h)), bs = [...V.blds.values()].filter(vis), sel = V.sel;
+  if (s < 1.15) {   // far out: every home is a small dot
+    g.fillStyle = '#b8532f'; hs.forEach(h => { if (h.status !== 'abandoned') g.fillRect(X(h.x) - 1.2, Y(h.z) - 1.2, 2.4, 2.4); });
+    g.fillStyle = '#14233f'; bs.forEach(b => g.fillRect(X(b.x) - 1.6, Y(b.z) - 1.6, 3.2, 3.2));
+  } else {
+    const hw = 7.4 * s, r = Math.min(4, hw * .22); g.lineWidth = Math.max(.8, Math.min(1.6, s * .28));
+    hs.forEach(h => { const x = X(h.x) - hw / 2, y = Y(h.z) - hw / 2; rr(g, x, y, hw, hw, r); g.fillStyle = h.status === 'abandoned' ? '#bdb8ad' : h.villa ? '#c9a24a' : h.gold ? '#e2b04a' : '#cf6a45'; g.fill(); g.strokeStyle = '#14233f'; g.stroke();
+      if (s > 2.2 && h.status !== 'abandoned') { g.strokeStyle = 'rgba(20,35,63,.45)'; g.beginPath(); g.moveTo(x + hw * .5, y + 2); g.lineTo(x + hw * .5, y + hw - 2); g.stroke(); } });
+    const bw = 11 * s; bs.forEach(b => { const x = X(b.x) - bw / 2, y = Y(b.z) - bw / 2; rr(g, x, y, bw, bw, Math.min(5, bw * .18)); g.fillStyle = '#f1e2c2'; g.fill(); g.strokeStyle = '#14233f'; g.stroke();
+      if (s > 1.7) { g.fillStyle = '#14233f'; g.font = `600 ${Math.max(8, Math.min(13, bw * .34))}px Poppins, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(b.list.filter(h => h.status !== 'abandoned').length, X(b.x), Y(b.z) + .5); } });
+  }
+  if (sel) { const w = (sel.bid ? 11 : 7.4) * Math.max(s, 1.6) + 8; g.lineWidth = 3; g.strokeStyle = '#c9a24a'; rr(g, X(sel.x) - w / 2, Y(sel.z) - w / 2, w, w, 6); g.stroke(); g.lineWidth = 1.2; g.strokeStyle = '#14233f'; rr(g, X(sel.x) - w / 2 - 2, Y(sel.z) - w / 2 - 2, w + 4, w + 4, 8); g.stroke(); }
+  // name tags: only when zoomed in, nearest to the middle first, never on top of each other
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (s < 1.15) { g.font = '700 ' + Math.max(15, Math.min(26, 30 * s + 8)) + 'px Lora, Georgia, serif'; V.labels.forEach(l => { const x = X(l[1]), y = Y(l[2]); g.lineWidth = 4; g.strokeStyle = 'rgba(255,250,240,.9)'; g.strokeText(l[0], x, y); g.fillStyle = '#14233f'; g.fillText(l[0], x, y); }); }
+  const tags = []; if (s >= 2.6) { hs.forEach(h => { if (h.status !== 'abandoned') tags.push([h.shown, X(h.x), Y(h.z) - 7.4 * s / 2 - 9, h === sel, h.gold || h.villa]); }); bs.forEach(b => tags.push(['R' + b.bid + ' · ' + b.list.filter(h => h.status !== 'abandoned').length + ' homes', X(b.x), Y(b.z) - 11 * s / 2 - 9, sel && sel.bid === b.bid, false])); }
+  else if (sel) tags.push([sel.bid ? 'R' + sel.bid : sel.shown, X(sel.x), Y(sel.z) - (sel.bid ? 11 : 7.4) * Math.max(s, 1.6) / 2 - 14, true, false]);
+  tags.sort((a, b) => (b[3] - a[3]) || (Math.hypot(a[1] - W / 2, a[2] - H / 2) - Math.hypot(b[1] - W / 2, b[2] - H / 2)));
+  g.font = '600 11px Poppins, sans-serif'; const used = []; let n = 0;
+  for (const t of tags) { if (n >= 80) break; const w = g.measureText(t[0]).width + 14, x = t[1] - w / 2, y = t[2] - 9; if (y < 56 || x + w < 0 || x > W) continue;
+    if (!t[3] && used.some(u => x < u[0] + u[2] + 3 && x + w + 3 > u[0] && y < u[1] + 21 && y + 21 > u[1])) continue; used.push([x, y, w]); n++;
+    rr(g, x, y, w, 18, 9); g.fillStyle = t[3] ? '#14233f' : t[4] ? '#f6e3a8' : 'rgba(255,250,240,.96)'; g.fill(); g.lineWidth = .8; g.strokeStyle = '#14233f'; g.stroke(); g.fillStyle = t[3] ? '#ecd9a4' : '#14233f'; g.fillText(t[0], t[1], y + 9.5); }
+}
+function loop() { if (mode === '2d' && V.dirty) draw(); if (mode === '2d') requestAnimationFrame(loop); else V.looping = false; }
+function wake() { V.dirty = true; if (!V.looping && mode === '2d') { V.looping = true; requestAnimationFrame(loop); } }
+function zoomAt(k, px, py) { const wx = V.cx + (px - V.W / 2) / V.s, wz = V.cz + (py - V.H / 2) / V.s; V.s *= k; clampV(); V.cx = wx - (px - V.W / 2) / V.s; V.cz = wz - (py - V.H / 2) / V.s; clampV(); wake(); }
+function goTo(h, s) { V.cx = h.x; V.cz = h.z + (V.H ? 60 / Math.max(s || V.s, 1) : 0); if (s) V.s = Math.max(V.s, s); clampV(); wake(); }
+const c2 = $('#c2');
+function card(h) { V.sel = h; wake(); if (!h) { c2.hidden = true; return; }
+  const b = h.bid ? V.blds.get(h.bid) : null, where = h.villa ? 'Villa Lane, Central' : h.area + ', ' + h.district, live = h.status !== 'abandoned';
+  const others = b ? b.list.filter(o => o !== h && o.status !== 'abandoned') : [];
+  c2.innerHTML = `<button class="x" data-c="close" aria-label="Close">×</button><div class="k">${esc(where)}${h.label ? ' · ' + esc(h.label) + ', building R' + h.bid : ''}</div>
+    <div class="t">${h.villa ? 'Villa, plot ' + h.villa : 'Home № ' + h.n.toLocaleString('en-IN')}</div>
+    <div class="u">${live ? esc(h.shown) : 'This home is empty now'}${live && h.job ? ' · ' + esc(h.job) : ''}${live && h.gold ? ' · ⭐ Supporter' : ''}</div>
+    ${others.length ? `<div class="k" style="margin-top:8px">Also in this building</div><div class="who">${others.map(o => `<button data-c="pick" data-n="${o.n}">${esc(o.shown)}</button>`).join('')}</div>` : ''}
+    <div class="row"><button class="push p" data-c="3d">See in 3D</button>${live && h.status === 'active' ? `<a class="push" href="index.html?u=${encodeURIComponent(h.user)}">Open on the site</a>` : ''}</div>`;
+  c2.hidden = false; }
+function pick(px, py) { const wx = V.cx + (px - V.W / 2) / V.s, wz = V.cz + (py - V.H / 2) / V.s, lim = Math.max(7, 16 / V.s); let best = null, bd = lim;
+  V.homes.forEach(h => { const d = Math.hypot(h.x - wx, h.z - wz) - (h.bid ? 3 : 0); if (d < bd) { bd = d; best = h; } });
+  if (best && best.bid) { const l = V.blds.get(best.bid).list; best = l.find(h => h.status === 'active') || l[0]; }
+  card(best); }
+function init2D() {
+  if (V.ctx) return; V.ctx = V.cv.getContext('2d'); fit(); addEventListener('resize', () => { if (mode === '2d') { fit(); clampV(); wake(); } });
+  V.s = Math.min(V.W / 760, V.H / 900); V.cx = 40; V.cz = -40; clampV();   // opens on Central; pinch out for the whole country
+  const im = new Image(); im.decoding = 'async'; im.onload = () => { V.img = im; wake(); }; im.src = 'vinland-plan.jpg';
+  const pts = new Map(); let moved = 0, pinch = 0, lastTap = 0;
+  V.cv.addEventListener('pointerdown', e => { if (!$('#r2').hidden) { $('#r2').hidden = true; document.body.classList.remove('searching2d'); } V.cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); if (pts.size === 1) moved = 0; if (pts.size === 2) { const p = [...pts.values()]; pinch = Math.hypot(p[0][0] - p[1][0], p[0][1] - p[1][1]); } });
+  V.cv.addEventListener('pointermove', e => { const o = pts.get(e.pointerId); if (!o) return; const dx = e.clientX - o[0], dy = e.clientY - o[1]; pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pts.size === 1) { moved += Math.abs(dx) + Math.abs(dy); V.cx -= dx / V.s; V.cz -= dy / V.s; clampV(); wake(); }
+    else if (pts.size === 2) { const p = [...pts.values()], d = Math.hypot(p[0][0] - p[1][0], p[0][1] - p[1][1]); moved = 99; if (pinch) zoomAt(d / pinch, (p[0][0] + p[1][0]) / 2, (p[0][1] + p[1][1]) / 2); pinch = d; } });
+  const up = e => { const had = pts.has(e.pointerId); pts.delete(e.pointerId); if (pts.size < 2) pinch = 0; if (!had || pts.size || e.type !== 'pointerup') return;
+    if (moved < 8) { const now = performance.now(); if (now - lastTap < 300) zoomAt(1.8, e.clientX, e.clientY); else pick(e.clientX, e.clientY); lastTap = now; } };
+  V.cv.addEventListener('pointerup', up); V.cv.addEventListener('pointercancel', up);
+  V.cv.addEventListener('wheel', e => { e.preventDefault(); zoomAt(Math.exp(-e.deltaY * .0016), e.clientX, e.clientY); }, { passive: false });
+  V.el.addEventListener('click', e => { const z = e.target.closest('[data-z]'); if (z) { zoomAt(+z.dataset.z > 0 ? 1.6 : 1 / 1.6, V.W / 2, V.H / 2); return; }
+    const c = e.target.closest('[data-c]'); if (!c) return; const a = c.dataset.c;
+    if (a === 'close') card(null); else if (a === 'pick') { const h = V.homes.find(x => x.n === +c.dataset.n); if (h) card(h); }
+    else if (a === '3d' && V.sel) { const h = V.sel, key = h.status === 'hidden' || h.villa ? String(h.n) : h.user; try { history.replaceState(null, '', location.pathname + '?home=' + encodeURIComponent(key)); } catch (er) {} setMode('3d', true); if (window.VIN3D_API) window.VIN3D_API.select(key); }
+    else if (a === 'find') { const h = V.byUser.get(c.dataset.u); $('#r2').hidden = true; document.body.classList.remove('searching2d'); $('#q2').blur(); if (h) { goTo(h, 4.2); card(h); } } });
+  const q2 = $('#q2'), r2 = $('#r2');
+  q2.addEventListener('input', () => { const k = q2.value.trim().replace(/^@/, '').toLowerCase(); if (!k || !V.ready) { r2.hidden = true; document.body.classList.remove('searching2d'); return; }
+    const all = [...V.byUser.keys()], hit = all.filter(u => u.startsWith(k)).concat(all.filter(u => !u.startsWith(k) && u.includes(k))).slice(0, 6);
+    document.body.classList.add('searching2d'); r2.innerHTML = hit.length ? hit.map(u => `<button data-c="find" data-u="${esc(u)}">@${esc(V.byUser.get(u).user)} <span>№ ${V.byUser.get(u).villa ? 'Villa' : V.byUser.get(u).n}</span></button>`).join('') : '<p>No home with that name yet. Follow @buildacountry and comment HOME.</p>'; r2.hidden = false; });
+  q2.addEventListener('keydown', e => { if (e.key === 'Enter') { const b = r2.querySelector('button'); if (b) b.click(); } });
+  const use = t => { if (!okCSV(t)) return; build2D(t); if (wantHome && !V.sel) { const h = /^\d+$/.test(wantHome) ? V.homes.find(x => x.n === +wantHome) : V.byUser.get(wantHome); if (h) { goTo(h, 4.2); card(h); } } wake(); };
+  use(C.text); C.subs.push(use); refresh().then(t => { if (!V.ready && !t) toast('We could not reach the citizens list. Check your internet and try again.'); });
+}
+
+// ---------- the 2D | 3D switch ----------
+function setMode(m, byUser) {
+  if (m === '3d' && !hasGL) { toast('This phone cannot show 3D. Here is the 2D map.'); m = '2d'; }
+  mode = m; if (byUser) LS.set('vin_map_mode', m);
+  document.body.classList.toggle('mode2d', m === '2d'); V.el.hidden = m !== '2d';
+  document.querySelectorAll('#modeSw button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === m)));
+  api.paused = m !== '3d';
+  if (m === '2d') { init2D(); fit(); clampV(); wake(); } else if (!started3d) start3D(); else if (window.VIN3D_API) window.VIN3D_API.wake();
+}
+const api = window.VIN_BOOT = { paused: false, PHONE, citizensText, refresh, progress, frameTime, t0: T0,
+  ready() { if (!window.__vinReady) window.__vinReady = performance.now(); hideLoad(); },
+  fail(msg) { hideLoad(); setMode('2d'); toast(msg || '3D could not start here. Showing the quick 2D map.'); } };
+$('#modeSw').addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.m !== mode) setMode(b.dataset.m, true); });
+$('#vload button').addEventListener('click', () => { hideLoad(); setMode('2d', true); });
+if (!ST) { document.body.insertAdjacentHTML('beforeend', '<p style="position:fixed;inset:0;display:grid;place-items:center;font:16px sans-serif">The map could not load. Refresh to try again.</p>'); return; }
+setMode(pickMode());
+})();
+</script>
+<script>
+// The whole 3D world. Called by the boot script above, only when 3D is wanted (after the 3D engine has loaded).
+window.VIN3D = () => {
+if (!window.THREE) { throw new Error('no 3D engine'); }
+const BOOT = window.VIN_BOOT || null, OLDP = /[?&]old=1/.test(location.search);   // ?old=1 = the old slow settings, to compare speed on a real phone
+const wrap = document.getElementById('scene');
+const PHONE = matchMedia('(max-width: 720px)').matches || matchMedia('(pointer: coarse)').matches;
+const FAST = PHONE && !OLDP;   // phones (12 Nov): no antialias, pixel ratio max 1.25, no real shadows (a soft fake shadow under each home instead), name tags 10x a second
+const renderer = new THREE.WebGLRenderer({ antialias: !FAST, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, FAST ? 1.25 : PHONE ? 1.5 : 2));
+renderer.shadowMap.enabled = !FAST; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 wrap.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#e8e4d8');
@@ -1834,13 +2050,18 @@ function updateLabels() { vv.copy(hallPos).project(camera); const nearH = camera
   flagPos.set(flagG.position.x, flagG.position.y + 18 * flagG.scale.y, flagG.position.z); vv.copy(flagPos).project(camera); const on = vv.z < 1 && Math.abs(vv.x) < 1 && Math.abs(vv.y) < 1;
   flagLbl.hidden = !on; if (on) { flagLbl.style.left = ((vv.x + 1) / 2 * wrap.clientWidth) + 'px'; flagLbl.style.top = ((1 - vv.y) / 2 * wrap.clientHeight) + 'px'; }
   const W = wrap.clientWidth, H = wrap.clientHeight;
-  homes.forEach(h => { const sel = h === selected; const d = camera.position.distanceTo(h.lp); vv.copy(h.lp).project(camera);
+  const cardH = narrow && !card.hidden ? card.offsetHeight : 0;
+  homes.forEach(h => { const sel = h === selected; const d = camera.position.distanceTo(h.lp);
+    if (!sel && d >= (h.villa ? (narrow ? 260 : 360) : (narrow ? 120 : 165))) { if (!h.el.hidden) h.el.hidden = true; return; }   // far from the camera: no tag, no work
+    vv.copy(h.lp).project(camera);
     const show = vv.z < 1 && Math.abs(vv.x) < 1.02 && Math.abs(vv.y) < 1.02 && (sel || d < (h.villa ? (narrow ? 260 : 360) : (narrow ? 120 : 165)));
-    const py = (1 - vv.y) / 2 * H; const under = py < (narrow ? 250 : 90) || (narrow && !card.hidden && py > H - card.offsetHeight);
+    const py = (1 - vv.y) / 2 * H; const under = py < (narrow ? 250 : 90) || (cardH && py > H - cardH);
     h.el.hidden = !show || (under && !sel); if (!h.el.hidden) { h.el.style.left = ((vv.x + 1) / 2 * W) + 'px'; h.el.style.top = ((1 - vv.y) / 2 * H) + 'px'; h.el.classList.toggle('sel', sel); h.el.style.zIndex = sel ? 3 : h.villa ? 2 : 1;
       if (h.villa) { const k = Math.max(0.72, Math.min(1, 1 - (d - 90) / 340)); h.el.style.transform = `translate(-50%, -100%) scale(${k.toFixed(2)})`; h.el.style.transformOrigin = '50% 100%'; } } });   // the villa tag shrinks with distance so it never looks bigger than the villa
-  shops.concat(marketCorners).forEach(s => { const sel = s === selected; const d = camera.position.distanceTo(s.lp); vv.copy(s.lp).project(camera);
-    const show = vv.z < 1 && Math.abs(vv.x) < 1.02 && Math.abs(vv.y) < 1.02 && (sel || d < (narrow ? 95 : 130)); const py = (1 - vv.y) / 2 * H; const under = py < (narrow ? 250 : 90) || (narrow && !card.hidden && py > H - card.offsetHeight);
+  shops.concat(marketCorners).forEach(s => { const sel = s === selected; const d = camera.position.distanceTo(s.lp);
+    if (!sel && d >= (narrow ? 95 : 130)) { if (!s.el.hidden) s.el.hidden = true; return; }
+    vv.copy(s.lp).project(camera);
+    const show = vv.z < 1 && Math.abs(vv.x) < 1.02 && Math.abs(vv.y) < 1.02 && (sel || d < (narrow ? 95 : 130)); const py = (1 - vv.y) / 2 * H; const under = py < (narrow ? 250 : 90) || (cardH && py > H - cardH);
     s.el.hidden = !show || (under && !sel); if (!s.el.hidden) { s.el.style.left = ((vv.x + 1) / 2 * W) + 'px'; s.el.style.top = ((1 - vv.y) / 2 * H) + 'px'; s.el.classList.toggle('sel', sel); } }); }
 
 // ---------- card: open, minimise, close ----------
@@ -3798,6 +4019,10 @@ camera.position.set(180, 200, 270); controls.target.set(0, 0, 0);
 const ease = k => k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let last = performance.now();
+const RUN = { until: 0, lastDraw: 0, lastTags: 0, tagsFor: null, homes: false, shown: 0, wasBusy: false, stopped: false };
+const kick = (ms = 700) => { RUN.until = Math.max(RUN.until, performance.now() + ms); if (RUN.stopped && !(BOOT && BOOT.paused)) { RUN.stopped = false; last = performance.now(); requestAnimationFrame(frame); } };
+controls.addEventListener('change', () => kick(350));
+['pointerdown', 'pointermove', 'pointerup', 'wheel', 'touchstart', 'touchmove', 'keydown', 'click', 'resize'].forEach(ev => window.addEventListener(ev, () => kick(), { passive: true, capture: true }));
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   nightFrame(now); plazaFrame(now); crackFrame(now);
@@ -3810,7 +4035,17 @@ function frame(now) {
   { const dx = controls.target.x - camera.position.x, dz = controls.target.z - camera.position.z; compassNeedle.style.transform = 'rotate(' + (Math.atan2(dx, -dz) * -180 / Math.PI).toFixed(1) + 'deg)'; }
   controls.update(); clampView(); }
   const tg = controls.target; sun.target.position.set(Math.round(tg.x / 8) * 8, 0, Math.round(tg.z / 8) * 8); sun.position.copy(sun.target.position).add(SUN_OFF);
-  if (!panelOpen) { updatePeople(dt, now); renderer.render(scene, camera); updateLabels(); updateLayoutLabels(); updateEduLabels(); updateSupTags(); }
+  // Render only when something moves (12 Nov). "Busy" = the camera or the person is doing something: every frame.
+  // Otherwise only the slow background life (walkers, flag, sea foam) is drawn: 10 times a second on phones, 30 on laptops.
+  const busy = OLDP || WALK.on || DRV.on || !!fly || touring || now < RUN.until || (NIGHT.built && Math.abs(NIGHT.k - (NIGHT.on ? 1 : 0)) > 0.001) || CRACK.list.length > 0;
+  const due = busy || now - RUN.lastDraw >= (reduce ? 1000 : NIGHT.on ? 33 : FAST ? 100 : 33);
+  if (!panelOpen && RUN.homes && due) {
+    updatePeople(Math.min(0.25, (now - RUN.lastDraw) / 1000) || dt, now); renderer.render(scene, camera);
+    if (!FAST || now - RUN.lastTags >= 100 || RUN.tagsFor !== selected) { RUN.lastTags = now; RUN.tagsFor = selected; updateLabels(); updateLayoutLabels(); updateEduLabels(); updateSupTags(); }
+    if (BOOT) { if (RUN.wasBusy && busy && RUN.shown > 2) BOOT.frameTime(now - RUN.lastDraw); if (++RUN.shown === 2) BOOT.ready(); }
+    RUN.lastDraw = now; RUN.wasBusy = busy;
+  } else RUN.wasBusy = false;
+  if (BOOT && BOOT.paused) { RUN.stopped = true; return; }   // 2D is showing: the 3D loop sleeps until someone switches back
   requestAnimationFrame(frame);
 }
 document.getElementById('loading').remove();
@@ -3866,7 +4101,7 @@ const DEMANDS_FALLBACK = `emoji,demand,count,likes,asked_by,status
 🎨,Arts centre,2,1,@izabella_maria20 +1,"Built (Day 11, dance studio in the Business District)"
 👟,Shoe / sports store,3,0,@chayce_nathe +2,Opened as a shop
 ⚡,Power & water (dam + solar),2,1,@hritu_raj_hajong +1,Council vote (3 Nov)
-🏎️,Race track,1,6,@no.sh_ig,Next milestone after 10K
+🏎️,Race track,1,6,@no.sh_ig,Waiting
 🚒,Fire station,2,0,@bhaskar_26.01 +1,"Built (Day 8, next to the Police HQ)"
 🗡️,Adventurer's guild,1,1,@vaibhav.4t,Waiting
 🔭,Space observatory,1,0,@havriellepontigon,Waiting
@@ -4950,32 +5185,57 @@ function driveFrame(dt, now) {
     DRV.hornEl.style.left = ((vv.x + 1) / 2 * W) + 'px'; DRV.hornEl.style.top = ((1 - vv.y) / 2 * H) + 'px'; DRV.hornEl.style.opacity = Math.max(0, 1 - age); }
 }
 
+
+// Phones draw no real shadows (the biggest cost). Instead every home and Riverside building gets one soft dark patch on the ground,
+// pushed a little away from the sun. All patches are ONE instanced mesh = one draw call.
+function softShadows() {
+  if (!FAST || softShadows.done) return; softShadows.done = true;
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 6, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(40,30,20,.42)'); gr.addColorStop(.55, 'rgba(40,30,20,.3)'); gr.addColorStop(1, 'rgba(40,30,20,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  const spots = homes.filter(h => !h.flat && !h.villa && h.status !== 'abandoned').map(h => [h.x, h.z, 15]);
+  const seen = new Set(); homes.forEach(h => { if (h.flat && !seen.has(h.flat.bid)) { seen.add(h.flat.bid); const b = RS.blds.find(x => x.id === h.flat.bid); if (b) spots.push([b.x, b.z, 24]); } });
+  if (!spots.length) return;
+  const geo = new THREE.PlaneGeometry(1, 1); geo.rotateX(-Math.PI / 2);
+  const im = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, fog: true }), spots.length);
+  const M = new THREE.Matrix4(), q = new THREE.Quaternion(), P0 = new THREE.Vector3(), S0 = new THREE.Vector3();
+  spots.forEach((p, i) => { P0.set(p[0] + 1.6, 0.14, p[1] - 1.9); S0.set(p[2], 1, p[2]); M.compose(P0, q, S0); im.setMatrixAt(i, M); });
+  im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; im.renderOrder = 1; scene.add(im);
+}
+window.VIN3D_API = { wake: () => kick(900),
+  select: q => { q = String(q).replace(/^@/, '').toLowerCase(); const h = /^\d+$/.test(q) ? homes.find(x => x.n === +q) : homes.find(x => x.status !== 'hidden' && x.user.toLowerCase() === q); if (h) { if (narrow) setMin(false); selectHome(h); kick(2500); } return !!h; } };
+if (window.__vinHook) window.__vinHook(code => eval(code));   // only the build tools set this (tools/export_plan.py)
+
 // ----- load the sheet -----
 (async function load() {
   let rows = null;
-  if (SHEET_CSV_URL) {
-    try { const r = await fetch(SHEET_CSV_URL + (SHEET_CSV_URL.includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store' }); if (r.ok) rows = parseCSV(await r.text()); } catch (e) {}
-  }
-  if (!rows || !rows.length) rows = parseCSV(FALLBACK);
   const get = async u => { if (!u) return null; try { const r = await fetch(u + (u.includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store' }); return r.ok ? await r.text() : null; } catch (e) { return null; } };
-  const [dTxt, mTxt, lTxt, nTxt] = await Promise.all([get(DEMANDS_CSV_URL), get(MOOD_CSV_URL), get(LAYOUT_CSV_URL), get(NOTICES_CSV_URL)]);
+  if (BOOT) { BOOT.progress(62, 'Reading the citizens list…'); const t = await BOOT.citizensText(); if (t) rows = parseCSV(t); }   // the copy saved on this phone (by the site or the last visit) comes back at once; a fresh copy is fetched in the background for next time
+  else if (SHEET_CSV_URL) { const t = await get(SHEET_CSV_URL); if (t) rows = parseCSV(t); }
+  if (!rows || !rows.length) rows = parseCSV(FALLBACK);
+  const useDemands = dTxt => { let dRows = dTxt && parseCSV(dTxt); if (!dRows || !dRows.some(d => d.demand)) dRows = parseCSV(DEMANDS_FALLBACK);
+    demands = dRows.filter(d => d.demand).map(d => ({ emoji: d.emoji || '•', demand: d.demand, count: parseInt(d.count || d.people, 10) || 1, asked_by: d.asked_by || '', status: d.status || 'Waiting', likes: parseInt(d.likes, 10) || 0 })).sort((a, b) => (b.count + b.likes) - (a.count + a.likes));
+    const top = demands.find(d => !/built|opened/i.test(d.status)); if (top) top.top = true; };
+  // only things that change where homes go may delay the homes (both links are empty today)
+  const [mTxt, lTxt, nTxt] = await Promise.all([get(MOOD_CSV_URL), get(LAYOUT_CSV_URL), get(NOTICES_CSV_URL)]);
   notices = ((nTxt && parseCSV(nTxt)) || parseCSV(NOTICES_FALLBACK)).filter(n => n.notice);
-  let dRows = dTxt && parseCSV(dTxt); if (!dRows || !dRows.some(d => d.demand)) dRows = parseCSV(DEMANDS_FALLBACK);
-  demands = dRows.filter(d => d.demand).map(d => ({ emoji: d.emoji || '•', demand: d.demand, count: parseInt(d.count || d.people, 10) || 1, asked_by: d.asked_by || '', status: d.status || 'Waiting', likes: parseInt(d.likes, 10) || 0 })).sort((a, b) => (b.count + b.likes) - (a.count + a.likes));
-  { const top = demands.find(d => !/built|opened/i.test(d.status)); if (top) top.top = true; }
+  useDemands(null); get(DEMANDS_CSV_URL).then(t => { if (t) useDemands(t); });   // the demands list is only for the old panels: it never holds the homes back
   if (mTxt) { const m = parseCSV('key,value\n' + mTxt); m.forEach(r => { if (r.key) mood[r.key.toLowerCase()] = r.value; }); }
   if (lTxt) { const cell = parseCSV('a\n' + lTxt)[0]; if (cell && cell.a) loadLayoutText(cell.a); }
+  if (BOOT) { BOOT.progress(78, 'Placing the homes…'); await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0))); }
   buildHomes(rows);
   roadDress();
   drawLayout(false);
   buildPeople();
+  softShadows();
+  if (BOOT) BOOT.progress(96, 'Opening the map…');
+  RUN.homes = true; kick(1800);
   const hh = location.hash.slice(1);
   if (['citizens', 'country', 'estate', 'locked'].includes(hh)) setTab(hh);
 })();
 
 requestAnimationFrame(frame);
 
-})();
+};/*__VIN3D_END__*/
 </script>
 
 </body>
