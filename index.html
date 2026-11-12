@@ -64,6 +64,22 @@ details{background:var(--sheet);border:1px solid var(--rule);border-radius:6px;m
 ol.laws{padding:0;list-style:none;counter-reset:l}ol.laws li{counter-increment:l;display:flex;gap:10px;padding:9px 0;border-top:1px solid #efe3c4}ol.laws li:first-child{border-top:0}ol.laws li:before{content:counter(l);font:700 15px var(--serif);color:var(--gold);min-width:18px}ol.laws b{font:600 13.5px var(--serif);display:block}ol.laws small{color:var(--mute);font-size:12px}
 .cover{display:block;border:0;padding:0;background:var(--navy) center/cover no-repeat;border-radius:4px 10px 10px 4px;box-shadow:3px 0 0 #e9dcc2,5px 0 0 #d9c7a6,0 12px 18px -10px rgba(8,16,31,.75);aspect-ratio:620/868}
 .load{padding:60px 0;text-align:center;color:var(--mute);font:500 15px var(--serif)}
+/* ---------- login result (full screen) + login card ---------- */
+#lr{position:fixed;inset:0;z-index:30;background:var(--navy);color:var(--goldlt);overflow-y:auto;display:flex;align-items:center;justify-content:center;padding:calc(20px + var(--st)) 20px calc(20px + var(--sb))}
+#lr[hidden],#lc[hidden]{display:none}
+.lrbox{width:100%;max-width:400px;text-align:center}
+.lrbox h2{font:700 25px/1.25 var(--serif);color:#fff;margin:14px 0 6px;overflow-wrap:anywhere}.lrbox p{font-size:14px;line-height:1.5}
+.lrbox .lrcover{width:132px;margin:6px auto 0;aspect-ratio:620/868;border-radius:4px 10px 10px 4px;background:var(--navy2) url(passport-cover.jpg) center/cover;box-shadow:3px 0 0 #e9dcc2,5px 0 0 #d9c7a6,0 14px 24px -10px #000}
+.steps{list-style:none;padding:0;margin:20px auto 4px;text-align:left;max-width:300px;font-size:13.5px}.steps li{display:flex;gap:10px;align-items:center;padding:6px 0}
+.steps i{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 13px var(--sans);font-style:normal;border:1.5px solid #6d7a95;color:#9aa6bd}
+.steps .ok i{background:var(--gold);border-color:var(--gold);color:var(--navy)}.steps .bad i{background:#c4543d;border-color:#c4543d;color:#fff}.steps .now i{border-color:var(--gold);color:var(--gold)}.steps .bad{color:#ffd9cf}
+.lrnote{background:rgba(236,217,164,.12);border:1px solid rgba(201,162,74,.5);border-radius:10px;padding:12px 14px;margin-top:18px;font-size:13px;text-align:left}
+.lrdet{font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;color:#9aa6bd;margin-top:14px;overflow-wrap:anywhere}
+#lr .push{border-color:var(--goldlt);box-shadow:0 4px 0 #000;color:var(--goldlt);background:transparent}#lr .push.g{color:var(--navy);background:var(--gold);border-color:var(--golddk);box-shadow:0 4px 0 var(--golddk)}
+#lr .col{display:flex;flex-direction:column;gap:12px;margin-top:22px}
+#lc{position:fixed;inset:0;z-index:25}.lcbg{position:absolute;inset:0;background:rgba(8,16,31,.55)}
+.lcbox{position:absolute;left:50%;transform:translateX(-50%);top:calc(76px + var(--st));width:calc(100% - 24px);max-width:420px;background:var(--sheet);border:1px solid var(--rule);outline:1px solid var(--gold);outline-offset:-5px;border-radius:8px;padding:20px 18px 18px;box-shadow:0 16px 30px -12px rgba(8,16,31,.7)}
+.lcbox .x{position:absolute;right:8px;top:8px;width:40px;height:40px;border:0;background:none;font-size:22px;color:var(--navy)}
 /* ---------- Support Vinland (full-screen sheet, no 3D) ---------- */
 #sup{position:fixed;inset:0;z-index:15;background:repeating-linear-gradient(135deg,transparent 0 11px,rgba(201,162,74,.08) 11px 12px),var(--paper);overflow-y:auto;-webkit-overflow-scrolling:touch}
 #sup[hidden]{display:none}
@@ -77,7 +93,7 @@ dl.facts{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5
 .pay{display:flex;gap:10px;margin-top:12px}.pay>div{flex:1;min-width:0}.pay small{display:block;font-size:11px;color:var(--mute);margin-bottom:4px}.pay .push{width:100%}
 /* ---------- passport (full screen) ---------- */
 #pp{position:fixed;inset:0;z-index:20;background:#0b1528;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:calc(12px + var(--st)) 16px calc(16px + var(--sb));color:var(--goldlt)}
-#pp[hidden]{display:none}
+#pp[hidden],#ppshare[hidden],#ppnote[hidden]{display:none}
 #ppx{position:absolute;top:calc(10px + var(--st));right:12px;width:44px;height:44px;border-radius:50%;border:1.5px solid var(--gold);background:none;color:var(--goldlt);font-size:20px;line-height:1}
 .stage{perspective:1400px;width:min(92vw,380px,calc((100vh - 230px) * .716));width:min(92vw,380px,calc((100dvh - 230px) * .716))}
 .book{position:relative;aspect-ratio:358/500;cursor:pointer;--u:3.58px}   /* --u = 1% of the booklet width (set in JS), so the page scales like a real printed page on every phone */
@@ -102,15 +118,18 @@ dl.facts{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5
 </head>
 <body>
 <div class="app">
-  <header class="top"><span id="crest"></span><div><h1>VINLAND</h1><small id="sub">A country built by its followers</small></div><button class="push g login" id="loginBtn" data-a="tab" data-t="me">Login</button></header>
+  <header class="top"><span id="crest"></span><div><h1>VINLAND</h1><small id="sub">A country built by its followers</small></div><button class="push g login" id="loginBtn" data-a="lc-open" aria-haspopup="dialog">Login</button></header>
   <main class="scr" id="scr"><p class="load">Opening Vinland…</p></main>
   <nav class="nav" id="nav" aria-label="Sections"></nav>
 </div>
+<div id="lr" hidden role="dialog" aria-modal="true" aria-labelledby="lrT"><div class="lrbox" id="lrIn"></div></div>
+<div id="lc" hidden role="dialog" aria-modal="true" aria-labelledby="lcT"><div class="lcbg" data-a="lc-close"></div><div class="lcbox" id="lcIn"></div></div>
 <div id="sup" hidden role="dialog" aria-modal="true" aria-label="Support Vinland"><div class="in" id="supIn"></div></div>
 <div id="pp" hidden role="dialog" aria-modal="true" aria-label="Vinland passport">
   <button id="ppx" data-a="pp-close" aria-label="Close passport">×</button>
   <div class="stage"><div class="book" id="book" data-a="pp-next"></div></div>
   <div class="dots" id="ppdots"></div>
+  <p id="ppnote" hidden style="font-size:12.5px;color:#cfc3a0;text-align:center;margin:-4px 0 12px;max-width:min(92vw,380px)"></p>
   <div class="row"><button class="push g" data-a="pp-share" id="ppshare">Share passport</button><button class="push sm" data-a="pp-close" style="min-height:48px;flex:0 0 104px;background:transparent;color:var(--goldlt)">Close</button></div>
 </div>
 <script src="vinland-static.js"></script>
@@ -192,23 +211,66 @@ function neighbours(h) {
 // The page keeps only its own session code. It is NOT a proof by itself: every feature that matters asks Supabase who owns it.
 const LOGIN_URL = 'https://whhohzvvxhzpcsdcyuks.supabase.co/functions/v1/vin-login';
 const loginApi = body => fetch(LOGIN_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
-const readSession = () => { try { const s = JSON.parse(store.get('vin_session') || 'null'); return s && s.user && s.token && (!s.exp || new Date(s.exp) > new Date()) ? s : null; } catch (e) { return null; } };
+let memSession = null;   // used when this browser will not keep anything (some in-app or private browsers)
+const readSession = () => { let s = null; try { s = JSON.parse(store.get('vin_session') || 'null'); } catch (e) {} s = s || memSession; return s && s.user && s.token && (!s.exp || new Date(s.exp) > new Date()) ? s : null; };
 const session = () => { const s = readSession(); return s ? String(s.user).toLowerCase() : ''; };
-const clearSession = () => { try { localStorage.removeItem('vin_session'); } catch (e) {} };
-let loginState = '';   // '' | 'working' | 'bad' | 'offline' | 'in'
+const clearSession = () => { memSession = null; try { localStorage.removeItem('vin_session'); } catch (e) {} };
+const IN_IG = /Instagram|FBAN|FBAV/i.test(navigator.userAgent || '');   // Instagram / Facebook in-app browser: it keeps its own logins, apart from Chrome or Safari
+let loginState = '';   // '' | 'working' | 'in'
+// The full-screen login result. Every step is shown, so a login can never fail silently.
+const LR = { code: '', steps: [], user: '', why: '', det: '', saved: true };
+const STEP_NAMES = ['Checking your link', 'Saving your login on this phone', 'Checking with Vinland'];
+const WHY = {
+  used: ['This link was already used', 'Each link works once. DM KEY to @buildacountry again for a new one.'],
+  expired: ['This link has expired', 'Links work for 15 minutes. DM KEY to @buildacountry again for a new one.'],
+  unknown: ['This link is not valid', 'Please use the newest link from your DMs, or DM KEY again for a new one.'],
+  server: ['Vinland could not finish your login', 'Our side had a problem. Tap Try again. If it keeps happening, DM KEY again in a few minutes.'],
+  network: ['No internet connection', 'Your phone could not reach Vinland. Check your internet, then tap Try again. Your link still works.'],
+  check: ['Vinland did not recognise your login', 'Your login was made, but Vinland could not confirm it. DM KEY again for a new link.'],
+};
+function lrRender() {
+  const el = $('#lr'), st = LR.steps, done = st.length === 3 && st.every(x => x === 'ok'), failed = st.includes('bad'), h = LR.user && byUser.get(LR.user);
+  const list = `<ol class="steps" aria-label="Login steps">${STEP_NAMES.map((n, i) => `<li class="${st[i] || ''}"><i aria-hidden="true">${st[i] === 'ok' ? '✓' : st[i] === 'bad' ? '!' : i + 1}</i><span>${n}${st[i] === 'now' ? '…' : ''}</span></li>`).join('')}</ol>`;
+  let body;
+  if (done) body = `<div class="lrcover" aria-hidden="true"></div><h2 id="lrT">You're in, welcome home @${esc(LR.user)}</h2>
+      <p>${h ? `Citizen № ${num(h.cn)} · ${esc(homeLine(h))}` : 'Your home is on its way: new homes show on the site within about 5 minutes.'}</p>
+      ${LR.saved ? '' : '<div class="lrnote">This browser does not keep logins, so you stay logged in only until you close this page.</div>'}
+      ${IN_IG ? '<div class="lrnote"><b>Logged in here, inside Instagram.</b><br>To stay logged in on Chrome or Safari, tap ⋯ (top right) → Open in browser, then DM KEY again.</div>' : ''}
+      <div class="col">${h ? `<button class="push g" data-a="lr-passport">Open my passport</button>` : ''}<button class="push${h ? '' : ' g'}" data-a="lr-close">Go to my page</button></div>`;
+  else if (failed) { const w = WHY[LR.why] || WHY.server, retry = LR.why === 'network' || LR.why === 'server';
+    body = `<div style="font-size:40px;line-height:1" aria-hidden="true">🔑</div><h2 id="lrT">${w[0]}</h2><p>${w[1]}</p>${list}
+      <div class="col">${retry ? '<button class="push g" data-a="lr-retry">Try again</button>' : ''}<a class="push${retry ? '' : ' g'}" href="https://ig.me/m/buildacountry" target="_blank" rel="noopener" data-a="go-ig">DM KEY on Instagram</a><button class="push" data-a="lr-close">Close</button></div>
+      <p class="lrdet">Stopped at step ${st.indexOf('bad') + 1}: ${esc(LR.det)}</p>`; }
+  else body = `<div class="lrcover" aria-hidden="true"></div><h2 id="lrT">Opening your door…</h2>${list}`;
+  $('#lrIn').innerHTML = body; el.hidden = false; document.body.style.overflow = 'hidden';
+}
+function lrClose() { $('#lr').hidden = true; document.body.style.overflow = ''; LR.code = ''; tab = 'me'; render(); }
 async function loginWithKey(code) {
-  loginState = 'working'; tab = 'me'; render();
-  try { const r = await loginApi({ action: 'login', code });
-    if (r && r.ok && r.user && r.token) { store.set('vin_session', JSON.stringify({ user: r.user, token: r.token, exp: r.expires })); loginState = 'in'; track('site-login-ok'); }
-    else { loginState = 'bad'; track('site-login-bad'); } }
-  catch (e) { loginState = 'offline'; }
-  tab = 'me'; render();
+  LR.code = code; LR.steps = ['now']; LR.user = ''; LR.why = ''; LR.det = ''; LR.saved = true; loginState = 'working'; lrRender();
+  const fail = (i, why, det) => { LR.steps[i] = 'bad'; LR.why = why; LR.det = det; loginState = ''; lrRender(); render(); track('site-login-fail-' + why); };
+  // step 1: swap the one-time code for a session
+  let r;
+  try { const res = await fetch(LOGIN_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'login', code }) });
+    try { r = await res.json(); } catch (e) { r = null; }
+    if (!r) return fail(0, 'server', 'server answered ' + res.status + ' without a result'); }
+  catch (e) { return fail(0, 'network', 'login call did not reach Vinland (' + (e && e.name || 'error') + ')'); }
+  if (!r.ok || !r.user || !r.token) return fail(0, WHY[r.error] ? r.error : 'server', r.error === 'server' ? 'error on Vinland\'s side' + (r.step === 2 ? ' while saving the login' : '') : 'server said ' + (r.error || 'no'));
+  LR.user = String(r.user).toLowerCase(); LR.steps = ['ok', 'now']; lrRender();
+  // step 2: keep the session on this phone (or in memory if the browser will not keep it)
+  const sess = { user: LR.user, token: r.token, exp: r.expires }, txt = JSON.stringify(sess);
+  store.set('vin_session', txt); LR.saved = store.get('vin_session') === txt; memSession = sess;
+  LR.steps = ['ok', 'ok', 'now']; lrRender();
+  // step 3: ask Vinland who owns this session (the same check every later feature uses)
+  try { const m = await loginApi({ action: 'me', token: r.token });
+    if (!m || !m.ok || String(m.user).toLowerCase() !== LR.user) { clearSession(); return fail(2, 'check', 'check said ' + ((m && m.error) || 'someone else')); } }
+  catch (e) { /* the login itself worked; only the extra check could not be reached */ }
+  LR.steps = ['ok', 'ok', 'ok']; loginState = 'in'; track('site-login-ok' + (IN_IG ? '-ig' : '')); lrRender(); render();
 }
 async function checkSession() {   // quiet check on every visit: a session that Supabase no longer knows is forgotten here too
   const s = readSession(); if (!s) return;
   try { const r = await loginApi({ action: 'me', token: s.token }); if (r && r.ok === false && r.error === 'no session') { clearSession(); render(true); } } catch (e) {}
 }
-async function logout() { const s = readSession(); clearSession(); loginState = ''; found = found && lookup(found.user); render(); track('site-logout'); if (s) try { await loginApi({ action: 'logout', token: s.token }); } catch (e) {} }
+async function logout() { const s = readSession(); clearSession(); loginState = ''; lcClose(); found = found && lookup(found.user); render(); track('site-logout'); if (s) try { await loginApi({ action: 'logout', token: s.token }); } catch (e) {} }
 const myHome = () => byUser.get(session()) || null;
 const DIWALI_DAY = 8;   // 8 Nov 2026 = Day 8
 const statusOf = h => (h.cn > 0 && h.cn <= 5000) ? 'Founding citizen' : 'Citizen';
@@ -224,14 +286,14 @@ const TABS = [['home', 'home', 'Home'], ['town', 'town', 'Town'], ['times', 'new
 let tab = 'home', found = null, miss = '', suggest = [], qText = '', lastUser = store.get('vin_last') || '';
 const mapLink = h => 'map.html?home=' + (h.status === 'hidden' || h.villa ? h.n : encodeURIComponent(h.user));
 function homeCard(h) {
-  const own = session() && h.user.toLowerCase() === session(), nb = neighbours(h), sup = (ST.support[h.user.toLowerCase()] || 0) >= 2;
+  const own = !!session() && h.user.toLowerCase() === session(), nb = neighbours(h), sup = (ST.support[h.user.toLowerCase()] || 0) >= 2;
   return `<div style="margin-top:16px;padding-top:14px;border-top:1px dashed var(--rule);position:relative">
     <div class="h" style="font-size:19px;padding-right:64px;overflow-wrap:anywhere">${own ? 'Welcome home, @' + esc(h.user) : '@' + esc(h.user) + ' lives here'}</div>
     <div class="stamp" style="right:-4px;top:${own ? 40 : 44}px"><span>CITIZEN</span><b>№ ${h.cn || '—'}</b><span>VINLAND</span></div>
     <div style="display:flex;gap:12px;align-items:center;margin-top:8px">${houseSVG(78)}<div><div class="k">${h.villa ? 'Villa' : 'Home'}</div><div class="v" style="font-size:24px;line-height:1.1">${h.villa ? 'Plot ' + h.villa : '№ ' + num(h.n)}</div><div style="font-size:13px;margin-top:2px">${esc(h.villa ? 'Villa Lane, Central' : h.area + ', ' + h.district)}</div>${h.label ? `<div class="sub">${esc(h.label)}, building R${h.bid}</div>` : ''}</div></div>
     ${h.job || sup ? `<div class="sub" style="margin-top:8px;color:var(--ink)">${h.job ? esc(h.job) : ''}${h.job && sup ? ' · ' : ''}${sup ? '⭐ Supporter of Vinland' : ''}</div>` : ''}
     ${nb.length ? `<div class="k" style="margin-top:10px">${own ? 'Your neighbours' : 'Neighbours'}</div><div class="who">${nb.map(o => o.status === 'hidden' ? `<button disabled>Citizen #${o.n}</button>` : `<button data-a="find" data-u="${esc(o.user)}">@${esc(o.user)}</button>`).join('')}</div>` : ''}
-    <div class="row" style="margin-top:14px"><a class="push p" href="${mapLink(h)}" data-a="go-map">${ic('map', 17)}Open on map</a><button class="push" data-a="pp-open" data-i="1" data-u="${esc(h.user)}">${ic('share', 17)}Share passport</button></div></div>`;
+    <div class="row" style="margin-top:14px"><a class="push p" href="${mapLink(h)}" data-a="go-map">${ic('map', 17)}Open on map</a><button class="push" data-a="pp-open" data-i="1" data-u="${esc(h.user)}">${own ? ic('share', 17) + 'Share passport' : 'View passport'}</button></div></div>`;
 }
 function headline(t) { const m = /^(.{12,90}?)([:.!?])\s+(.*)$/s.exec(t); return m ? [m[1] + (m[2] === ':' || m[2] === '.' ? '' : m[2]), m[3].charAt(0).toUpperCase() + m[3].slice(1)] : [t, '']; }
 const news = () => notices.filter(n => !/^always$/i.test(n.date));
@@ -289,28 +351,28 @@ const P = {
   me() {
     const h = myHome(), tiles = [['coin', 'Wallet', ''], ['', 'Knocks', '🚪'], ['', 'Guestbook', '❤️'], ['', 'Host a party', '🎉'], ['brush', 'Customise look', ''], ['users', 'Housemate', '']];
     const tileHTML = `<div class="grid2">${tiles.map(t => `<div class="tile off">${t[2] ? `<span class="e" aria-hidden="true">${t[2]}</span>` : ic(t[0])}<span>${t[1]}</span></div>`).join('')}</div>`;
-    if (h) return `${loginState === 'in' ? `<div class="doc" style="background:var(--navy);color:var(--goldlt);border-color:var(--navy)"><div class="h" style="color:#fff">Welcome home, @${esc(h.user)}</div><div style="font-size:13px;margin-top:2px">You are logged in on this phone.</div></div>` : ''}<div class="doc" style="display:flex;gap:14px;align-items:center"><button class="cover" style="width:92px;flex:none;background-image:url(passport-cover.jpg)" data-a="pp-open" data-u="${esc(h.user)}" aria-label="Open your passport"></button>
+    const su = session(), welcome = `<div class="doc" style="background:var(--navy);color:var(--goldlt);border-color:var(--navy)"><div class="h" style="color:#fff;overflow-wrap:anywhere">Welcome home, @${esc(su)}</div><div style="font-size:13px;margin-top:2px">You are logged in on this phone.${IN_IG ? ' (Inside Instagram: open the site in Chrome or Safari and DM KEY again to stay logged in there.)' : ''}</div></div>`;
+    const out = `<div class="row" style="margin-top:22px"><button class="push sm" style="flex:1" data-a="logout">Log out</button></div><p class="sub" style="text-align:center;margin-top:10px">This phone remembers you for 90 days.</p>`;
+    if (su && h) return `${welcome}<div class="doc" style="display:flex;gap:14px;align-items:center"><button class="cover" style="width:92px;flex:none;background-image:url(passport-cover.jpg)" data-a="pp-open" data-u="${esc(h.user)}" aria-label="Open your passport"></button>
         <div style="flex:1;min-width:0"><div class="k">Passport of Vinland</div><div class="h" style="font-size:20px;overflow-wrap:anywhere">@${esc(h.user)}</div><div class="sub">Citizen № ${num(h.cn)} · ${esc(statusOf(h))}</div><div class="row" style="margin-top:10px"><button class="push g sm" data-a="pp-open" data-u="${esc(h.user)}">Open passport</button></div></div></div>
-      ${tileHTML}<div class="row" style="margin-top:14px"><a class="push p" href="${mapLink(h)}" data-a="go-map">${ic('map', 17)}My home on map</a></div>
-      <div class="row" style="margin-top:22px"><button class="push sm" style="flex:1" data-a="logout">Log out</button></div><p class="sub" style="text-align:center;margin-top:10px">This phone remembers you for 90 days.</p>`;
+      ${tileHTML}<div class="row" style="margin-top:14px"><a class="push p" href="${mapLink(h)}" data-a="go-map">${ic('map', 17)}My home on map</a></div>${out}`;
+    if (su) return `${welcome}<div class="doc frame" style="text-align:center"><div class="h">${dataOK ? 'Your home is on its way' : 'Loading your home…'}</div><p class="p">${dataOK ? 'New homes show on the site within about 5 minutes. Your passport appears here as soon as your home does.' : 'One moment.'}</p>${dataOK ? '<div class="row" style="margin-top:12px"><button class="push sm" style="flex:1" data-a="retry">Check again</button></div>' : ''}</div>${tileHTML}${out}`;
     return `<div class="doc" style="display:flex;gap:14px;align-items:center"><div class="cover" style="width:92px;flex:none;background-image:url(passport-cover.jpg)" aria-hidden="true"></div>
-        <div style="flex:1;min-width:0"><label class="h" for="pq">Your passport</label><div class="sub">Type your username to open it</div>
-        <form class="field" data-a="pp-form" style="margin-top:8px"><input id="pq" type="search" autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="@yourusername" value="${esc(lastUser)}"><button class="push g" style="flex:0 0 72px" type="submit">Open</button></form><p class="err" id="pperr"></p></div></div>
+        <div style="flex:1;min-width:0"><label class="h" for="pq">Look at a passport</label><div class="sub">Type a citizen's username</div>
+        <form class="field" data-a="pp-form" style="margin-top:8px"><input id="pq" type="search" autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="@username" value="${esc(lastUser)}"><button class="push g" style="flex:0 0 72px" type="submit">Open</button></form><p class="err" id="pperr"></p></div></div>
       <div class="doc frame" style="text-align:center"><div style="color:var(--gold)">${ic('key', 26)}</div>
-        ${loginState === 'working' ? `<div class="h" style="margin-top:4px">Opening your door…</div><p class="p">One moment.</p>`
-        : `<div class="h" style="margin-top:4px">${session() && !dataOK ? 'Loading your home…' : 'Log in to your life in Vinland'}</div>
-        ${loginState === 'bad' ? `<p class="err" role="alert">That link has expired or was already used. DM KEY again for a new one.</p>` : loginState === 'offline' ? `<p class="err" role="alert">We could not reach Vinland. Check your internet, then DM KEY again for a new link.</p>` : session() && dataOK ? `<p class="err" role="alert">We could not find a home for @${esc(session())}. Follow @buildacountry and comment HOME.</p>` : ''}
+        <div class="h" style="margin-top:4px">${loginState === 'working' ? 'Opening your door…' : 'Log in to your life in Vinland'}</div>
         <p class="p">DM KEY to @buildacountry. We will send your private link. It works once, for 15 minutes.</p>
         <div class="row" style="margin-top:12px"><a class="push g" href="https://ig.me/m/buildacountry" target="_blank" rel="noopener" data-a="go-ig">DM KEY on Instagram</a></div>
-        <p class="sub" style="margin-top:10px">Never share your link with anyone.</p>`}</div>
+        <p class="sub" style="margin-top:10px">Never share your link with anyone. Logged in, you can share your own passport.</p></div>
       ${tileHTML}`;
   }
 };
 const wait = () => `<p class="load">${loadErr ? 'We could not reach the citizens list.' : 'Opening Vinland…'}</p>${loadErr ? '<div class="row"><button class="push" data-a="retry">Try again</button></div>' : ''}`;
 function render(keepScroll) {
-  const y = window.scrollY, me = myHome();
+  const y = window.scrollY, su = session();
   $('#sub').textContent = dataOK ? `Day ${dayNumber()}  |  ${num(live)} citizens` : 'A country built by its followers';
-  const lb = $('#loginBtn'); lb.innerHTML = me ? '@' + esc(me.user) : ic('key', 16) + 'Login';
+  const lb = $('#loginBtn'); lb.innerHTML = su ? '@' + esc(su) : ic('key', 16) + 'Login';
   $('#nav').innerHTML = TABS.map(t => `<button class="${t[0] === tab ? 'on' : ''}" data-a="tab" data-t="${t[0]}" aria-current="${t[0] === tab ? 'page' : 'false'}">${ic(t[1], 22)}${t[2]}</button>`).join('');
   scr.innerHTML = P[tab]();
   window.scrollTo(0, keepScroll ? y : 0);
@@ -361,7 +423,10 @@ function pageHTML(h, i) {
 }
 const pp = $('#pp'), book = $('#book'); let ppH = null, ppI = 0, ppBusy = false;
 const LITE = matchMedia('(prefers-reduced-motion: reduce)').matches || (navigator.deviceMemory && navigator.deviceMemory <= 3) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);   // weak phone: a quick fade, not a page turn
-function ppDots() { $('#ppdots').innerHTML = ['Cover', 'Photo page', 'Stamps'].map((t, i) => `<button class="${i === ppI ? 'on' : ''}" data-a="pp-go" data-i="${i}">${t}</button>`).join(''); $('#ppshare').innerHTML = ppI === 0 ? 'Tap to open' : ic('share', 17) + 'Share passport'; }
+function ppDots() { $('#ppdots').innerHTML = ['Cover', 'Photo page', 'Stamps'].map((t, i) => `<button class="${i === ppI ? 'on' : ''}" data-a="pp-go" data-i="${i}">${t}</button>`).join(''); const own = ppOwn(), b = $('#ppshare'), note = $('#ppnote');
+  b.hidden = ppI !== 0 && !own; b.innerHTML = ppI === 0 ? 'Tap to open' : ic('share', 17) + 'Share passport';
+  note.hidden = ppI === 0 || own; note.textContent = session() ? 'Only @' + ppH.user + ' can share this passport.' : 'Log in to share your own passport.'; }
+const ppOwn = () => !!(ppH && session() && session() === ppH.user.toLowerCase());   // anyone can look; only the owner, logged in, can share
 function ppShow(i, animate) {
   if (ppBusy || !ppH) return; i = Math.max(0, Math.min(2, i)); const old = book.firstElementChild, fwd = i > ppI; ppI = i;
   if (!old || !animate) { book.innerHTML = pageHTML(ppH, i); ppDots(); return; }
@@ -405,6 +470,7 @@ async function storyCanvas(h) {
 }
 async function ppShare() {
   if (!ppH) return; if (ppI === 0) { ppShow(1, true); return; }
+  if (!ppOwn()) return;
   const b = $('#ppshare'), h = ppH; b.disabled = true; b.textContent = 'Making your picture…';
   try { const c = await storyCanvas(h), blob = await new Promise(ok => c.toBlob(ok, 'image/jpeg', .92)), name = 'vinland-passport-' + h.user + '.jpg', f = new File([blob], name, { type: 'image/jpeg' }); track('site-passport-share');
     if (navigator.canShare && navigator.canShare({ files: [f] })) await navigator.share({ files: [f], title: 'My Vinland passport' }).catch(() => {});
@@ -413,6 +479,16 @@ async function ppShare() {
   b.disabled = false; ppDots();
 }
 window.__vinStoryURL = async u => { const h = lookup(u); return h ? (await storyCanvas(h)).toDataURL('image/jpeg', .9) : null; };   // used only by the preview screenshots (tools/site_shots2.py)
+
+// ---------- the Login button: a small card ----------
+function lcOpen() { const u = session();
+  $('#lcIn').innerHTML = `<button class="x" data-a="lc-close" aria-label="Close">×</button>` + (u
+    ? `<div class="k">Logged in on this phone</div><div class="h" id="lcT" style="font-size:21px;margin-top:2px;overflow-wrap:anywhere">@${esc(u)}</div>
+       <div class="row" style="margin-top:16px"><button class="push p" data-a="lc-me">Go to my page</button></div><div class="row" style="margin-top:12px"><button class="push" data-a="logout">Log out</button></div>`
+    : `<div class="h" id="lcT" style="font-size:20px">Log in: DM KEY to @buildacountry</div><p class="p">We send you a private link. It works once, for 15 minutes. Tap it and you are in.</p>
+       <div class="row" style="margin-top:16px"><a class="push g" href="https://ig.me/m/buildacountry" target="_blank" rel="noopener" data-a="go-ig">DM KEY on Instagram</a></div><p class="sub" style="margin-top:10px">Never share your link with anyone.</p>`);
+  $('#lc').hidden = false; }
+function lcClose() { $('#lc').hidden = true; }
 
 // ---------- Support Vinland: the old Real estate + Support content, inside the site (texts come from map.html via vinland-static.js) ----------
 const sup = $('#sup'); let supImgs = null;
@@ -453,6 +529,12 @@ document.addEventListener('click', e => {
   else if (a === 'go-map') track('site-open-map');
   else if (a === 'go-ig') track('site-open-ig');
   else if (a === 'logout') logout();
+  else if (a === 'lc-open') lcOpen();
+  else if (a === 'lc-close') lcClose();
+  else if (a === 'lc-me') { lcClose(); setTab('me'); }
+  else if (a === 'lr-close') lrClose();
+  else if (a === 'lr-retry') { if (LR.code) loginWithKey(LR.code); }
+  else if (a === 'lr-passport') { const u = LR.user; $('#lr').hidden = true; document.body.style.overflow = ''; tab = 'me'; render(); ppOpen(u, 1); }
   else if (a === 'sup-open') supOpen();
   else if (a === 'sup-close') supClose();
   else if (a === 'sup-pay') track(el.dataset.t);
@@ -460,7 +542,7 @@ document.addEventListener('click', e => {
 document.addEventListener('submit', e => { const f = e.target.closest('form[data-a]'); if (!f) return; e.preventDefault();
   if (f.dataset.a === 'find-form') find(f.querySelector('input').value);
   else if (f.dataset.a === 'pp-form') { const v = f.querySelector('input').value, er = $('#pperr'); if (!cleanName(v)) { er.textContent = 'Type your username first.'; return; } if (!dataOK) { er.textContent = 'Still loading the citizens list. Try again in a moment.'; return; } if (!ppOpen(v)) { er.textContent = 'No home for @' + cleanName(v) + ' yet. Follow @buildacountry and comment HOME.'; } else { er.textContent = ''; lastUser = cleanName(v); store.set('vin_last', lastUser); } } });
-document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (!pp.hidden) ppClose(); else if (!sup.hidden) supClose(); });
+document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (!pp.hidden) ppClose(); else if (!$('#lc').hidden) lcClose(); else if (!sup.hidden) supClose(); });
 const onHash = () => { const t = location.hash.slice(1); if (t === 'support') { if (tab !== 'town') setTab('town', false); if (sup.hidden) supOpen(); return; } supClose(true); if (P[t] && t !== tab) setTab(t, false); };
 window.addEventListener('hashchange', onHash); window.addEventListener('popstate', onHash);
 
