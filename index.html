@@ -90,6 +90,15 @@ ol.laws{padding:0;list-style:none;counter-reset:l}ol.laws li{counter-increment:l
 .soon{text-align:center;margin:0;opacity:.8}.soon .em{display:block;width:auto;margin-bottom:4px}.soon small{color:#9a7b3c!important;font-weight:600}
 .nav a{flex:1;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10.5px;color:#8a8170;border-radius:12px;text-decoration:none}
 @media (max-width:360px){.big3 .push{font-size:12.5px;min-height:78px}.hero{height:190px}}
+/* ---------- social (step 5): knocks, friends, neighbours, parties ---------- */
+#ps{position:fixed;inset:0;z-index:25}#ps[hidden],#toast[hidden]{display:none}#ps .lcbox{top:calc(24px + var(--st));max-height:calc(100vh - 48px);overflow-y:auto}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + var(--sb));z-index:40;background:var(--navy);color:#fff;border:1.5px solid var(--gold);border-radius:14px;padding:10px 16px;font:500 13.5px var(--sans);max-width:calc(100% - 32px);text-align:center;box-shadow:0 8px 18px -8px #000}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px}.chips button{min-height:40px;padding:0 12px;border-radius:12px;border:1.5px solid var(--navy);background:var(--sheet);font:500 13px var(--sans);color:var(--navy)}.chips button.on{background:var(--navy);color:var(--goldlt);font-weight:600}
+.per{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #efe3c4}.per:first-of-type{border-top:0}.per>span:first-child{flex:1;min-width:0;overflow-wrap:anywhere}.per b{font:600 14px var(--sans)!important;display:block}
+.per .push{flex:0 0 auto;min-height:40px;font-size:12.5px;padding:0 12px;box-shadow:0 3px 0 var(--navy)}.per .push.g{box-shadow:0 3px 0 var(--golddk)}.per .tag{flex:none}
+.lk{border:0;background:none;color:var(--mute);font:500 12px var(--sans);text-decoration:underline;padding:8px 4px;min-height:40px}
+.nav button{position:relative}.badge{position:absolute;top:4px;left:calc(50% + 6px);min-width:18px;height:18px;border-radius:9px;background:#c2552d;color:#fff;font:700 10.5px/18px var(--sans);padding:0 5px;text-align:center}
+.prow{display:flex;gap:12px;align-items:center;padding:9px 0;border-top:1px solid #efe3c4}.prow:first-of-type{border-top:0}.prow>span:nth-child(2){flex:1;min-width:0}
 /* ---------- login result (full screen) + login card ---------- */
 #lr{position:fixed;inset:0;z-index:30;background:var(--navy);color:var(--goldlt);overflow-y:auto;display:flex;align-items:center;justify-content:center;padding:calc(20px + var(--st)) 20px calc(20px + var(--sb))}
 #lr[hidden],#lc[hidden]{display:none}
@@ -149,6 +158,8 @@ dl.facts{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5
   <nav class="nav" id="nav" aria-label="Sections"></nav>
 </div>
 <div id="lr" hidden role="dialog" aria-modal="true" aria-labelledby="lrT"><div class="lrbox" id="lrIn"></div></div>
+<div id="ps" hidden role="dialog" aria-modal="true" aria-labelledby="psT"><div class="lcbg" data-a="ps-close"></div><div class="lcbox" id="psIn"></div></div>
+<div id="toast" role="status" aria-live="polite" hidden></div>
 <div id="lc" hidden role="dialog" aria-modal="true" aria-labelledby="lcT"><div class="lcbg" data-a="lc-close"></div><div class="lcbox" id="lcIn"></div></div>
 <div id="sup" hidden role="dialog" aria-modal="true" aria-label="Support Vinland"><div class="in" id="supIn"></div></div>
 <div id="pp" hidden role="dialog" aria-modal="true" aria-label="Vinland passport">
@@ -228,11 +239,11 @@ function build(rows) {
   dataOK = true;
 }
 const shownName = h => h.status === 'hidden' ? 'Citizen #' + h.n : '@' + h.user;
-function neighbours(h) {
+function neighbours(h, n = 2) {
   if (h.villa) return [];
   const pool = homes.filter(o => o !== h && o.status === 'active' && !o.villa && (h.a === 'R' ? o.bid === h.bid : o.a !== 'R'));
   const d = o => h.a === 'R' ? Math.abs(o.floor - h.floor) + Math.abs(o.n - h.n) / 1000 : Math.hypot(o.x - h.x, o.z - h.z);
-  return pool.map(o => [d(o), o]).filter(e => h.a === 'R' || e[0] < 40).sort((a, b) => a[0] - b[0]).slice(0, 2).map(e => e[1]);
+  return pool.map(o => [d(o), o]).filter(e => h.a === 'R' || e[0] < 40).sort((a, b) => a[0] - b[0]).slice(0, n).map(e => e[1]);
 }
 // ---------- login (item 4): DM KEY → private link → Supabase gives this phone a session for 90 days ----------
 // The page keeps only its own session code. It is NOT a proof by itself: every feature that matters asks Supabase who owns it.
@@ -299,7 +310,7 @@ async function loginWithKey(code) {
   try { const m = await loginApi({ action: 'me', token: r.token });
     if (!m || !m.ok || String(m.user).toLowerCase() !== LR.user) { clearSession(); return fail(2, 'check', 'check said ' + ((m && m.error) || 'someone else')); } }
   catch (e) { /* the login itself worked; only the extra check could not be reached */ }
-  LR.steps = ['ok', 'ok', 'ok']; loginState = 'in'; track('site-login-ok' + (IN_IG ? '-ig' : '')); lrRender(); render();
+  LR.steps = ['ok', 'ok', 'ok']; loginState = 'in'; track('site-login-ok' + (IN_IG ? '-ig' : '')); lrRender(); render(); socLoad();
 }
 async function checkSession() {   // quiet check on every visit: a session that Supabase no longer knows is forgotten here too
   const s = readSession(); if (!s) return;
@@ -307,7 +318,7 @@ async function checkSession() {   // quiet check on every visit: a session that 
     if (r && r.ok === false && r.error === 'no session') { clearSession(); render(true); }
     else if (r && r.ok && r.expires) { s.exp = r.expires; store.set('vin_session', JSON.stringify(s)); if (memSession) memSession.exp = r.expires; } } catch (e) {}   // each visit: 90 days from today
 }
-async function logout() { const s = readSession(); clearSession(); loginState = ''; lcClose(); found = found && lookup(found.user); render(); track('site-logout'); if (s) try { await loginApi({ action: 'logout', token: s.token }); } catch (e) {} }
+async function logout() { const s = readSession(); clearSession(); loginState = ''; lcClose(); SOC.knocks = []; SOC.friends = new Set(); SOC.knocked = new Set(); SOC.mine = null; SOC.stamps = []; SOC.parties = SOC.parties.filter(p => p.open === 'all'); setTimeout(socLoad, 400); found = found && lookup(found.user); render(); track('site-logout'); if (s) try { await loginApi({ action: 'logout', token: s.token }); } catch (e) {} }
 const myHome = () => byUser.get(session()) || null;
 const DIWALI_DAY = 8;   // 8 Nov 2026 = Day 8
 const statusOf = h => (h.cn > 0 && h.cn <= 5000) ? 'Founding citizen' : 'Citizen';
@@ -316,7 +327,76 @@ function stampsOf(h) { const out = [], when = dayDate(h.joined).toUpperCase();
   if (pioneers.has(h)) out.push({ k: 'pioneer', top: 'PIONEER', mid: ['FIRST', '1,000'], bot: when, col: '#2c4a7c' });
   if (h.cn > 0 && h.cn <= 5000) out.push({ k: 'founding', top: 'FOUNDING CITIZEN', mid: ['FIRST', '5,000'], bot: when, col: '#b3402e' });
   if (h.joined <= DIWALI_DAY) out.push({ k: 'diwali', top: 'FESTIVAL OF LIGHTS', mid: ['DIWALI', '2026'], bot: dayDate(DIWALI_DAY).toUpperCase(), col: '#96602a' });   // Dev, 12 Nov: everyone who had moved in by 8 Nov
+  const soc = session() && h.user.toLowerCase() === session() ? SOC.stamps : SOC.others[h.user.toLowerCase()];
+  (soc || []).forEach(x => { const d = new Date(x.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase(), th = (THEMES[x.theme] || ['', 'Party'])[1].toUpperCase();
+    if (x.kind === 'host') out.push({ k: 'host' + x.at, top: 'HOSTED A PARTY', mid: [th.split(' ')[0], 'HOST'], bot: d, col: '#7a3f8c' });
+    else { const hh = byUser.get(x.host); out.push({ k: 'guest' + x.at, top: 'PARTY GUEST', mid: ['AT', hh ? (hh.villa ? 'VILLA ' + hh.villa : '№ ' + hh.n) : 'A PARTY'], bot: d, col: '#2f6a52' }); } });
   return out; }
+
+// ---------- SOCIAL (step 5): knock, friends, neighbours, parties. Supabase decides who you are; the page only shows what it is given. ----------
+// No typing anywhere: every choice is a fixed button. Friend lists and counts are private: this page only ever receives your own.
+const SOCIAL_URL = 'https://whhohzvvxhzpcsdcyuks.supabase.co/functions/v1/social';
+const socApi = body => fetch(SOCIAL_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
+const THEMES = { birthday: ['🎂', 'Birthday'], housewarming: ['🏡', 'Housewarming'], festival: ['🪔', 'Festival'], weekend: ['🎉', 'Weekend'], game: ['🎲', 'Game night'], beach: ['🏖️', 'Beach night'] };
+const SOC = { ready: false, knocks: [], friends: new Set(), knocked: new Set(), left: 20, parties: [], mine: null, stamps: [], others: {}, ask: '', nb: false, find: false, busy: false };
+const PS = { theme: 'birthday', day: 0, hour: -1, open: 'all', err: '' };
+async function socLoad() {
+  const se = readSession();
+  try { const r = await socApi(se ? { action: 'state', token: se.token } : { action: 'public' });
+    if (r && r.ok) { SOC.ready = true; SOC.parties = r.parties || []; SOC.knocks = r.knocks || []; SOC.friends = new Set(r.friends || []); SOC.knocked = new Set(r.knockedToday || []); SOC.left = r.left === undefined ? 20 : r.left; SOC.mine = r.mine || null; SOC.stamps = r.stamps || []; }
+    else if (r && r.error === 'no session') { SOC.knocks = []; SOC.friends = new Set(); SOC.mine = null; SOC.stamps = []; const p = await socApi({ action: 'public' }); if (p && p.ok) SOC.parties = p.parties || []; }
+  } catch (e) {}
+  if (!document.activeElement || document.activeElement.tagName !== 'INPUT') render(true);
+}
+let toastT = 0; function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 3200); }
+const fmtWhen = iso => { const d = new Date(iso), ms = d - Date.now(); if (ms <= 0 && ms > -36e5) return 'On now';   // always in the viewer's own time zone
+  const day = new Date().toDateString() === d.toDateString() ? 'Today' : new Date(Date.now() + 864e5).toDateString() === d.toDateString() ? 'Tomorrow' : d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  return day + ', ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: d.getMinutes() ? '2-digit' : undefined }); };
+const newKnocks = () => { const seen = store.get('vin_knocks_seen') || ''; return SOC.knocks.filter(k => k.at > seen).length; };
+function knockBtn(u, cls = '') { const me = session(), o = String(u).toLowerCase(); if (!me || o === me) return '';
+  if (SOC.friends.has(o)) return `<span class="tag on">Friends 💛</span>`;
+  if (SOC.knocked.has(o)) return `<span class="tag">Knocked 👋</span>`;
+  return `<button class="push g ${cls}" data-a="knock" data-u="${esc(u)}">👋 Knock</button>`; }
+async function doKnock(u) { const se = readSession(); if (!se || SOC.busy) return; SOC.busy = true;
+  try { const r = await socApi({ action: 'knock', token: se.token, to: u });
+    if (r && r.ok) { SOC.knocked.add(String(u).toLowerCase()); SOC.left = Math.max(0, SOC.left - 1); if (r.friends) { SOC.friends.add(String(u).toLowerCase()); SOC.knocks = SOC.knocks.filter(k => k.from !== String(u).toLowerCase()); toast('You and @' + u + ' are friends now 💛'); } else toast('You knocked on @' + u + "'s door 👋"); track('site-knock'); }
+    else toast(r && r.msg ? r.msg : r && r.error === 'no session' ? 'Please log in again: DM KEY to @buildacountry.' : 'That knock did not go through. Try again.');
+  } catch (e) { toast('No internet. Try again.'); } SOC.busy = false; render(true); }
+async function socDo(action, extra, okMsg) { const se = readSession(); if (!se || SOC.busy) return false; SOC.busy = true; let ok = false;
+  try { const r = await socApi(Object.assign({ action, token: se.token }, extra)); ok = !!(r && r.ok); if (ok) { if (okMsg) toast(okMsg); } else { PS.err = (r && r.msg) || 'That did not work. Try again.'; if (action !== 'host') toast(PS.err); } } catch (e) { PS.err = 'No internet. Try again.'; if (action !== 'host') toast(PS.err); }
+  SOC.busy = false; SOC.ask = ''; if (ok) await socLoad(); else render(true); return ok; }
+function partiesCard() { const me = session(), h = me ? byUser.get(me) : null, list = SOC.parties.slice(0, 3), mine = SOC.mine;
+  if (!list.length && !mine && !h) return '';
+  const row = p => { const th = THEMES[p.theme] || ['🎉', 'Party'], hh = byUser.get(p.host), on = new Date(p.start) <= new Date();
+    return `<div class="prow"><span class="em">${th[0]}</span><span><b>${esc(th[1])} at @${esc(p.host)}'s</b><small>${esc(fmtWhen(p.start))}${p.open === 'friends' ? ' · Friends only' : ''}</small></span>
+      ${me && h ? (p.going ? `<button class="push sm" data-a="going" data-p="${p.id}" data-on="0" style="min-height:40px">Going ✓</button>` : `<button class="push g sm" data-a="going" data-p="${p.id}" data-on="1" style="min-height:40px;box-shadow:0 3px 0 var(--golddk)">I'm going</button>`) : hh ? `<a class="push sm" href="${mapLink(hh)}" data-a="go-map" style="min-height:40px">${on ? 'See' : 'Map'}</a>` : ''}</div>`; };
+  return `<div class="doc lob"><div class="pr"><span>🎉 Parties coming up</span>${list.length > 0 && SOC.parties.length > 3 ? `<span class="gold">+${SOC.parties.length - 3} more</span>` : ''}</div>
+    ${mine ? `<div class="prow"><span class="em">${(THEMES[mine.theme] || ['🎉'])[0]}</span><span><b>Your ${esc((THEMES[mine.theme] || ['', 'party'])[1].toLowerCase())}</b><small>${esc(fmtWhen(mine.start))} · ${mine.count} coming${mine.open === 'friends' ? ' · Friends only' : ''}</small></span>${new Date(mine.start) > new Date() ? (SOC.ask === 'cancel' ? `<button class="push sm" data-a="party-cancel" style="min-height:40px">Yes, cancel</button>` : `<button class="lk" data-a="ask" data-k="cancel">Cancel</button>`) : `<span class="tag on">On now</span>`}</div>` : ''}
+    ${list.map(row).join('')}${!list.length && !mine ? '<p class="sub" style="margin-top:6px">No party is planned yet. Be the first host.</p>' : ''}
+    ${h && !mine ? `<div class="row" style="margin-top:10px"><button class="push p" data-a="ps-open">🎈 Host a party</button></div>` : ''}${!me && list.length ? '<p class="sub" style="margin-top:8px">Citizens can tap I\'m going. Follow and comment HOME to get your home.</p>' : ''}</div>`; }
+function neighboursCard(h) { const nb = neighbours(h, 6); if (!nb.length) return '';
+  return `<div class="doc lob"><button class="suph" data-a="nb-toggle" aria-expanded="${SOC.nb}"><span class="em">👋</span><span style="flex:1;min-width:0;text-align:left"><b>Your neighbours</b><small>${nb.length} homes next to yours</small></span><span class="gold" aria-hidden="true">${SOC.nb ? '−' : '›'}</span></button>
+    ${SOC.nb ? `<div style="margin-top:8px">${nb.map(o => o.status === 'hidden' ? `<div class="per"><span><b>Citizen #${o.n}</b><small>Home № ${num(o.n)}</small></span></div>` : `<div class="per"><span><b>@${esc(o.user)}</b><small>Home № ${num(o.n)}${o.job ? ' · ' + esc(o.job) : ''}</small></span>${knockBtn(o.user)}</div>`).join('')}</div>` : ''}</div>`; }
+function findCard() {
+  return `<div class="doc lob"><button class="suph" data-a="find-toggle" aria-expanded="${SOC.find}"><span class="em">🔍</span><span style="flex:1;min-width:0;text-align:left"><b>Find a citizen</b><small>Visit a home, knock on the door</small></span><span class="gold" aria-hidden="true">${SOC.find ? '−' : '›'}</span></button>
+    ${SOC.find ? `<form class="field" data-a="find-form"><input id="q" type="search" inputmode="text" autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="@username" value="${esc(qText)}" enterkeyhint="search" aria-label="Username"><button class="push g" style="flex:0 0 96px" type="submit">${ic('search', 16)}Find</button></form>
+      ${found ? homeCard(found) : ''}${miss ? `<p class="err" style="overflow-wrap:anywhere">No home for @${esc(miss)} yet.</p>${suggest.length ? `<div class="who" style="margin-top:6px">${suggest.map(o => `<button data-a="find" data-u="${esc(o.user)}">@${esc(o.user)}</button>`).join('')}</div>` : ''}` : ''}` : ''}</div>`; }
+// Host a party: theme, day, hour, who. Fixed choices only. Times are the host's own clock; Supabase checks 10 AM to 10 PM in that time zone.
+function psHTML() { const days = Array.from({ length: 8 }, (_, i) => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + i); return d; }), now = Date.now(), lim = now + 7 * 864e5;
+  const slot = (d, hr) => { const t = new Date(d); t.setHours(hr, 0, 0, 0); return t; }, okHour = hr => { const t = +slot(days[PS.day], hr); return t > now + 5 * 6e4 && t <= lim; };
+  const okDay = i => [...Array(13)].some((_, k) => { const t = +slot(days[i], 10 + k); return t > now + 5 * 6e4 && t <= lim; });
+  if (!okDay(PS.day)) PS.day = days.findIndex((_, i) => okDay(i)); if (PS.hour < 0 || !okHour(PS.hour)) PS.hour = [19, 20, 18, 21, 17, 22, 16, 15, 14, 13, 12, 11, 10].find(okHour) || -1;
+  const hl = hr => new Date(2026, 0, 1, hr).toLocaleTimeString(undefined, { hour: 'numeric' });
+  return `<button class="x" data-a="ps-close" aria-label="Close">×</button><div class="h" id="psT" style="font-size:20px">Host a party at your home</div><p class="sub">1 hour long. One party a week.</p>
+    <div class="k" style="margin-top:12px">Theme</div><div class="chips">${Object.keys(THEMES).map(k => `<button class="${PS.theme === k ? 'on' : ''}" data-a="ps-set" data-k="theme" data-v="${k}" aria-pressed="${PS.theme === k}">${THEMES[k][0]} ${THEMES[k][1]}</button>`).join('')}</div>
+    <div class="k">Day</div><div class="chips">${days.map((d, i) => okDay(i) ? `<button class="${PS.day === i ? 'on' : ''}" data-a="ps-set" data-k="day" data-v="${i}" aria-pressed="${PS.day === i}">${i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })}</button>` : '').join('')}</div>
+    <div class="k">Time (your clock)</div><div class="chips">${[...Array(13)].map((_, k) => 10 + k).filter(okHour).map(hr => `<button class="${PS.hour === hr ? 'on' : ''}" data-a="ps-set" data-k="hour" data-v="${hr}" aria-pressed="${PS.hour === hr}">${hl(hr)}</button>`).join('')}</div>
+    <div class="k">Who can come</div><div class="chips"><button class="${PS.open === 'all' ? 'on' : ''}" data-a="ps-set" data-k="open" data-v="all" aria-pressed="${PS.open === 'all'}">Everyone</button><button class="${PS.open === 'friends' ? 'on' : ''}" data-a="ps-set" data-k="open" data-v="friends" aria-pressed="${PS.open === 'friends'}">Friends only</button></div>
+    ${PS.err ? `<p class="err" role="alert">${esc(PS.err)}</p>` : ''}<div class="row" style="margin-top:6px"><button class="push g" data-a="ps-host"${PS.hour < 0 ? ' disabled' : ''}>🎈 Host the party</button></div>`; }
+function psOpen() { PS.err = ''; $('#psIn').innerHTML = psHTML(); $('#ps').hidden = false; }
+function psClose() { $('#ps').hidden = true; }
+async function psHost() { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + PS.day); d.setHours(PS.hour, 0, 0, 0); let tz = 'UTC'; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch (e) {}
+  PS.err = ''; const ok = await socDo('host', { theme: PS.theme, start: d.toISOString(), tz, open: PS.open }, 'Your party is on the map 🎈'); if (ok) { psClose(); track('site-party-host'); } else $('#psIn').innerHTML = psHTML(); }
 
 // ---------- pages ----------
 const TABS = [['home', 'home', 'Home'], ['map', 'map', 'Map'], ['news', 'news', 'News'], ['me', 'user', 'Me']];
@@ -331,7 +411,7 @@ function homeCard(h) {
     <div style="display:flex;gap:12px;align-items:center;margin-top:8px">${houseSVG(78)}<div><div class="k">${h.villa ? 'Villa' : 'Home'}</div><div class="v" style="font-size:24px;line-height:1.1">${h.villa ? 'Plot ' + h.villa : '№ ' + num(h.n)}</div><div style="font-size:13px;margin-top:2px">${esc(h.villa ? 'Villa Lane, Central' : h.area + ', ' + h.district)}</div>${h.label ? `<div class="sub">${esc(h.label)}, building R${h.bid}</div>` : ''}</div></div>
     ${h.job || sup ? `<div class="sub" style="margin-top:8px;color:var(--ink)">${h.job ? esc(h.job) : ''}${h.job && sup ? ' · ' : ''}${sup ? '⭐ Supporter of Vinland' : ''}</div>` : ''}
     ${nb.length ? `<div class="k" style="margin-top:10px">${own ? 'Your neighbours' : 'Neighbours'}</div><div class="who">${nb.map(o => o.status === 'hidden' ? `<button disabled>Citizen #${o.n}</button>` : `<button data-a="find" data-u="${esc(o.user)}">@${esc(o.user)}</button>`).join('')}</div>` : ''}
-    <div class="row" style="margin-top:14px"><a class="push p" href="${mapLink(h)}" data-a="go-map">${ic('map', 17)}Open on map</a><button class="push" data-a="pp-open" data-i="1" data-u="${esc(h.user)}">${own ? ic('share', 17) + 'Share passport' : 'View passport'}</button></div></div>`;
+    ${!own && session() ? `<div class="row" style="margin-top:14px">${knockBtn(h.user).replace('class="tag', 'style="margin:auto" class="tag')}</div>` : ''}<div class="row" style="margin-top:${!own && session() ? 10 : 14}px"><a class="push p" href="${mapLink(h)}" data-a="go-map">${ic('map', 17)}Open on map</a><button class="push" data-a="pp-open" data-i="1" data-u="${esc(h.user)}">${own ? ic('share', 17) + 'Share passport' : 'View passport'}</button></div></div>`;
 }
 function headline(t) { const m = /^(.{12,90}?)([:.!?])\s+(.*)$/s.exec(t); return m ? [m[1] + (m[2] === ':' || m[2] === '.' ? '' : m[2]), m[3].charAt(0).toUpperCase() + m[3].slice(1)] : [t, '']; }
 const news = () => notices.filter(n => !/^always$/i.test(n.date));
@@ -355,7 +435,7 @@ const BEACH = 96;
 function beachStrip() { if (!dataOK) return ''; const taken = homes.filter(h => h.status !== 'abandoned' && /^Beach Lane/.test(h.label || '')).length, left = Math.max(0, BEACH - taken);
   return `<div class="doc lob beachst"><div class="pr"><span>🏖️ Beach Lane</span><span class="gold">${left ? num(left) + ' of ' + BEACH + ' flats left' : 'All ' + BEACH + ' flats taken'}</span></div>${bar(taken / BEACH * 100, 'var(--terra)')}</div>`; }
 const bar = (pct, col) => `<div class="pbar2"><i style="width:${Math.max(2, Math.min(100, pct)).toFixed(1)}%${col ? ';background:' + col : ''}"></i></div>`;
-function towerCard(h) { const left = Math.max(0, TOWER - live), st = h ? stampsOf(h).length : 0;
+function towerCard(h) { const left = Math.max(0, TOWER - live), st = h ? Math.min(10, stampsOf(h).length) : 0;
   return `<div class="doc lob">${h ? `<div class="pr"><span>🛂 Stamps</span><span class="gold">${st} / 10</span></div>${bar(st * 10)}` : ''}
     <div class="pr"${h ? ' style="margin-top:12px"' : ''}><span>🗼 Vinland Tower</span><span class="gold">${left ? num(left) + ' to go' : 'Unlocked'}</span></div>${bar(live / TOWER * 100, 'var(--navy)')}</div>`; }
 function focusCard() { return `<button class="doc lob focus" data-a="tab" data-t="${FOCUS.tab}"><span class="em">${FOCUS.emoji}</span><span style="flex:1;min-width:0"><b>${esc(FOCUS.title)}</b><small>${esc(FOCUS.sub)}</small></span><span class="gold" aria-hidden="true">›</span></button>`; }
@@ -370,10 +450,10 @@ const P = {
     const su = session(), h = su ? byUser.get(su) : null;
     if (su && h) return `${homeTop(h)}
       <div class="big3 two"><a class="push" href="map/" data-a="go-map"><span>🗺️</span>Explore</a><button class="push" data-a="pp-open" data-u="${esc(h.user)}"><span>🛂</span>Passport</button></div>
-      ${towerCard(h)}${focusCard()}${supportCard()}`;
+      ${partiesCard()}${towerCard(h)}${focusCard()}${neighboursCard(h)}${findCard()}${supportCard()}`;
     if (su) return `
       <div class="doc lob" style="text-align:center"><b class="h">${dataOK ? 'Your home is on its way' : 'Opening Vinland…'}</b><p class="sub">${dataOK ? 'New homes show here within about 5 minutes.' : 'One moment.'}</p>${dataOK ? '<div class="row" style="margin-top:10px"><button class="push sm" style="flex:1" data-a="retry">Check again</button></div>' : ''}</div>
-      <div class="big3 two"><a class="push" href="map/" data-a="go-map"><span>🗺️</span>Explore</a><button class="push" data-a="tab" data-t="news"><span>📰</span>News</button></div>${towerCard(null)}${focusCard()}${supportCard()}`;
+      <div class="big3 two"><a class="push" href="map/" data-a="go-map"><span>🗺️</span>Explore</a><button class="push" data-a="tab" data-t="news"><span>📰</span>News</button></div>${partiesCard()}${towerCard(null)}${focusCard()}${supportCard()}`;
     return `<div class="doc frame"><label class="h" for="q">Find your home</label>
       <form class="field" data-a="find-form"><input id="q" type="search" inputmode="text" autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="@yourusername" value="${esc(qText)}" enterkeyhint="search"><button class="push g" style="flex:0 0 96px" type="submit">${ic('search', 16)}Find</button></form>
       ${!dataOK ? `<p class="err">${loadErr ? 'We could not reach the citizens list. Check your internet and try again.' : 'Loading the citizens list…'}</p>${loadErr ? '<div class="row" style="margin-top:8px"><button class="push sm" data-a="retry">Try again</button></div>' : ''}` : ''}
@@ -383,7 +463,7 @@ const P = {
         <p class="sub" style="margin-top:6px">Just got your home? It shows here in about 5 minutes.</p></div>` : ''}</div>
       ${beachStrip()}
       <div class="big3 two"><a class="push g" href="${IG}" target="_blank" rel="noopener" data-a="go-ig"><span>📸</span>Follow + comment HOME</a><a class="push" href="map/" data-a="go-map"><span>🗺️</span>Explore</a></div>
-      ${towerCard(null)}${focusCard()}${supportCard()}`;
+      ${partiesCard()}${towerCard(null)}${focusCard()}${supportCard()}`;
   },
   news() {
     const nw = news(), reminded = store.get('vin_remind') === ELECTION.id;
@@ -432,15 +512,19 @@ const P = {
       <div class="doc"><ol class="laws">${ST.laws.map(l => `<li><div><b>${esc(l[0])}</b><small>${esc(l[1])}</small></div></li>`).join('')}</ol></div>`;
   },
   me() {
-    const su = session(), h = su ? byUser.get(su) : null, soon = [['🪙', 'Wallet'], ['🚪', 'Knocks'], ['🎉', 'Parties'], ['🎨', 'My look']];
+    const su = session(), h = su ? byUser.get(su) : null, soon = [['🪙', 'Wallet'], ['🎨', 'My look']];
     const soonHTML = `<div class="grid2">${soon.map(t => `<div class="doc lob soon"><span class="em">${t[0]}</span><b>${t[1]}</b><small>Soon</small></div>`).join('')}</div>`;
     const out = `<div class="row" style="margin-top:6px"><button class="push" data-a="logout">Log out</button></div><p class="sub" style="text-align:center;margin-top:8px">This phone remembers you for 90 days after your last visit.${IN_IG ? ' Inside Instagram: your KEY link also works in Chrome or Safari.' : ''}</p>`;
-    if (su && h) { const sts = stampsOf(h), slots = Math.max(4, sts.length + 1);
+    if (su && h) { const sts = stampsOf(h), slots = Math.max(4, sts.length + 1), nbs = new Set(neighbours(h, 6).map(o => o.user.toLowerCase()));
+      if (SOC.knocks.length) store.set('vin_knocks_seen', SOC.knocks.reduce((a, k) => k.at > a ? k.at : a, ''));
+      const knocksHTML = `<div class="doc lob"><div class="k">🚪 Knocks on your door</div>${SOC.knocks.map(k => `<div class="per"><span><b>${k.friend ? 'Your friend' : nbs.has(k.from) ? 'Your neighbour' : 'Citizen'} @${esc(k.from)} knocked 👋</b><small>${esc(new Date(k.at).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }))}</small></span>
+          ${SOC.ask === 'block:' + k.from ? `<button class="push sm" data-a="block" data-u="${esc(k.from)}">Yes, block</button>` : `<button class="push g sm" data-a="knock" data-u="${esc(k.from)}">Knock back</button><button class="lk" data-a="ask" data-k="block:${esc(k.from)}">Block</button>`}</div>`).join('') || `<p class="sub" style="margin-top:6px">No knocks yet. Knock on a neighbour's door 👋 (${SOC.left} knocks left today)</p>`}</div>`;
+      const fr = [...SOC.friends], friendsHTML = `<div class="doc lob"><div class="k">💛 Friends${fr.length ? ' · ' + fr.length : ''}</div>${fr.map(u => { const fh = byUser.get(u); return `<div class="per"><span><b>@${esc(u)}</b>${fh ? `<small>Home № ${num(fh.n)}</small>` : ''}</span>${SOC.ask === 'unfriend:' + u ? `<button class="push sm" data-a="unfriend" data-u="${esc(u)}">Yes, unfriend</button>` : `${fh ? `<a class="push sm" href="${mapLink(fh)}" data-a="go-map">Visit</a>` : ''}<button class="lk" data-a="ask" data-k="unfriend:${esc(u)}">Unfriend</button>`}</div>`; }).join('') || '<p class="sub" style="margin-top:6px">Knock, and when they knock back within 7 days, you are friends. Only you can see your friends.</p>'}</div>`;
       return `<div class="mepass"><button class="cover" style="width:78px;flex:none;background-image:url(passport-cover.jpg)" data-a="pp-open" data-u="${esc(h.user)}" aria-label="Open your passport"></button>
         <div style="min-width:0"><div class="h" style="font-size:20px;overflow-wrap:anywhere">@${esc(h.user)}</div><div class="sub">Citizen № ${num(h.cn)} · ${esc(h.villa ? 'Villa Lane' : h.district)}</div><div class="row" style="margin-top:8px"><button class="push g sm" data-a="pp-open" data-u="${esc(h.user)}">Open passport</button></div></div></div>
       <div class="doc lob"><div class="k">My stamps</div><div class="stamps">${Array.from({ length: slots }, (_, i) => sts[i] ? `<span class="st">${stampSVG(sts[i], 'ms' + i, [-8, 6, -4, 8, -6][i % 5])}</span>` : '<span class="st next">Next<br>stamp</span>').join('')}</div>
-        <p class="sub" style="margin-top:8px">Earn stamps by voting, exploring and helping.</p></div>
-      ${soonHTML}${out}`; }
+        <p class="sub" style="margin-top:8px">Earn stamps by voting, exploring, hosting and helping.</p></div>
+      ${knocksHTML}${friendsHTML}${partiesCard()}${soonHTML}${out}`; }
     if (su) return `<div class="doc lob" style="background:var(--navy);color:var(--goldlt);border-color:var(--navy)"><b style="color:#fff;font:700 18px var(--serif)">@${esc(su)}</b><small style="color:var(--goldlt)">${dataOK ? 'Your home is on its way: it shows here within about 5 minutes.' : 'Loading your home…'}</small></div>${soonHTML}${out}`;
     return `<div class="doc frame" style="text-align:center"><div style="font-size:30px">🔑</div><div class="h" style="margin-top:4px">Log in to your life in Vinland</div>
         <p class="p">DM KEY to @buildacountry. Your private link works for 24 hours, up to 3 times.</p>
@@ -455,7 +539,7 @@ function render(keepScroll) {
   const y = window.scrollY, su = session();
   $('#sub').textContent = dataOK ? `Day ${dayNumber()}  |  ${num(live)} citizens` : 'A country built by its followers';
   const lb = $('#loginBtn'), mh = su && byUser.get(su); lb.classList.toggle('me', !!su); lb.innerHTML = su ? `<span>@${esc(su)}</span>${mh ? `<small>${esc(statusOf(mh))}</small>` : ''}` : ic('key', 16) + 'Login';
-  $('#nav').innerHTML = TABS.map(t => t[0] === 'map' ? `<a href="map/" data-a="go-map">${ic(t[1], 22)}${t[2]}</a>` : `<button class="${t[0] === tab ? 'on' : ''}" data-a="tab" data-t="${t[0]}" aria-current="${t[0] === tab ? 'page' : 'false'}">${ic(t[1], 22)}${t[2]}</button>`).join('');
+  $('#nav').innerHTML = TABS.map(t => t[0] === 'map' ? `<a href="map/" data-a="go-map">${ic(t[1], 22)}${t[2]}</a>` : `<button class="${t[0] === tab ? 'on' : ''}" data-a="tab" data-t="${t[0]}" aria-current="${t[0] === tab ? 'page' : 'false'}">${ic(t[1], 22)}${t[2]}${t[0] === 'me' && tab !== 'me' && newKnocks() ? `<span class="badge" aria-label="${newKnocks()} new knocks">${newKnocks()}</span>` : ''}</button>`).join('');
   scr.innerHTML = P[tab]();
   window.scrollTo(0, keepScroll ? y : 0);
 }
@@ -468,8 +552,8 @@ function find(u) {
   const h = lookup(key);
   if (h) { found = h; lastUser = h.user; store.set('vin_last', h.user); track('site-find-ok'); }
   else { miss = key; suggest = [...byUser.values()].filter(o => o.status === 'active' && o.user.toLowerCase().includes(key)).slice(0, 4); track('site-find-miss'); }
-  if (tab !== 'home') tab = 'home'; render(true);
-  const el = scr.querySelector('.doc.frame'); if (el && el.getBoundingClientRect().bottom > innerHeight) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  if (tab !== 'home') tab = 'home'; if (session()) SOC.find = true; render(true);
+  const el = session() ? null : scr.querySelector('.doc.frame'); if (el && el.getBoundingClientRect().bottom > innerHeight) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
 // ---------- passport ----------
@@ -497,9 +581,9 @@ function pageHTML(h, i) {
         <div style="flex:1;min-width:0"><div class="pk">Name</div><div class="pv" style="font-size:calc(${h.user.length > 16 ? 4.2 : 5.3} * var(--u))">@${esc(h.user)}</div><div class="pk">Citizen №</div><div class="pv">${h.cn ? num(h.cn) : '—'}</div><div class="pk">Home</div><div class="pv">${esc(homeLine(h))}</div><div class="pk">Nationality</div><div class="pv">Vinlandian</div><div class="pk">Moved in</div><div class="pv">Day ${h.joined}, ${dayDate(h.joined)}</div><div class="pk">Status</div><div class="pv" style="margin:0">${statusOf(h)}</div></div></div>
       ${st ? `<div class="slot" style="position:absolute;right:calc(6 * var(--u));bottom:calc(21 * var(--u))"><span style="display:block;width:calc(25 * var(--u));height:calc(25 * var(--u))">${stampSVG(st, 'pf', -13).replace('<svg ', '<svg style="width:100%;height:100%;transform:rotate(-13deg)" ')}</span></div>` : ''}
       <div class="mrz">${m.map(esc).join('<br>')}</div></div></div>`; }
-  const sts = stampsOf(h), rots = [-11, 8, -5, 9, -8, 6], cells = [];
+  const all = stampsOf(h), sts = all.length > 6 ? all.slice(all.length - 6) : all, rots = [-11, 8, -5, 9, -8, 6], cells = [];
   for (let k = 0; k < 6; k++) cells.push(sts[k] ? `<div class="slot">${stampSVG(sts[k], 'ps' + k, rots[k])}</div>` : `<div class="slot"><div class="empty">Your next<br>stamp</div></div>`);
-  return `<div class="pg"><div class="pin"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:calc(1.5 * var(--u))"><div style="font:500 calc(4.2 * var(--u)) var(--serif);letter-spacing:.24em">STAMPS</div><div class="pk">${sts.length} collected</div></div>
+  return `<div class="pg"><div class="pin"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:calc(1.5 * var(--u))"><div style="font:500 calc(4.2 * var(--u)) var(--serif);letter-spacing:.24em">STAMPS</div><div class="pk">${all.length} collected</div></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;flex:1">${cells.join('')}</div>
     <div style="display:flex;justify-content:space-between;font:italic 500 calc(3.3 * var(--u)) var(--serif);color:rgba(20,35,63,.7);border-top:1px solid rgba(20,35,63,.25);padding-top:calc(2 * var(--u))"><span>Stamps are earned, never bought.</span><span>3</span></div></div></div>`;
 }
@@ -518,7 +602,8 @@ function ppShow(i, animate) {
   (fwd ? old : book.lastElementChild).addEventListener('animationend', done, { once: true }); setTimeout(done, 600); ppDots();
 }
 const ppFit = () => { if (!pp.hidden) book.style.setProperty('--u', book.clientWidth / 100 + 'px'); }; addEventListener('resize', ppFit);
-function ppOpen(u, page) { const h = lookup(u); if (!h) return false; ppH = h; ppI = 0; pp.classList.toggle('lite', !!LITE); pp.hidden = false; document.body.style.overflow = 'hidden'; book.innerHTML = ''; ppFit(); ppShow(page || 0, false); track('site-passport'); return true; }
+function ppOpen(u, page) { const h = lookup(u); if (!h) return false;
+  { const k = h.user.toLowerCase(); if (k !== session() && !SOC.others[k]) socApi({ action: 'stamps', user: k }).then(r => { if (r && r.ok) { SOC.others[k] = r.stamps || []; if (ppH === h && r.stamps.length && !ppBusy) book.innerHTML = pageHTML(ppH, ppI); } }).catch(() => {}); } ppH = h; ppI = 0; pp.classList.toggle('lite', !!LITE); pp.hidden = false; document.body.style.overflow = 'hidden'; book.innerHTML = ''; ppFit(); ppShow(page || 0, false); track('site-passport'); return true; }
 function ppClose() { pp.hidden = true; document.body.style.overflow = ''; ppH = null; }
 { let x0 = null; book.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true }); book.addEventListener('touchend', e => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 40) { book.dataset.sw = '1'; ppShow(ppI + (dx < 0 ? 1 : -1), true); setTimeout(() => delete book.dataset.sw, 350); } }, { passive: true }); }
 
@@ -614,6 +699,18 @@ document.addEventListener('click', e => {
   else if (a === 'sup-card') { supCard = !supCard; render(true); if (supCard) track('site-support-card'); }
   else if (a === 'news-open') { newsOpen = newsOpen === +el.dataset.i ? -1 : +el.dataset.i; render(true); }
   else if (a === 'parl-open') { parlOpen = !parlOpen; render(true); }
+  else if (a === 'knock') doKnock(el.dataset.u);
+  else if (a === 'ask') { SOC.ask = el.dataset.k; render(true); }
+  else if (a === 'block') socDo('block', { user: el.dataset.u }, 'Blocked. They are not told.');
+  else if (a === 'unfriend') socDo('unfriend', { user: el.dataset.u });
+  else if (a === 'going') socDo('going', { party: el.dataset.p, on: el.dataset.on === '1' }, el.dataset.on === '1' ? "You're going 🎉 Open Vinland during the party for your stamp." : '');
+  else if (a === 'party-cancel') socDo('cancel', {}, 'Party cancelled.');
+  else if (a === 'nb-toggle') { SOC.nb = !SOC.nb; render(true); }
+  else if (a === 'find-toggle') { SOC.find = !SOC.find; render(true); if (SOC.find) { const q = $('#q'); if (q) q.focus(); } }
+  else if (a === 'ps-open') psOpen();
+  else if (a === 'ps-close') psClose();
+  else if (a === 'ps-set') { PS[el.dataset.k] = el.dataset.k === 'day' || el.dataset.k === 'hour' ? +el.dataset.v : el.dataset.v; if (el.dataset.k === 'day') PS.hour = -1; PS.err = ''; $('#psIn').innerHTML = psHTML(); }
+  else if (a === 'ps-host') psHost();
   else if (a === 'remind') { store.set('vin_remind', ELECTION.id); track('site-remind'); render(true); }
   else if (a === 'lc-open') lcOpen();
   else if (a === 'lc-close') lcClose();
@@ -653,7 +750,9 @@ render(); if (location.hash === '#support') supOpen();
 { let u = ''; try { u = new URLSearchParams(location.search).get('u') || ''; } catch (e) {} if (u && dataOK) find(u); else if (u) qText = u; }
 let wantPP = ''; try { wantPP = new URLSearchParams(location.search).get('pp') || ''; } catch (e) {}   // index.html?pp=username opens that citizen's passport (from Vinland Maps)
 const openWantedPP = () => { if (wantPP && dataOK) { const u = wantPP; wantPP = ''; ppOpen(u, 1); } }; openWantedPP();   // index.html?u=username opens that home card
+socLoad();
 load().then(() => { openWantedPP(); if (qText && !found && !miss && dataOK && tab === 'home') find(qText); });
+if (window.__vinHook) window.__vinHook(code => eval(code));   // only the build tools set this (tools/social_shots.py)
 if (window.__vinKey) { const k = window.__vinKey; window.__vinKey = null; LR.home = !!window.__vinFromHome; loginWithKey(k); } else checkSession();
 })();
 </script>
