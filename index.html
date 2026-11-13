@@ -91,6 +91,13 @@ ol.laws{padding:0;list-style:none;counter-reset:l}ol.laws li{counter-increment:l
 .nav a{flex:1;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10.5px;color:#8a8170;border-radius:12px;text-decoration:none}
 @media (max-width:360px){.big3 .push{font-size:12.5px;min-height:78px}.hero{height:190px}}
 /* ---------- social (step 5): knocks, friends, neighbours, parties ---------- */
+#sh{position:fixed;inset:0;z-index:25}#sh[hidden]{display:none}#sh .lcbox{top:calc(16px + var(--st));max-height:calc(100vh - 32px);overflow-y:auto;padding-bottom:18px}
+.dots{display:flex;flex-wrap:wrap;gap:9px;margin:6px 0 12px}.dots button{width:38px;height:38px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1.5px var(--rule);padding:0}.dots button.on{box-shadow:0 0 0 3px var(--navy)}
+.lookpv{display:flex;gap:14px;align-items:center;margin:8px 0 6px}.lookpv svg{width:110px;height:140px;border:1.5px solid var(--navy);border-radius:8px;flex:none}
+.coinb{display:inline-flex;align-items:center;gap:6px;background:var(--navy);color:var(--goldlt);border-radius:20px;padding:5px 12px;font:600 13px var(--sans)}
+.shopit{display:flex;align-items:center;gap:11px;padding:10px 0;border-top:1px solid #efe3c4}.shopit:first-of-type{border-top:0}.shopit>span.sw{flex:none;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;background:#f1e6c8;border:1px solid var(--rule)}
+.shopit>span.nm{flex:1;min-width:0}.shopit b{display:block;font:600 14px var(--sans)}.shopit small{font:400 12px var(--sans);color:var(--mute)}.shopit .push{flex:0 0 auto;min-height:40px;font-size:12.5px;padding:0 12px;box-shadow:0 3px 0 var(--navy)}.shopit .push.g{box-shadow:0 3px 0 var(--golddk)}.shopit .push[disabled]{opacity:.5;box-shadow:none}
+.metile{display:flex;align-items:center;gap:10px;text-align:left;width:100%;margin:0}.metile .em{font-size:24px;width:auto}.metile b{display:block;font:600 14px var(--sans)}.metile small{font:400 12px var(--sans);color:var(--mute)}.metile svg{width:38px;height:48px;border-radius:5px;border:1px solid var(--rule);flex:none}
 #ps{position:fixed;inset:0;z-index:25}#ps[hidden],#toast[hidden]{display:none}#ps .lcbox{top:calc(24px + var(--st));max-height:calc(100vh - 48px);overflow-y:auto}
 #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + var(--sb));z-index:40;background:var(--navy);color:#fff;border:1.5px solid var(--gold);border-radius:14px;padding:10px 16px;font:500 13.5px var(--sans);max-width:calc(100% - 32px);text-align:center;box-shadow:0 8px 18px -8px #000}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px}.chips button{min-height:40px;padding:0 12px;border-radius:12px;border:1.5px solid var(--navy);background:var(--sheet);font:500 13px var(--sans);color:var(--navy)}.chips button.on{background:var(--navy);color:var(--goldlt);font-weight:600}
@@ -159,6 +166,7 @@ dl.facts{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5
 </div>
 <div id="lr" hidden role="dialog" aria-modal="true" aria-labelledby="lrT"><div class="lrbox" id="lrIn"></div></div>
 <div id="ps" hidden role="dialog" aria-modal="true" aria-labelledby="psT"><div class="lcbg" data-a="ps-close"></div><div class="lcbox" id="psIn"></div></div>
+<div id="sh" hidden role="dialog" aria-modal="true" aria-labelledby="shT"><div class="lcbg" data-a="sh-close"></div><div class="lcbox" id="shIn"></div></div>
 <div id="toast" role="status" aria-live="polite" hidden></div>
 <div id="lc" hidden role="dialog" aria-modal="true" aria-labelledby="lcT"><div class="lcbg" data-a="lc-close"></div><div class="lcbox" id="lcIn"></div></div>
 <div id="sup" hidden role="dialog" aria-modal="true" aria-label="Support Vinland"><div class="in" id="supIn"></div></div>
@@ -318,7 +326,7 @@ async function checkSession() {   // quiet check on every visit: a session that 
     if (r && r.ok === false && r.error === 'no session') { clearSession(); render(true); }
     else if (r && r.ok && r.expires) { s.exp = r.expires; store.set('vin_session', JSON.stringify(s)); if (memSession) memSession.exp = r.expires; } } catch (e) {}   // each visit: 90 days from today
 }
-async function logout() { const s = readSession(); clearSession(); loginState = ''; lcClose(); SOC.knocks = []; SOC.friends = new Set(); SOC.knocked = new Set(); SOC.mine = null; SOC.stamps = []; SOC.parties = SOC.parties.filter(p => p.open === 'all'); setTimeout(socLoad, 400); found = found && lookup(found.user); render(); track('site-logout'); if (s) try { await loginApi({ action: 'logout', token: s.token }); } catch (e) {} }
+async function logout() { const s = readSession(); clearSession(); loginState = ''; lcClose(); SH.ready = false; SH.look = {}; SH.owned = new Set(); SH.coins = 0; $('#sh').hidden = true; SOC.knocks = []; SOC.friends = new Set(); SOC.knocked = new Set(); SOC.mine = null; SOC.stamps = []; SOC.parties = SOC.parties.filter(p => p.open === 'all'); setTimeout(socLoad, 400); found = found && lookup(found.user); render(); track('site-logout'); if (s) try { await loginApi({ action: 'logout', token: s.token }); } catch (e) {} }
 const myHome = () => byUser.get(session()) || null;
 const DIWALI_DAY = 8;   // 8 Nov 2026 = Day 8
 const statusOf = h => (h.cn > 0 && h.cn <= 5000) ? 'Founding citizen' : 'Citizen';
@@ -345,7 +353,7 @@ const PS = { theme: 'birthday', day: 0, hour: -1, open: 'all', err: '' };
 async function socLoad() {
   const se = readSession();
   try { const r = await socApi(se ? { action: 'state', token: se.token } : { action: 'public' });
-    if (r && r.ok) { SOC.ready = true; SOC.parties = r.parties || []; SOC.knocks = r.knocks || []; SOC.friends = new Set(r.friends || []); SOC.knocked = new Set(r.knockedToday || []); SOC.left = r.left === undefined ? 20 : r.left; SOC.mine = r.mine || null; SOC.stamps = r.stamps || []; }
+    if (r && r.ok) { if (se && !SH.ready) shopLoad(); SOC.ready = true; SOC.parties = r.parties || []; SOC.knocks = r.knocks || []; SOC.friends = new Set(r.friends || []); SOC.knocked = new Set(r.knockedToday || []); SOC.left = r.left === undefined ? 20 : r.left; SOC.mine = r.mine || null; SOC.stamps = r.stamps || []; }
     else if (r && r.error === 'no session') { SOC.knocks = []; SOC.friends = new Set(); SOC.mine = null; SOC.stamps = []; const p = await socApi({ action: 'public' }); if (p && p.ok) SOC.parties = p.parties || []; }
   } catch (e) {}
   if (!document.activeElement || document.activeElement.tagName !== 'INPUT') render(true);
@@ -401,6 +409,89 @@ function psOpen() { PS.err = ''; $('#psIn').innerHTML = psHTML(); $('#ps').hidde
 function psClose() { $('#ps').hidden = true; }
 async function psHost() { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + PS.day); d.setHours(PS.hour, 0, 0, 0); let tz = 'UTC'; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch (e) {}
   PS.err = ''; const ok = await socDo('host', { theme: PS.theme, start: d.toISOString(), tz, open: PS.open }, 'Your party is on the map 🎈'); if (ok) { psClose(); track('site-party-host'); } else $('#psIn').innerHTML = psHTML(); }
+
+// ---------- STEP 8: coins, My look, Vinland Shop. Coins are earned free; Supabase keeps the wallet. Looks never buy votes, jobs or wins (Law 7). ----------
+const KITC = { skins: ['#f1c9a5', '#e9b48a', '#c98e62', '#a8714a', '#8a5a3a'], hairs: ['#2f2b28', '#3a2a20', '#5a3a24', '#8a5a2b', '#c98b3a', '#9a958c'], tops: ['#3f7fbf', '#c8603f', '#2f7a68', '#6a4a8c', '#c9922e', '#47684a', '#b5543a', '#3f5866', '#d88fb0', '#f6f0e2'], bottoms: ['#3b3a46', '#4a3b2f', '#2f3e52', '#55504a', '#d9c49a'], hats: ['#c8603f', '#3f5866', '#f6f0e2', '#2f2b28', '#c9922e', '#47684a'] };
+const SHOPCATS = [['clothes', '🧢', 'Hats & more'], ['car', '🚗', 'Cars'], ['paint', '🎨', 'Car paints'], ['home', '🏡', 'Home colours'], ['yard', '🌷', 'Garden'], ['pet', '🐾', 'Pets'], ['party', '🎉', 'Party kit']];
+const ITEMS = {   // id: [category tab, emoji or colour, name, note]
+  'hat:cap': ['clothes', '🧢', 'Cap', 'Hat'], 'hat:sunhat': ['clothes', '👒', 'Sun hat', 'Hat'], 'hat:beanie': ['clothes', '🧶', 'Beanie', 'Hat'], 'hat:tophat': ['clothes', '🎩', 'Top hat', 'Hat'], 'hat:turban': ['clothes', '👳', 'Turban', 'Hat'],
+  'acc:glasses': ['clothes', '👓', 'Glasses', 'Accessory'], 'acc:sunglasses': ['clothes', '🕶️', 'Sunglasses', 'Accessory'], 'acc:scarf': ['clothes', '🧣', 'Scarf', 'Accessory'], 'acc:backpack': ['clothes', '🎒', 'Backpack', 'Accessory'], 'acc:necklace': ['clothes', '📿', 'Necklace', 'Accessory'],
+  'car:scooter': ['car', '🛵', 'Scooter', '40 km/h'], 'car:autoRickshaw': ['car', '🛺', 'Auto rickshaw', '35 km/h'], 'car:carVan': ['car', '🚐', 'Van', '50 km/h'], 'car:carPickup': ['car', '🛻', 'Pickup', '50 km/h'], 'car:carSedan': ['car', '🚘', 'Sedan', '65 km/h'], 'car:carSUV': ['car', '🚙', 'SUV', '55 km/h'], 'car:carSports': ['car', '🏎️', 'Sports car', '90 km/h'],
+  'paint:Gold': ['paint', '#d4af37', 'Gold'], 'paint:Rose gold': ['paint', '#d8a28f', 'Rose gold'], 'paint:Pearl': ['paint', '#f4f1ea', 'Pearl'], 'paint:Midnight': ['paint', '#1f2a44', 'Midnight'], 'paint:Racing green': ['paint', '#1f4d3a', 'Racing green'], 'paint:Chrome': ['paint', '#c9ced2', 'Chrome'], 'paint:Flame': ['paint', '#e8473a', 'Flame'], 'paint:Lilac': ['paint', '#b9a2d8', 'Lilac'],
+  'home:Rose': ['home', '#f2cfb3|#b5543a', 'Rose'], 'home:Mint': ['home', '#c9d8b6|#4f9a86', 'Mint'], 'home:Sky': ['home', '#c8dbe6|#5b5f66', 'Sky'], 'home:Saffron': ['home', '#f3dfa2|#c8603f', 'Saffron'], 'home:Lavender': ['home', '#d9cfe6|#6a4a8c', 'Lavender'], 'home:Midnight': ['home', '#3f5866|#2f2b28', 'Midnight'], 'home:Royal gold': ['home', '#f6f0e2|#c9a24a', 'Royal gold'],
+  'garden:flowers': ['yard', '🌷', 'Flower garden', 'Garden'], 'garden:vegetables': ['yard', '🥕', 'Vegetable garden', 'Garden'], 'garden:rock': ['yard', '🪨', 'Rock garden', 'Garden'], 'garden:fountain': ['yard', '⛲', 'Fountain', 'Garden'], 'garden:swing': ['yard', '🪢', 'Swing', 'Garden'],
+  'fence:picket': ['yard', '🪵', 'Picket fence', 'Fence'], 'fence:hedge': ['yard', '🌳', 'Hedge', 'Fence'], 'fence:stone': ['yard', '🧱', 'Stone wall', 'Fence'], 'fence:iron': ['yard', '⛓️', 'Iron fence', 'Fence'], 'fence:bamboo': ['yard', '🎋', 'Bamboo fence', 'Fence'],
+  'gate:wooden': ['yard', '🚪', 'Wooden gate', 'Gate'], 'gate:iron': ['yard', '🚪', 'Iron gate', 'Gate'], 'gate:arch': ['yard', '🚪', 'Arch gate', 'Gate'],
+  'pet:dog': ['pet', '🐶', 'Dog', 'Lives in your yard'], 'pet:cat': ['pet', '🐱', 'Cat', 'Lives in your yard'],
+  'party:lanterns': ['party', '🏮', 'Lanterns', 'For your own parties'], 'party:diwaliLights': ['party', '🪔', 'Diwali lights', 'For your own parties'] };
+const COINWHY = { welcome: 'Welcome gift', visit: 'Daily visit', stamp: 'New stamp', trip: 'Finished a trip', shift: 'Worked a shift', host: 'Hosted a party', guest: 'Went to a party', buy: 'Vinland Shop' };
+const SH = { ready: false, coins: 0, lines: [], owned: new Set(), look: {}, prices: {}, view: '', cat: 'clothes', ask: '', busy: false, draft: null };
+async function shopLoad() { const se = readSession(); if (!se) { SH.ready = false; return; }
+  try { const r = await socApi({ action: 'wallet', token: se.token }); if (r && r.ok) { SH.ready = true; SH.coins = r.coins; SH.lines = r.lines || []; SH.owned = new Set(r.owned || []); SH.look = r.look || {}; SH.prices = r.prices || {}; } } catch (e) {}
+  if (!$('#sh').hidden) shRender(); if (!document.activeElement || document.activeElement.tagName !== 'INPUT') render(true); }
+const savedLook = h => { const k = h.user.toLowerCase(), l = k === session() ? (SH.ready ? SH.look : null) : SOC.looks && SOC.looks[k]; return l && Object.keys(l).length ? l : null; };
+// the citizen as a small flat drawing (the lobby has no 3D): same choices as the 3D kit person
+function lookSVG(l, xmlns) { const sk = KITC.skins[l.skin || 0], hc = KITC.hairs[l.hair || 0], tp = KITC.tops[l.top || 0], bt = KITC.bottoms[l.bottom || 0], hcol = KITC.hats[l.hatColor || 0], hs = l.hairStyle || 'short', of = l.outfit || 'tee', hat = l.hat || 'none', acc = l.acc || 'none', ink = '#14233f';
+  let o = `<rect width="110" height="140" fill="#efe6cf"/>`;
+  if (hs === 'long') o += `<path d="M30 60c0-20 10-30 25-30s25 10 25 30v44H30z" fill="${hc}"/>`;
+  if (acc === 'backpack') o += `<rect x="24" y="100" width="62" height="40" rx="8" fill="#3f5866"/>`;
+  o += `<path d="M18 140c0-26 14-38 37-38s37 12 37 38z" fill="${of === 'dress' || of === 'saree' || of === 'kurta' || of === 'shirt' || of === 'tee' ? tp : tp}"/><rect x="47" y="84" width="16" height="22" fill="${sk}"/>`;
+  if (of === 'tee') o += `<path d="M44 102a11 8 0 0 0 22 0z" fill="${sk}"/>`;
+  if (of === 'shirt') o += `<path d="M43 101l12 12 12-12-4-3-8 8-8-8z" fill="#fffdf6"/><path d="M55 113v27" stroke="${ink}" stroke-width="1.2" opacity=".5"/>`;
+  if (of === 'kurta') o += `<path d="M46 102a9 6 0 0 0 18 0z" fill="${sk}"/><path d="M55 108v24" stroke="#fffdf6" stroke-width="2.4"/><circle cx="55" cy="114" r="1.6" fill="${ink}"/><circle cx="55" cy="122" r="1.6" fill="${ink}"/>`;
+  if (of === 'dress') o += `<path d="M40 102a15 12 0 0 0 30 0z" fill="${sk}"/><path d="M38 104l4-4M72 104l-4-4" stroke="${tp}" stroke-width="5" stroke-linecap="round"/>`;
+  if (of === 'saree') o += `<path d="M46 102a9 6 0 0 0 18 0z" fill="${sk}"/><path d="M22 140L74 100l12 8L44 140z" fill="${bt === '#d9c49a' ? '#c9a24a' : '#f2c14e'}" opacity=".92"/>`;
+  if (acc === 'backpack') o += `<path d="M36 108v32M74 108v32" stroke="#3f5866" stroke-width="6"/>`;
+  if (acc === 'scarf') o += `<path d="M40 98q15 10 30 0v9q-15 9-30 0z" fill="#c8603f"/><rect x="60" y="104" width="9" height="24" rx="3" fill="#c8603f"/>`;
+  if (acc === 'necklace') o += `<path d="M44 102q11 16 22 0" fill="none" stroke="#c9a24a" stroke-width="2.4"/><circle cx="55" cy="112" r="3.4" fill="#c9a24a"/>`;
+  o += `<circle cx="55" cy="62" r="25" fill="${sk}"/>`;
+  if (hs !== 'bald') o += `<path d="M30 60c0-19 10-29 25-29s25 10 25 29c-6-11-14-15-25-15s-19 4-25 15z" fill="${hc}"/>`;
+  if (hs === 'bun' && hat === 'none') o += `<circle cx="55" cy="27" r="10" fill="${hc}"/>`;
+  if (acc === 'sunglasses') o += `<rect x="36" y="57" width="16" height="11" rx="3" fill="${ink}"/><rect x="58" y="57" width="16" height="11" rx="3" fill="${ink}"/><path d="M52 61h6" stroke="${ink}" stroke-width="2"/>`;
+  else { o += `<circle cx="45" cy="63" r="2.8" fill="${ink}"/><circle cx="65" cy="63" r="2.8" fill="${ink}"/>`; if (acc === 'glasses') o += `<circle cx="45" cy="63" r="8" fill="none" stroke="${ink}" stroke-width="1.8"/><circle cx="65" cy="63" r="8" fill="none" stroke="${ink}" stroke-width="1.8"/><path d="M53 63h4" stroke="${ink}" stroke-width="1.8"/>`; }
+  o += `<path d="M47 74q8 6 16 0" fill="none" stroke="${ink}" stroke-width="2" stroke-linecap="round"/>`;
+  if (hat === 'cap') o += `<path d="M30 52c0-17 11-25 25-25s25 8 25 25z" fill="${hcol}"/><path d="M72 46h22c3 0 3 7 0 7H70z" fill="${hcol}"/>`;
+  if (hat === 'sunhat') o += `<ellipse cx="55" cy="48" rx="46" ry="9" fill="${hcol}"/><path d="M32 48c0-15 10-22 23-22s23 7 23 22z" fill="${hcol}"/><path d="M32 45h46" stroke="${ink}" stroke-width="3" opacity=".35"/>`;
+  if (hat === 'beanie') o += `<path d="M29 54c0-19 11-28 26-28s26 9 26 28z" fill="${hcol}"/><rect x="27" y="48" width="56" height="9" rx="4" fill="${hcol}" stroke="${ink}" stroke-opacity=".25"/><circle cx="55" cy="23" r="6" fill="#fffdf6"/>`;
+  if (hat === 'tophat') o += `<rect x="36" y="8" width="38" height="36" rx="3" fill="${hcol}"/><rect x="24" y="41" width="62" height="8" rx="4" fill="${hcol}"/><rect x="36" y="33" width="38" height="6" fill="#c9a24a"/>`;
+  if (hat === 'turban') o += `<path d="M27 52c0-20 12-30 28-30s28 10 28 30q-28-12-56 0z" fill="${hcol}"/><path d="M31 44q24-16 48 0M36 34q19-10 38 0" fill="none" stroke="${ink}" stroke-opacity=".3" stroke-width="2"/><circle cx="55" cy="33" r="4" fill="#c9a24a"/>`;
+  return `<svg ${xmlns ? 'xmlns="http://www.w3.org/2000/svg" ' : ''}viewBox="0 0 110 140" width="110" height="140">${o}</svg>`; }
+const itemBtn = (id, used, useKey) => { const own = SH.owned.has(id), price = SH.prices[id];
+  if (own) return used ? `<button class="push sm" data-a="sh-use" data-k="${useKey}" data-v="${useKey === 'party' ? '-' + esc(id.split(':')[1]) : ''}">In use ✓</button>` : `<button class="push g sm" data-a="sh-use" data-k="${useKey}" data-v="${esc(id.split(':')[1])}">Use</button>`;
+  if (price === undefined) return ''; if (SH.coins < price) return `<button class="push sm" disabled>🪙 ${price} · need ${price - SH.coins} more</button>`;
+  return SH.ask === id ? `<button class="push g sm" data-a="sh-buy" data-i="${esc(id)}">Yes, get it</button>` : `<button class="push sm" data-a="sh-ask" data-i="${esc(id)}">🪙 ${price}</button>`; };
+function shHTML() { const su = session(), h = su ? byUser.get(su) : null, L = SH.draft || SH.look, x = `<button class="x" data-a="sh-close" aria-label="Close">×</button>`, coin = `<span class="coinb">🪙 ${num(SH.coins)} coins</span>`;
+  if (!SH.ready) return x + `<div class="h" id="shT" style="font-size:20px">One moment…</div><p class="sub">Opening your wallet.</p>`;
+  if (SH.view === 'wallet') return x + `<div class="h" id="shT" style="font-size:20px">Your wallet</div><p style="margin:8px 0 4px">${coin}</p><p class="sub">Coins are earned by living in Vinland. They are free, and they can never buy votes, jobs or wins.</p>
+    <div class="k" style="margin-top:12px">Latest</div>${SH.lines.map(l => `<div class="per"><span><b>${l.n > 0 ? '+' : ''}${l.n} · ${esc(l.why === 'buy' && ITEMS[l.ref] ? ITEMS[l.ref][2] : COINWHY[l.why] || l.why)}</b><small>${esc(new Date(l.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }))}</small></span></div>`).join('') || '<p class="sub">Nothing yet.</p>'}
+    <div class="k" style="margin-top:12px">How to earn</div><p class="sub" style="line-height:1.7">Every new stamp +50 · Daily visit +10 · A finished trip +15 · A shift at work +15 · A party you went to +20 · Hosting a party with guests +40 (once a week)</p>
+    <div class="row" style="margin-top:10px"><button class="push g" data-a="sh-open" data-v="shop">🛍️ Open the Vinland Shop</button></div>`;
+  if (SH.view === 'look') { const dots = (k, list) => `<div class="dots">${list.map((c, i) => `<button class="${(L[k] || 0) === i ? 'on' : ''}" style="background:${c}" data-a="lk-set" data-k="${k}" data-v="${i}" aria-label="Colour ${i + 1}" aria-pressed="${(L[k] || 0) === i}"></button>`).join('')}</div>`;
+    const chips = (k, list, def) => `<div class="chips">${list.map(v => `<button class="${(L[k] || def) === v[0] ? 'on' : ''}" data-a="lk-set" data-k="${k}" data-v="${v[0]}" aria-pressed="${(L[k] || def) === v[0]}">${v[1]}</button>`).join('')}</div>`;
+    const ownedOf = c => Object.keys(ITEMS).filter(i => i.startsWith(c + ':') && SH.owned.has(i)).map(i => [i.split(':')[1], ITEMS[i][1] + ' ' + ITEMS[i][2]]);
+    return x + `<div class="h" id="shT" style="font-size:20px">My look</div><div class="lookpv">${lookSVG(L)}<p class="sub" style="margin:0">This is you in Vinland: on your passport, in Play mode, at parties and at work. Everyone can see it.</p></div>
+      <div class="k">Skin</div>${dots('skin', KITC.skins)}<div class="k">Hair</div>${chips('hairStyle', [['short', 'Short'], ['long', 'Long'], ['bun', 'Bun'], ['bald', 'Bald']], 'short')}<div class="k">Hair colour</div>${dots('hair', KITC.hairs)}
+      <div class="k">Outfit</div>${chips('outfit', [['tee', 'T-shirt'], ['shirt', 'Shirt'], ['kurta', 'Kurta'], ['dress', 'Dress'], ['saree', 'Saree']], 'tee')}<div class="k">Top colour</div>${dots('top', KITC.tops)}<div class="k">Bottom colour</div>${dots('bottom', KITC.bottoms)}
+      <div class="k">Hat</div>${chips('hat', [['none', 'None']].concat(ownedOf('hat')), 'none')}${(L.hat || 'none') !== 'none' ? `<div class="k">Hat colour</div>${dots('hatColor', KITC.hats)}` : ''}
+      <div class="k">Accessory</div>${chips('acc', [['none', 'None']].concat(ownedOf('acc')), 'none')}<p class="sub">More hats and accessories are in the Vinland Shop.</p>
+      <div class="row" style="margin-top:8px"><button class="push g" data-a="lk-save"${SH.busy ? ' disabled' : ''}>Save my look</button><button class="push" data-a="sh-open" data-v="shop">🛍️ Shop</button></div>`; }
+  const house = h && !h.bid && !h.villa, list = Object.keys(ITEMS).filter(i => ITEMS[i][0] === SH.cat), useKey = i => i.split(':')[0], inUse = i => { const [k, v] = i.split(':'); return k === 'party' ? (L.party || []).includes(v) : L[k] === v; };
+  const sw = it => it[1][0] === '#' ? `<span class="sw" style="background:${it[1].includes('|') ? `linear-gradient(${it[1].split('|')[1]} 0 42%,${it[1].split('|')[0]} 42%)` : it[1]}"></span>` : `<span class="sw">${it[1]}</span>`;
+  return x + `<div class="h" id="shT" style="font-size:20px">Vinland Shop</div><p style="margin:8px 0 4px">${coin}</p><p class="sub">Coins only, and coins are earned free. Get it once, keep it forever.</p>
+    <div class="chips" style="margin-top:10px">${SHOPCATS.map(c => `<button class="${SH.cat === c[0] ? 'on' : ''}" data-a="sh-cat" data-v="${c[0]}" aria-pressed="${SH.cat === c[0]}">${c[1]} ${c[2]}</button>`).join('')}</div>
+    ${(SH.cat === 'home' || SH.cat === 'yard' || SH.cat === 'pet') && !house ? '<p class="sub">These show on houses. Your home is a flat or a villa, so they will not show there yet.</p>' : ''}
+    ${SH.cat === 'car' ? `<div class="shopit">${sw(['', '🚗'])}<span class="nm"><b>Hatchback</b><small>60 km/h · your free car</small></span>${(L.car || 'carHatch') === 'carHatch' ? '<button class="push sm" disabled>In use ✓</button>' : '<button class="push g sm" data-a="sh-use" data-k="car" data-v="carHatch">Use</button>'}</div>` : ''}
+    ${list.map(i => `<div class="shopit">${sw(ITEMS[i])}<span class="nm"><b>${esc(ITEMS[i][2])}</b><small>${esc(ITEMS[i][3] || (SH.cat === 'paint' ? 'For the car parked at your home' : 'Wall and roof'))}</small></span>${itemBtn(i, inUse(i), useKey(i))}</div>`).join('')}
+    ${SH.cat === 'car' ? '<p class="sub">Your car waits outside your home in Play mode (laptop). Time trials always use the same trial car for everyone.</p>' : ''}`; }
+function shRender() { $('#shIn').innerHTML = shHTML(); }
+function shOpen(v) { SH.view = v; SH.ask = ''; SH.draft = v === 'look' ? Object.assign({}, SH.look) : null; shRender(); $('#sh').hidden = false; if (!SH.ready) shopLoad(); }
+async function shSave(look, okMsg) { const se = readSession(); if (!se || SH.busy) return; SH.busy = true; const before = SH.look; SH.look = look; shRender(); render(true);   // shows at once; goes back if Supabase says no
+  try { const r = await socApi({ action: 'look', token: se.token, look }); if (r && r.ok) { SH.look = r.look; if (okMsg) toast(okMsg); } else { SH.look = before; toast((r && r.msg) || 'That did not save. Try again.'); } } catch (e) { SH.look = before; toast('No internet. Try again.'); }
+  SH.busy = false; SH.draft = SH.view === 'look' ? Object.assign({}, SH.look) : null; shRender(); render(true); }
+async function shBuy(id) { const se = readSession(); if (!se || SH.busy) return; SH.busy = true; SH.ask = '';
+  try { const r = await socApi({ action: 'buy', token: se.token, item: id }); if (r && r.ok) { SH.owned.add(id); SH.coins = r.coins; toast('You got the ' + ITEMS[id][2].toLowerCase() + ' ' + (ITEMS[id][1][0] === '#' ? '🎨' : ITEMS[id][1]) + ' Tap Use to show it.'); track('shop-buy'); } else toast((r && r.msg) || 'That did not work. Try again.'); } catch (e) { toast('No internet. Try again.'); }
+  SH.busy = false; shRender(); render(true); shopLoad(); }
+function shUse(k, v) { const look = Object.assign({}, SH.look); if (k === 'party') { const cur = new Set(look.party || []); if (v[0] === '-') { cur.delete(v.slice(1)); v = ''; } else cur.add(v); look.party = [...cur]; } else if (v) look[k] = v; else delete look[k]; shSave(look, v ? 'Done. It shows on the map within a few minutes.' : ''); }
 
 // ---------- pages ----------
 const TABS = [['home', 'home', 'Home'], ['map', 'map', 'Map'], ['news', 'news', 'News'], ['me', 'user', 'Me']];
@@ -517,6 +608,7 @@ const P = {
   },
   me() {
     const su = session(), h = su ? byUser.get(su) : null, soon = [['🪙', 'Wallet'], ['🎨', 'My look']];
+    const meTiles = su && h ? `<div class="grid2"><button class="doc lob metile" data-a="sh-open" data-v="wallet"><span class="em">🪙</span><span><b>Wallet</b><small>${SH.ready ? num(SH.coins) + ' coins' : 'Your coins'}</small></span></button><button class="doc lob metile" data-a="sh-open" data-v="look">${SH.ready && savedLook(h) ? lookSVG(SH.look) : '<span class="em">🎨</span>'}<span><b>My look</b><small>Your citizen</small></span></button></div><button class="doc lob metile" data-a="sh-open" data-v="shop"><span class="em">🛍️</span><span><b>Vinland Shop</b><small>Cars, clothes, home colours, garden, pets, party kit · coins only</small></span></button>` : '';
     const soonHTML = `<div class="grid2">${soon.map(t => `<div class="doc lob soon"><span class="em">${t[0]}</span><b>${t[1]}</b><small>Soon</small></div>`).join('')}</div>`;
     const out = `<div class="row" style="margin-top:6px"><button class="push" data-a="logout">Log out</button></div><p class="sub" style="text-align:center;margin-top:8px">This phone remembers you for 90 days after your last visit.${IN_IG ? ' Inside Instagram: your KEY link also works in Chrome or Safari.' : ''}</p>`;
     if (su && h) { const sts = stampsOf(h), slots = Math.max(4, sts.length + 1), nbs = new Set(neighbours(h, 6).map(o => o.user.toLowerCase()));
@@ -528,7 +620,7 @@ const P = {
         <div style="min-width:0"><div class="h" style="font-size:20px;overflow-wrap:anywhere">@${esc(h.user)}</div><div class="sub">Citizen № ${num(h.cn)} · ${esc(h.villa ? 'Villa Lane' : h.district)}</div><div class="row" style="margin-top:8px"><button class="push g sm" data-a="pp-open" data-u="${esc(h.user)}">Open passport</button></div></div></div>
       <div class="doc lob"><div class="k">My stamps</div><div class="stamps">${Array.from({ length: slots }, (_, i) => sts[i] ? `<span class="st">${stampSVG(sts[i], 'ms' + i, [-8, 6, -4, 8, -6][i % 5])}</span>` : '<span class="st next">Next<br>stamp</span>').join('')}</div>
         <p class="sub" style="margin-top:8px">Earn stamps by voting, exploring, hosting and helping.</p></div>
-      ${knocksHTML}${friendsHTML}${partiesCard()}${soonHTML}${out}`; }
+      ${meTiles}${knocksHTML}${friendsHTML}${partiesCard()}${out}`; }
     if (su) return `<div class="doc lob" style="background:var(--navy);color:var(--goldlt);border-color:var(--navy)"><b style="color:#fff;font:700 18px var(--serif)">@${esc(su)}</b><small style="color:var(--goldlt)">${dataOK ? 'Your home is on its way: it shows here within about 5 minutes.' : 'Loading your home…'}</small></div>${soonHTML}${out}`;
     return `<div class="doc frame" style="text-align:center"><div style="font-size:30px">🔑</div><div class="h" style="margin-top:4px">Log in to your life in Vinland</div>
         <p class="p">DM KEY to @buildacountry. Your private link works for 24 hours, up to 3 times.</p>
@@ -564,7 +656,7 @@ function find(u) {
 const SKINS = ['#f1c9a5', '#e9b48a', '#c98e62', '#a8714a', '#8a5a3a'], HAIRS = ['#2f2b28', '#3a2a20', '#5a3a24', '#8a5a2b', '#c98b3a', '#1e1a18'], SHIRTS = ['#3f7fbf', '#c8603f', '#2f7a68', '#6a4a8c', '#c9922e', '#47684a', '#b5543a', '#3f5866', '#d88fb0'];   // same colours as the walk-mode people
 // The citizen's own character. Default look comes from the username (so faces differ); "Customise look" will overwrite it later.
 function lookOf(h) { const s = hashStr(h.user.toLowerCase()); return { skin: SKINS[s % SKINS.length], hair: HAIRS[(s >> 2) % HAIRS.length], shirt: SHIRTS[(s >> 4) % SHIRTS.length], cut: (s >> 1) % 5 }; }
-function faceSVG(h, xmlns) { const L = lookOf(h), hair = ['M27 52V34c0-8 6-12 12-12h32c8 0 12 5 12 12v18h-7V40H34v12z', 'M27 50V33c0-8 6-12 12-12h32c8 0 12 5 12 12v8H52l-18 6v3z', 'M25 96V34c0-8 6-13 14-13h32c8 0 14 5 14 13v62h-9V42H34v54z', 'M27 46V35c0-8 6-12 12-12h32c8 0 12 4 12 12v11h-6v-7H33v7zM43 23a12 9 0 0 1 24 0z', 'M30 40v-6c0-6 5-9 10-9h30c5 0 10 3 10 9v6z'][L.cut];
+function faceSVG(h, xmlns) { const sl = savedLook(h); if (sl) return lookSVG(sl, xmlns); const L = lookOf(h), hair = ['M27 52V34c0-8 6-12 12-12h32c8 0 12 5 12 12v18h-7V40H34v12z', 'M27 50V33c0-8 6-12 12-12h32c8 0 12 5 12 12v8H52l-18 6v3z', 'M25 96V34c0-8 6-13 14-13h32c8 0 14 5 14 13v62h-9V42H34v54z', 'M27 46V35c0-8 6-12 12-12h32c8 0 12 4 12 12v11h-6v-7H33v7zM43 23a12 9 0 0 1 24 0z', 'M30 40v-6c0-6 5-9 10-9h30c5 0 10 3 10 9v6z'][L.cut];
   return `<svg ${xmlns ? 'xmlns="http://www.w3.org/2000/svg" ' : ''}viewBox="0 0 110 140" width="110" height="140"><rect width="110" height="140" fill="#d8e2e6"/><rect x="16" y="98" width="78" height="46" rx="6" fill="${L.shirt}"/><rect x="45" y="84" width="20" height="18" fill="${L.skin}"/><rect x="45" y="84" width="20" height="6" fill="#000" opacity=".12"/><rect x="29" y="30" width="52" height="58" rx="7" fill="${L.skin}"/><path d="${hair}" fill="${L.hair}"/><rect x="41" y="56" width="7" height="8" rx="2" fill="#1a2238"/><rect x="62" y="56" width="7" height="8" rx="2" fill="#1a2238"/><path d="M46 74q9 6 18 0" stroke="#000" stroke-opacity=".45" stroke-width="3" fill="none" stroke-linecap="round"/></svg>`; }
 // One small security pattern (SVG), made once and reused on every passport page and in the share image.
 const GUIL = (() => { let e = ''; for (let i = 0; i < 18; i++) e += `<ellipse cx="250" cy="150" rx="150" ry="52" transform="rotate(${i * 10} 250 150)"/>`; for (let i = 0; i < 12; i++) e += `<ellipse cx="60" cy="430" rx="110" ry="34" transform="rotate(${i * 15} 60 430)"/>`;
@@ -607,7 +699,7 @@ function ppShow(i, animate) {
 }
 const ppFit = () => { if (!pp.hidden) book.style.setProperty('--u', book.clientWidth / 100 + 'px'); }; addEventListener('resize', ppFit);
 function ppOpen(u, page) { const h = lookup(u); if (!h) return false;
-  { const k = h.user.toLowerCase(); if (k !== session() && !SOC.others[k]) socApi({ action: 'stamps', user: k }).then(r => { if (r && r.ok) { SOC.others[k] = r.stamps || []; if (ppH === h && r.stamps.length && !ppBusy) book.innerHTML = pageHTML(ppH, ppI); } }).catch(() => {}); } ppH = h; ppI = 0; pp.classList.toggle('lite', !!LITE); pp.hidden = false; document.body.style.overflow = 'hidden'; book.innerHTML = ''; ppFit(); ppShow(page || 0, false); track('site-passport'); return true; }
+  { const k = h.user.toLowerCase(); if (k !== session() && !SOC.others[k]) socApi({ action: 'stamps', user: k }).then(r => { if (r && r.ok) { SOC.others[k] = r.stamps || []; (SOC.looks = SOC.looks || {})[k] = r.look || null; if (ppH === h && (r.stamps.length || r.look) && !ppBusy) book.innerHTML = pageHTML(ppH, ppI); } }).catch(() => {}); } ppH = h; ppI = 0; pp.classList.toggle('lite', !!LITE); pp.hidden = false; document.body.style.overflow = 'hidden'; book.innerHTML = ''; ppFit(); ppShow(page || 0, false); track('site-passport'); return true; }
 function ppClose() { pp.hidden = true; document.body.style.overflow = ''; ppH = null; }
 { let x0 = null; book.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true }); book.addEventListener('touchend', e => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 40) { book.dataset.sw = '1'; ppShow(ppI + (dx < 0 ? 1 : -1), true); setTimeout(() => delete book.dataset.sw, 350); } }, { passive: true }); }
 
@@ -711,6 +803,14 @@ document.addEventListener('click', e => {
   else if (a === 'party-cancel') socDo('cancel', {}, 'Party cancelled.');
   else if (a === 'nb-toggle') { SOC.nb = !SOC.nb; render(true); }
   else if (a === 'find-toggle') { SOC.find = !SOC.find; render(true); if (SOC.find) { const q = $('#q'); if (q) q.focus(); } }
+  else if (a === 'sh-open') shOpen(el.dataset.v);
+  else if (a === 'sh-close') { $('#sh').hidden = true; SH.draft = null; }
+  else if (a === 'sh-cat') { SH.cat = el.dataset.v; SH.ask = ''; shRender(); }
+  else if (a === 'sh-ask') { SH.ask = el.dataset.i; shRender(); }
+  else if (a === 'sh-buy') shBuy(el.dataset.i);
+  else if (a === 'sh-use') shUse(el.dataset.k, el.dataset.v);
+  else if (a === 'lk-set') { const k = el.dataset.k, v = el.dataset.v; SH.draft[k] = /^\d+$/.test(v) && ['skin', 'hair', 'top', 'bottom', 'hatColor'].includes(k) ? +v : v; shRender(); }
+  else if (a === 'lk-save') shSave(Object.assign({}, SH.look, SH.draft), 'Saved. This is you in Vinland now ✨');
   else if (a === 'ps-open') psOpen();
   else if (a === 'ps-close') psClose();
   else if (a === 'ps-set') { PS[el.dataset.k] = el.dataset.k === 'day' || el.dataset.k === 'hour' ? +el.dataset.v : el.dataset.v; if (el.dataset.k === 'day') PS.hour = -1; PS.err = ''; $('#psIn').innerHTML = psHTML(); }
