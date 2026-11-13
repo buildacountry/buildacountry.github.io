@@ -357,14 +357,16 @@ function knockBtn(u, cls = '') { const me = session(), o = String(u).toLowerCase
   if (SOC.friends.has(o)) return `<span class="tag on">Friends 💛</span>`;
   if (SOC.knocked.has(o)) return `<span class="tag">Knocked 👋</span>`;
   return `<button class="push g ${cls}" data-a="knock" data-u="${esc(u)}">👋 Knock</button>`; }
-async function doKnock(u) { const se = readSession(); if (!se || SOC.busy) return; SOC.busy = true;
+async function doKnock(u) { const se = readSession(), o = String(u).toLowerCase(); if (!se || SOC.knocked.has(o)) return;
+  SOC.knocked.add(o); SOC.left = Math.max(0, SOC.left - 1); render(true); toast('You knocked on @' + u + "'s door 👋");   // instant; the server confirms in the background
+  const undo = () => { SOC.knocked.delete(o); SOC.left++; };
   try { const r = await socApi({ action: 'knock', token: se.token, to: u });
-    if (r && r.ok) { SOC.knocked.add(String(u).toLowerCase()); SOC.left = Math.max(0, SOC.left - 1); if (r.friends) { SOC.friends.add(String(u).toLowerCase()); SOC.knocks = SOC.knocks.filter(k => k.from !== String(u).toLowerCase()); toast('You and @' + u + ' are friends now 💛'); } else toast('You knocked on @' + u + "'s door 👋"); track('site-knock'); }
-    else toast(r && r.msg ? r.msg : r && r.error === 'no session' ? 'Please log in again: DM KEY to @buildacountry.' : 'That knock did not go through. Try again.');
-  } catch (e) { toast('No internet. Try again.'); } SOC.busy = false; render(true); }
+    if (r && r.ok) { if (r.friends) { SOC.friends.add(String(u).toLowerCase()); SOC.knocks = SOC.knocks.filter(k => k.from !== String(u).toLowerCase()); toast('You and @' + u + ' are friends now 💛'); } track('site-knock'); }
+    else { undo(); toast(r && r.msg ? r.msg : r && r.error === 'no session' ? 'Please log in again: DM KEY to @buildacountry.' : 'That knock did not go through. Try again.'); }
+  } catch (e) { undo(); toast('No internet. Try again.'); } render(true); }
 async function socDo(action, extra, okMsg) { const se = readSession(); if (!se || SOC.busy) return false; SOC.busy = true; let ok = false;
   try { const r = await socApi(Object.assign({ action, token: se.token }, extra)); ok = !!(r && r.ok); if (ok) { if (okMsg) toast(okMsg); } else { PS.err = (r && r.msg) || 'That did not work. Try again.'; if (action !== 'host') toast(PS.err); } } catch (e) { PS.err = 'No internet. Try again.'; if (action !== 'host') toast(PS.err); }
-  SOC.busy = false; SOC.ask = ''; if (ok) await socLoad(); else render(true); return ok; }
+  SOC.busy = false; SOC.ask = ''; await socLoad(); return ok; }   // reload the truth either way (undoes an instant change that failed)
 function partiesCard() { const me = session(), h = me ? byUser.get(me) : null, list = SOC.parties.slice(0, 3), mine = SOC.mine;
   if (!list.length && !mine && !h) return '';
   const row = p => { const th = THEMES[p.theme] || ['🎉', 'Party'], hh = byUser.get(p.host), on = new Date(p.start) <= new Date();
@@ -703,7 +705,7 @@ document.addEventListener('click', e => {
   else if (a === 'ask') { SOC.ask = el.dataset.k; render(true); }
   else if (a === 'block') socDo('block', { user: el.dataset.u }, 'Blocked. They are not told.');
   else if (a === 'unfriend') socDo('unfriend', { user: el.dataset.u });
-  else if (a === 'going') socDo('going', { party: el.dataset.p, on: el.dataset.on === '1' }, el.dataset.on === '1' ? "You're going 🎉 Open Vinland during the party for your stamp." : '');
+  else if (a === 'going') { const p = SOC.parties.find(x => String(x.id) === el.dataset.p); if (p) { p.going = el.dataset.on === '1'; render(true); } socDo('going', { party: el.dataset.p, on: el.dataset.on === '1' }, el.dataset.on === '1' ? "You're going 🎉 Open Vinland during the party for your stamp." : ''); }
   else if (a === 'party-cancel') socDo('cancel', {}, 'Party cancelled.');
   else if (a === 'nb-toggle') { SOC.nb = !SOC.nb; render(true); }
   else if (a === 'find-toggle') { SOC.find = !SOC.find; render(true); if (SOC.find) { const q = $('#q'); if (q) q.focus(); } }
