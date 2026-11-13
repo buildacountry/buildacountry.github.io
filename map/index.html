@@ -554,11 +554,12 @@ async function socLoad() { const se = socSess();
     if (r && r.ok) { SOC.user = r.user || ''; SOC.parties = (r.parties || []).concat(r.mine ? [r.mine] : []).filter(p => Date.parse(p.start) + 36e5 > Date.now()); SOC.byHost = new Map(SOC.parties.map(p => [p.host, p])); SOC.friends = new Set(r.friends || []); SOC.knocked = new Set(r.knockedToday || []); }
   } catch (e) {}
   wake(); if (V.sel && !c2.hidden) card(V.sel); if (window.VIN3D_API && window.VIN3D_API.party) window.VIN3D_API.party(); }
-async function socDo(body, okMsg) { const se = socSess(); if (!se || SOC.busy) return; SOC.busy = true;
+async function socDo(body, okMsg) { const se = socSess(), kn = body.action === 'knock'; if (!se || (kn ? SOC.knocked.has(body.to) : SOC.busy)) return; if (!kn) SOC.busy = true;
+  if (kn) { SOC.knocked.add(body.to); toast('You knocked on the door 👋', 2600); wake(); if (V.sel) card(V.sel); }   // instant; the server confirms
   try { const r = await socApi(Object.assign({ token: se.token }, body));
-    if (r && r.ok) { if (body.action === 'knock') { SOC.knocked.add(body.to); if (r.friends) SOC.friends.add(body.to); toast(r.friends ? 'You and @' + body.to + ' are friends now 💛' : 'You knocked on the door 👋', 2600); } else if (okMsg) toast(okMsg, 3200); }
-    else toast(r && r.msg ? r.msg : r && r.error === 'no session' ? 'Please log in again: DM KEY to @buildacountry.' : 'That did not work. Try again.', 3200);
-  } catch (e) { toast('No internet. Try again.', 2600); }
+    if (r && r.ok) { if (kn) { if (r.friends) { SOC.friends.add(body.to); toast('You and @' + body.to + ' are friends now 💛', 2600); } } else if (okMsg) toast(okMsg, 3200); }
+    else { if (kn) SOC.knocked.delete(body.to); toast(r && r.msg ? r.msg : r && r.error === 'no session' ? 'Please log in again: DM KEY to @buildacountry.' : 'That did not work. Try again.', 3200); }
+  } catch (e) { if (kn) SOC.knocked.delete(body.to); toast('No internet. Try again.', 2600); }
   SOC.busy = false; if (body.action === 'knock') { wake(); if (V.sel) card(V.sel); } else socLoad(); }
 function nbs2D(h) { if (h.villa) return []; const flat = !!h.bid;
   return V.homes.filter(o => o !== h && o.status === 'active' && !o.villa && (flat ? o.bid === h.bid : !o.bid)).map(o => [flat ? Math.abs((o.floor || 0) - (h.floor || 0)) + Math.abs(o.n - h.n) / 1000 : Math.hypot(o.x - h.x, o.z - h.z), o]).filter(e => flat || e[0] < 40).sort((a, b) => a[0] - b[0]).slice(0, 6).map(e => e[1]); }
@@ -2161,7 +2162,7 @@ function selectHome(h) {
   { const S5 = window.VSOC, se = S5 && S5.user, u = h.status === 'active' ? h.user.toLowerCase() : '', row = cardBody.querySelector('.row2'), p = S5 && u ? S5.byHost.get(u) : null;   // step 5: knock + party (fixed buttons only)
     if (p) { const el = document.createElement('p'); el.className = 'p'; const t = Date.parse(p.start), on = t <= Date.now(); el.textContent = '🎉 Party here: ' + (on ? 'on now' : new Date(t).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })) + (se === u ? ' · ' + (p.count || 0) + ' coming' : ''); cardBody.insertBefore(el, row);
       if (row && se && se !== u) { const b = document.createElement('button'); b.className = 'btn'; b.textContent = p.going ? 'Going ✓' : "I'm going"; b.onclick = () => window.VSOC_DO({ action: 'going', party: p.id, on: !p.going }, p.going ? '' : "You're going 🎉 Open Vinland during the party for your stamp.").then(() => { if (selected === h) selectHome(h); }); row.prepend(b); } }
-    if (row && se && u && se !== u) { const b = document.createElement('button'), done = S5.knocked.has(u); b.className = 'btn' + (done ? ' ghost' : ''); b.textContent = S5.friends.has(u) ? (done ? 'Friends 💛 · knocked' : '👋 Knock (friend 💛)') : done ? 'Knocked 👋' : '👋 Knock'; b.disabled = done; b.onclick = () => window.VSOC_DO({ action: 'knock', to: u }).then(() => { if (selected === h) selectHome(h); }); row.prepend(b); } }
+    if (row && se && u && se !== u) { const b = document.createElement('button'), done = S5.knocked.has(u); b.className = 'btn' + (done ? ' ghost' : ''); b.textContent = S5.friends.has(u) ? (done ? 'Friends 💛 · knocked' : '👋 Knock (friend 💛)') : done ? 'Knocked 👋' : '👋 Knock'; b.disabled = done; b.onclick = () => (b.textContent = 'Knocked 👋', b.disabled = true, b.className = 'btn ghost', window.VSOC_DO({ action: 'knock', to: u })).then(() => { if (selected === h) selectHome(h); }); row.prepend(b); } }
   const sb = document.getElementById('shareHome');
   if (sb) sb.onclick = () => { const url = location.href.split('#')[0] + '#home-' + h.n;
     const ok = () => { sb.textContent = 'Link copied'; setTimeout(() => sb.textContent = 'Copy link to this home', 1800); };
