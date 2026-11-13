@@ -50,7 +50,10 @@ function panel(html) { P.panel = html ? 'open' : ''; pPanel.innerHTML = html ? '
 // ---------- you: your look, your car, your work ----------
 function dress() { if (!WALK.parts) return; const k = hashStr(P.me.user), c = new THREE.Color(), UNI = { police: '#1f3a6e', fire: '#c0392b', medic: '#f4f4f0', teacher: '#47684a', shop: '#c9922e' }, uni = P.work && UNI[P.work.role];
   WALK.parts.body.forEach(b => { c.set(b.vary === 0 ? (uni || SHIRTS[k % SHIRTS.length]) : b.vary === 1 ? SKINS[(k >> 2) % SKINS.length] : b.vary === 2 ? HAIRS[(k >> 4) % HAIRS.length] : b.color); b.im.setColorAt(0, c); if (b.im.instanceColor) b.im.instanceColor.needsUpdate = true; }); }
-function mkCar(kind, look, extra) { const mesh = buildCar(look); if (extra) extra(mesh.userData.body, { edge: false, shadow: false }); return { kind, mesh, vmax: KMH[kind] / 3.6, x: 0, z: 0, a: 0 }; }
+function mkBody() { if (P.body) { scene.remove(P.body); P.body = null; } const l = lookOf(P.me.user); if (!l || !KIT || !KIT.person) return;
+  const g = KIT.person({ skin: KITSET.skins[l.skin || 0], hairStyle: l.hairStyle || 'short', hair: KITSET.hairs[l.hair || 0], outfit: l.outfit || 'tee', top: KITSET.tops[l.top || 0], bottom: KITSET.bottoms[l.bottom || 0], hat: l.hat || 'none', hatColor: KITSET.hats[l.hatColor || 0], acc: l.acc || 'none' });
+  g.scale.setScalar(0.95); P.body = g; P.bodyPh = 0; P.bodyAt = [WALK.x, WALK.z]; scene.add(g); }
+function mkCar(kind, look, extra) { const mesh = buildCar(look); if (extra) extra(mesh.userData.body, { edge: false, shadow: false }); return { kind, mesh, vmax: KMH[kind] / 3.6, kmh: KMH[kind], x: 0, z: 0, a: 0 }; }
 function mkKitCar(k, tint) { const body = KIT[k](tint || {}), mesh = new THREE.Group(); mesh.add(body); const s = new THREE.Box3().setFromObject(body).getSize(new THREE.Vector3());
   mesh.userData = { L: Math.max(2, s.z), W: Math.max(0.9, s.x), body, look: { model: k, colour: '' } }; return { kind: k, mesh, vmax: (KMH[k] || 60) / 3.6, x: 0, z: 0, a: 0 }; }
 function park(c, x, z, a) { DRV.car = c.mesh; const sp = a === undefined ? nearestRoadSpot(x, z) : [x, z, a]; c.x = sp[0]; c.z = sp[1]; c.a = sp[2]; c.mesh.position.set(c.x, groundY(c.x, c.z) + 0.02, c.z); c.mesh.rotation.set(0, c.a, 0); if (!c.mesh.parent) scene.add(c.mesh); kick(600); }
@@ -65,7 +68,7 @@ function enterCar(c) { if (DRV.on || P.lock) return; WALK.on = false; WALK.keys 
   Object.assign(DRV, { x: c.x, z: c.z, a: c.a, v: 0, steer: 0, camYaw: c.a, lookOff: 0, cleared: {}, wait: 0, waitAt: null, near: null, tagT: 0, keys: {} }); DRV.y = groundY(c.x, c.z); DRV.camH = 4.6; DRV_VMAX = c.vmax; P.car = c;
   if (!DRV.tags.length) for (let i = 0; i < 16; i++) { const el = document.createElement('div'); el.className = 'lbl home drv'; el.hidden = true; driveTags.appendChild(el); DRV.tags.push(el); }
   document.body.classList.add('walking', 'driving'); driveHud.hidden = false; DRV.on = true; controls.enabled = false; kick(900);
-  toast('You are in ' + (c.kind === 'own' ? 'your car' : 'the ' + CARNAME[c.kind]) + ' · top speed ' + KMH[c.kind] + ' km/h', 2600); }
+  toast('You are in ' + (c.kind === 'own' ? 'your car' : 'the ' + CARNAME[c.kind]) + ' · top speed ' + (c.kmh || KMH[c.kind]) + ' km/h', 2600); }
 function exitCar(quiet) { if (!DRV.on) return; const c = P.car; c.x = DRV.x; c.z = DRV.z; c.a = DRV.a; DRV.on = false; DRV.v = 0; DRV.keys = {}; driveHud.hidden = true; driveNear.hidden = true; DRV.tags.forEach(el => el.hidden = true); if (DRV.blink) DRV.blink.visible = false;
   document.body.classList.remove('driving'); setWalkAt(DRV.x + Math.cos(DRV.a) * 2.4, DRV.z - Math.sin(DRV.a) * 2.4, DRV.a); WALK.batches.forEach(b => { b.im.count = 1; }); walkHud.hidden = false; WALK.on = true; controls.enabled = false; kick(900); if (!quiet) toast('On foot. Your ' + (c.kind === 'own' ? 'car' : CARNAME[c.kind]) + ' waits here.', 2200); }
 // parked street cars (the kit cars from "life on the streets"): you can take one for a drive; it goes back to its place when you take another
@@ -133,15 +136,19 @@ async function shift(on) { const r = await API({ action: 'shift', on }); if (!r 
 // ---------- bus, train, ferry: every 5 minutes on the clock ----------
 const nextDep = () => (Math.floor(Date.now() / 3e5) + 1) * 3e5;
 function stopsPanel(s) { panel(`<h3>${s.ic} ${esc(s.n)}</h3><p>Leaves every 5 minutes (at :00, :05, :10…). Next one in ${clock((nextDep() - Date.now()) / 1000)}. Pick where to go, then wait here.</p>` + stops().filter(q => q !== s).map(q => `<div class="it"><span><b>${q.ic} ${esc(q.n)}</b></span><button data-p="ride" data-n="${esc(q.n)}">Go here</button></div>`).join('')); P.at = s; }
-function rideGo() { const r = P.ride, f = $('pFade'); r.going = true; WALK.on = false; f.textContent = r.from.ic + ' On the ' + r.from.v + ' to ' + r.to.n + '…'; f.hidden = false;
-  setTimeout(() => { setWalkAt(r.to.x, r.to.z); f.hidden = true; P.ride = null; if (P.on) { WALK.on = true; kick(900); toast('You are at ' + r.to.n + ' ' + r.to.ic, 2600); track('play-ride'); } }, 3200); }
+function rideGo() { const r = P.ride, f = $('pFade'); r.going = true; WALK.on = false; if (P.body) P.body.visible = false; WALK.batches.forEach(b => { b.im.count = 0; });
+  const done = () => { clearInterval(r.cam); setWalkAt(r.to.x, r.to.z); f.hidden = true; P.ride = null; WALK.batches.forEach(b => { b.im.count = 1; }); if (P.on) { WALK.on = true; kick(900); toast('You are at ' + r.to.n + ' ' + r.to.ic, 2600); track('play-ride'); } };
+  const v = window.VTRANSIT && window.VTRANSIT.list.find(q => q.kind === r.from.v), home = { bus: 'Bus Station', train: 'Train Station', ferry: 'River Ferry' }[r.from.v] === r.from.n;
+  if (v && home && v.at) { toast(r.from.ic + ' On the ' + r.from.v + ' to ' + r.to.n + '…', 8000);   // ride along: the camera follows the real moving bus / train / ferry for a few seconds
+    r.cam = setInterval(() => { if (!v.at) return; const [x, z, a] = v.at, d = r.from.v === 'bus' ? 16 : 30; camera.position.set(x - Math.sin(a) * d + Math.cos(a) * 7, d * 0.5, z - Math.cos(a) * d - Math.sin(a) * 7); camera.lookAt(x, 2, z); kick(200); }, 33); setTimeout(done, 8000); return; }
+  f.textContent = r.from.ic + ' On the ' + r.from.v + ' to ' + r.to.n + '…'; f.hidden = false; setTimeout(done, 3200); }
 
 // ---------- photo mode ----------
 function photo(on) { if (on === !!P.photo) return; if (on) { if (P.lock || P.ride) return; P.photo = { walk: WALK.on, drive: DRV.on, p: pos(), min: controls.minDistance }; controls.minDistance = 2; WALK.on = DRV.on = false; controls.enabled = true; controls.target.set(P.photo.p[0], 1.4, P.photo.p[1]); controls.update(); document.body.classList.add('vinphoto'); $('pPhoto').hidden = false; pTag.hidden = true; toast('Photo mode: drag to turn, scroll to zoom.', 2600); }
   else { const ph = P.photo; P.photo = null; controls.minDistance = ph.min; document.body.classList.remove('vinphoto', 'pclean'); $('pPhoto').hidden = true; controls.enabled = false; WALK.on = ph.walk; DRV.on = ph.drive; } kick(900); }
 function selfie() { const [x, z, a0] = P.photo.p, car = P.photo.drive, y = car ? 1.5 : 1.75, d = car ? 7 : 4.6; let a = a0;   // stand the camera in front of you, where no wall is in the way
   if (!car) { for (const k of [0, 1, -1, 2, -2, 3, -3, 4]) { const t = a0 + k * Math.PI / 4, cx = x + Math.sin(t) * d, cz = z + Math.cos(t) * d; if (!blockedAt(cx, cz) && !blockedAt((x + cx) / 2, (z + cz) / 2)) { a = t; break; } }
-    WALK.ang = a; P.photo.p[2] = a; poseSlot(0, x, z, a, 0, 1.1); WALK.batches.forEach(b => { b.im.instanceMatrix.needsUpdate = true; }); }
+    WALK.ang = a; P.photo.p[2] = a; if (P.body) P.body.rotation.y = a; else { poseSlot(0, x, z, a, 0, 1.1); WALK.batches.forEach(b => { b.im.instanceMatrix.needsUpdate = true; }); } }
   camera.position.set(x + Math.sin(a) * d, y + 0.35, z + Math.cos(a) * d); controls.target.set(x, y - 0.25, z); controls.update(); kick(900); }
 function snap() { renderer.render(scene, camera); const src = renderer.domElement, c = document.createElement('canvas'); c.width = 1080; c.height = 1920; const g = c.getContext('2d');
   const sc = Math.max(1080 / src.width, 1920 / src.height), w = src.width * sc, h = src.height * sc; g.drawImage(src, (1080 - w) / 2, (1920 - h) / 2, w, h);
@@ -193,7 +200,12 @@ function minimap(mx, mz, ma) { const g = mapC, S = 400, c = S / 2, sc = 0.9; g.f
   if (cup.visible) dot(cup.position.x, cup.position.z, '#f2c14e', 11, '🏆'); const tg = target(); if (tg) dot(tg.x, tg.z, '#e8473a', 10 + (Math.floor(performance.now() / 400) % 2) * 3);
   g.save(); g.translate(c, c); g.rotate(Math.atan2(Math.sin(ma), -Math.cos(ma))); g.beginPath(); g.moveTo(0, -17); g.lineTo(12, 13); g.lineTo(0, 6); g.lineTo(-12, 13); g.closePath(); g.fillStyle = '#c2552d'; g.fill(); g.lineWidth = 3; g.strokeStyle = '#fff'; g.stroke(); g.restore();
   g.fillStyle = '#14233f'; g.font = '700 22px Poppins, sans-serif'; g.textAlign = 'center'; g.fillText('N', c, 20); $('pXY').textContent = 'x ' + Math.round(mx) + ' · z ' + Math.round(mz); }
+const ZERO4 = new THREE.Matrix4().makeScale(0, 0, 0);
 const PLAYHOOK_TICK = (dt, now) => { if (!P.on) return; if (P.lock && DRV.on) DRV.v = 0;
+  if (P.body) { P.body.visible = WALK.on; if (WALK.on) { WALK.batches.forEach(b => { b.im.setMatrixAt(0, ZERO4); b.im.instanceMatrix.needsUpdate = true; });   // your own kit citizen stands in for the plain walker
+      const d = Math.hypot(WALK.x - P.bodyAt[0], WALK.z - P.bodyAt[1]); P.bodyAt = [WALK.x, WALK.z]; P.bodyPh += d * 2.6; const sw = d > 0.002 ? Math.sin(P.bodyPh) * 0.7 : 0, lm = P.body.userData.limbs || {};
+      if (lm.legL) { lm.legL.rotation.x = sw; lm.legR.rotation.x = -sw; } if (lm.armL) { lm.armL.rotation.x = -sw * 0.8; lm.armR.rotation.x = sw * 0.8; }
+      P.body.position.set(WALK.x, groundY(WALK.x, WALK.z) + 0.02, WALK.z); P.body.rotation.y = WALK.ang; } }
   if (WALK.on) { vv.set(WALK.x, 2.75, WALK.z).project(camera); pTag.hidden = vv.z >= 1; pTag.style.left = ((vv.x + 1) / 2 * wrap.clientWidth) + 'px'; pTag.style.top = ((1 - vv.y) / 2 * wrap.clientHeight) + 'px'; } else pTag.hidden = true;
   if (cup.visible) cup.rotation.y = now / 700; };
 
@@ -220,15 +232,18 @@ addEventListener('keydown', e => { if (!P.on || e.repeat || e.ctrlKey || e.metaK
 function start() { if (P.on) return; const me = S5 && S5.user ? homes.find(h => h.status === 'active' && h.user.toLowerCase() === S5.user) : null; if (!me) return;
   P.on = true; P.me = me; P.work = workOf(me); P.parked = null; hud.hidden = false; document.body.classList.add('playing'); PLAYHOOK.tick = PLAYHOOK_TICK; PLAYHOOK.onStop = cleanup;
   $('pWho').textContent = '@' + me.user; $('pJob').textContent = (me.job ? me.job + ' · ' : '') + (P.work ? 'works at ' + P.work.name : 'Home № ' + me.n); pTag.textContent = '@' + me.user;
-  driveRoads(); if (!P.own) P.own = mkCar('own', carLook(me.user)); P.cars = [P.own]; park(P.own, me.x, me.z);
+  driveRoads(); { const lk = lookOf(me.user) || {}, kind = lk.car && lk.car !== 'carHatch' && KIT && KIT[lk.car] && KMH[lk.car] ? lk.car : '', paint = lk.paint && KITSET.paints[lk.paint], key = kind + '|' + (paint || '');   // "the car you chose" (Vinland Shop) with its paint
+    if (!P.own || P.ownKey !== key) { if (P.own) scene.remove(P.own.mesh); P.ownKey = key; const base = carLook(me.user);
+      if (kind) { P.own = mkKitCar(kind, { body: paint || base.colour }); P.own.kind = 'own'; P.own.kmh = KMH[kind]; P.own.vmax = KMH[kind] / 3.6; } else P.own = mkCar('own', paint ? Object.assign({}, base, { colour: paint }) : base); } }
+  P.cars = [P.own]; park(P.own, me.x, me.z);
   const jc = P.work && jobCar(P.work.role); if (jc) { park(jc, P.own.x + Math.sin(P.own.a) * 7.5, P.own.z + Math.cos(P.own.a) * 7.5); if (Math.hypot(jc.x - P.own.x, jc.z - P.own.z) < 4) park(jc, P.own.x - Math.sin(P.own.a) * 7.5, P.own.z - Math.cos(P.own.a) * 7.5); P.cars.push(jc); }
-  DRV.car = P.own.mesh; startWalk(me); const wait = setInterval(() => { if (!WALK.on) return; clearInterval(wait); dress(); stops(); toast('Welcome home, @' + me.user + '. Your car is parked outside. Press E next to it to drive.', 5200); }, 60);
+  DRV.car = P.own.mesh; startWalk(me); const wait = setInterval(() => { if (!WALK.on) return; clearInterval(wait); dress(); mkBody(); stops(); toast('Welcome home, @' + me.user + '. Your car is parked outside. Press E next to it to drive.', 5200); }, 60);
   clearInterval(P.timer); P.timer = setInterval(ui, 100); track('play-start');
   API({ action: 'play' }).then(r => { if (!r || !r.ok || !P.on) { if (r && r.error === 'no session') toast('Please log in again: DM KEY to @buildacountry.', 5200); return; } P.left = r.tripsLeft; P.shift = !!r.myShift; P.hunt = r.hunt; if (r.hunt && r.hunt.found_by) cup.visible = false; }); }
 function cleanup() { if (!P.on) return; P.on = false; PLAYHOOK.tick = null; PLAYHOOK.onStop = null; clearInterval(P.timer); if (P.photo) { const ph = P.photo; P.photo = null; controls.minDistance = ph.min; WALK.on = ph.walk; DRV.on = ph.drive; controls.enabled = false; }
   document.body.classList.remove('playing', 'vinphoto', 'pclean'); hud.hidden = true; panel(''); beacon.visible = false; cup.visible = false; $('pFade').hidden = true; P.trip = P.trial = P.ride = null; P.lock = false;
   if (P.shift) { P.shift = false; API({ action: 'shift', on: false }).then(() => window.VSOC_LOAD && window.VSOC_LOAD()); }
-  const driving = DRV.on ? DRV.car : null; returnBorrowed(); P.cars.concat(P.tcar ? [P.tcar] : []).forEach(c => { if (c.mesh !== driving) scene.remove(c.mesh); }); DRV_VMAX = 11.2; if (!driving) DRV.car = null; kick(600); }
+  if (P.body) { scene.remove(P.body); P.body = null; } const driving = DRV.on ? DRV.car : null; returnBorrowed(); P.cars.concat(P.tcar ? [P.tcar] : []).forEach(c => { if (c.mesh !== driving) scene.remove(c.mesh); }); DRV_VMAX = 11.2; if (!driving) DRV.car = null; kick(600); }
 function leave() { if (!P.on) return; if (P.photo) photo(false); if (!WALK.on && !DRV.on) WALK.on = true; if (DRV.on) stopDrive(); else stopWalk(); }
 window.VPLAY = { start, leave, state: P, use, act, ui };
 })();

@@ -574,6 +574,7 @@ setInterval(() => { if (document.hidden) return; if (SOC.parties.length) { wake(
 window.VSOC_DO = socDo; window.VSOC_API = body => { const se = socSess(); return socApi(Object.assign(se ? { token: se.token } : {}, body)); }; window.VSOC_LOAD = () => socLoad();
 window.VIN2D = { show: u => { const h = V.byUser.get(String(u).toLowerCase()); if (h) { goTo(h, 4.2); card(h); } return !!h; } };
 const c2 = $('#c2'); socLoad();
+window.VLOOKS = {}; const looksLoad = () => socApi({ action: 'looks' }).then(r => { if (r && r.ok && r.looks) { window.VLOOKS = r.looks; if (window.VIN3D_API && window.VIN3D_API.looks) window.VIN3D_API.looks(); } }).catch(() => {}); looksLoad(); window.VLOOKS_LOAD = looksLoad;
 function card(h) { V.sel = h; wake(); if (!h) { c2.hidden = true; return; }
   const b = h.bid ? V.blds.get(h.bid) : null, where = h.villa ? 'Villa Lane, Central' : h.area + ', ' + h.district, live = h.status !== 'abandoned';
   const others = b ? b.list.filter(o => o !== h && o.status !== 'abandoned') : [];
@@ -1412,7 +1413,13 @@ const villaRank = u => Object.keys(VILLAS).indexOf(String(u || '').toLowerCase()
 // 🎨 STYLE (Supporter perk "your style"): your citizen's outfit and your home's colours. Add by hand after a real support:
 //   'username': { shirt: '#hex', pants: '#hex', hair: '#hex', wall: '#hex', roof: '#hex' }   (any field can be left out)
 const STYLE = {};
-const styleOf = u => STYLE[String(u || '').toLowerCase()] || null;
+const KITSET = { skins: ['#f1c9a5', '#e9b48a', '#c98e62', '#a8714a', '#8a5a3a'], hairs: ['#2f2b28', '#3a2a20', '#5a3a24', '#8a5a2b', '#c98b3a', '#9a958c'], tops: ['#3f7fbf', '#c8603f', '#2f7a68', '#6a4a8c', '#c9922e', '#47684a', '#b5543a', '#3f5866', '#d88fb0', '#f6f0e2'], bottoms: ['#3b3a46', '#4a3b2f', '#2f3e52', '#55504a', '#d9c49a'], hats: ['#c8603f', '#3f5866', '#f6f0e2', '#2f2b28', '#c9922e', '#47684a'],
+  homes: { Rose: ['#f2cfb3', '#b5543a'], Mint: ['#c9d8b6', '#4f9a86'], Sky: ['#c8dbe6', '#5b5f66'], Saffron: ['#f3dfa2', '#c8603f'], Lavender: ['#d9cfe6', '#6a4a8c'], Midnight: ['#3f5866', '#2f2b28'], 'Royal gold': ['#f6f0e2', '#c9a24a'] },
+  paints: { Gold: '#d4af37', 'Rose gold': '#d8a28f', Pearl: '#f4f1ea', Midnight: '#1f2a44', 'Racing green': '#1f4d3a', Chrome: '#c9ced2', Flame: '#e8473a', Lilac: '#b9a2d8' } };
+const lookOf = u => { const l = window.VLOOKS && window.VLOOKS[String(u || '').toLowerCase()]; return l && Object.keys(l).length ? l : null; };
+// STEP 8: a citizen's saved look (My look + Vinland Shop, checked by Supabase) sits on top of the hand-made STYLE table
+const styleOf = u => { const s = STYLE[String(u || '').toLowerCase()] || null, l = lookOf(u); if (!l) return s; const o = Object.assign({}, s), hs = l.home && KITSET.homes[l.home];
+  if (l.top !== undefined) o.shirt = KITSET.tops[l.top]; if (l.bottom !== undefined) o.pants = KITSET.bottoms[l.bottom]; if (l.hair !== undefined) o.hair = KITSET.hairs[l.hair]; if (l.skin !== undefined) o.skin = KITSET.skins[l.skin]; if (hs) { o.wall = hs[0]; o.roof = hs[1]; } return o; };
 const SUP_RANK = { wall: 1, supporter: 2, patron: 3, villa: 4, landmark: 5 };   // a key starting with '~' (e.g. '~1': 'wall') = a supporter who asked to stay anonymous: shown as "A kind citizen"
 const supRank = u => SUP_RANK[SUPPORT[String(u || '').toLowerCase()]] || 0;   // 1 = name on the Wall (gold brick), 2+ = gold home tag too
 function plazaPaint(ctx, x0, z0, ppu, slots, names, minFont) {   // draw bricks (and names) for slots in a rect starting at (x0, z0)
@@ -4195,7 +4202,7 @@ function frame(now) {
   const busy = !FAST || moving;
   const due = busy || now - RUN.lastDraw >= (reduce ? 1000 : NIGHT.on ? 33 : 100);
   if (!panelOpen && RUN.homes && due) {
-    updatePeople(Math.min(0.25, (now - RUN.lastDraw) / 1000) || dt, now); updateTraffic(Math.min(0.25, (now - RUN.lastDraw) / 1000) || dt); renderer.render(scene, camera);
+    updatePeople(Math.min(0.25, (now - RUN.lastDraw) / 1000) || dt, now); updateTraffic(Math.min(0.25, (now - RUN.lastDraw) / 1000) || dt); transitTick(); renderer.render(scene, camera);
     if (moving || !FAST || now - RUN.lastTags >= 100 || RUN.tagsFor !== selected) { RUN.lastTags = now; RUN.tagsFor = selected; updateLabels(); updateLayoutLabels(); updateEduLabels(); updateSupTags(); if (window.__vinPerf) window.__vinPerf.tags++; }
     if (BOOT) { if (RUN.wasBusy && moving && RUN.shown > 2) BOOT.frameTime(now - RUN.lastDraw); if (++RUN.shown === 2) BOOT.ready(); }
     RUN.lastDraw = now; RUN.wasBusy = moving;
@@ -4670,7 +4677,7 @@ function buildPeople() {
   const bodyParts = batchOf(bodyB(), walkers.length, true), legL = batchOf(legB(), walkers.length, false), legR = batchOf(legB(), walkers.length, false);
   [...bodyParts, ...legL, ...legR].forEach(x => peopleObjs.push(x));
   walkers.batches = { body: bodyParts, legL, legR };
-  const pickW = (w, v) => { const k = hashStr(w.h.user), st = styleOf(w.h.user) || {}; return v === 0 ? st.shirt || SHIRTS[k % SHIRTS.length] : v === 1 ? SKINS[(k >> 2) % SKINS.length] : st.hair || HAIRS[(k >> 4) % HAIRS.length]; };
+  const pickW = (w, v) => { const k = hashStr(w.h.user), st = styleOf(w.h.user) || {}; return v === 0 ? st.shirt || SHIRTS[k % SHIRTS.length] : v === 1 ? st.skin || SKINS[(k >> 2) % SKINS.length] : st.hair || HAIRS[(k >> 4) % HAIRS.length]; };
   colourBatch(bodyParts, walkers, pickW); const pantsOf = w => (styleOf(w.h.user) || {}).pants || PANTS[(hashStr(w.h.user) >> 6) % PANTS.length]; colourBatch(legL, walkers, pantsOf); colourBatch(legR, walkers, pantsOf);
   for (let i = 0; i < 6; i++) { const el = document.createElement('div'); el.className = 'lbl walker'; el.hidden = true; homeLabels.appendChild(el); peopleTags.push(el); }
 }
@@ -5441,19 +5448,62 @@ function softShadows() {
 const PARTY = { g: null, people: [], objs: [], key: '' };
 function partyScene() { const S5 = window.VSOC, K = window.VinlandKit; if (!S5 || !K || !K.bake || !K.instances) return;
   const now = Date.now(), list = S5.parties.map(p => ({ p, h: homes.find(x => x.status === 'active' && x.user.toLowerCase() === p.host), live: Date.parse(p.start) <= now && Date.parse(p.start) + 36e5 > now })).filter(o => o.h && !o.h.flat && Date.parse(o.p.start) + 36e5 > now).slice(0, 6);
-  const key = list.map(o => o.p.id + (o.live ? 'L' + (o.p.guests || []).join(',') : '')).join('|'); if (key === PARTY.key) return; PARTY.key = key;
+  const key = list.map(o => o.p.id + (o.live ? 'L' + (o.p.guests || []).join(',') : '') + ((lookOf(o.p.host) || {}).party || []).join('+')).join('|'); if (key === PARTY.key) return; PARTY.key = key;
   if (PARTY.g) { scene.remove(PARTY.g); PARTY.g = null; } PARTY.objs.forEach(b => scene.remove(b.im)); PARTY.objs = []; PARTY.people = []; if (!list.length) { kick(600); return; }
   const g = PARTY.g = new THREE.Group(), O = new THREE.Object3D(), mats = {}, put = (k, h, dx, dz, ry) => { const v = new THREE.Vector3(dx, 0, dz).applyAxisAngle(UPV, h.ry); O.position.set(h.x + v.x, 0.14, h.z + v.z); O.rotation.set(0, h.ry + (ry || 0), 0); O.updateMatrix(); (mats[k] = mats[k] || []).push(O.matrix.clone()); };
   const guests = [];
-  list.forEach(({ p, h, live }) => { put(p.theme === 'festival' ? 'lanterns' : 'fairyLights', h, 0, 3.6, 0); put('balloons', h, -3.4, 3.4, 0); put('balloons', h, 3.4, 3.4, 0);
+  list.forEach(({ p, h, live }) => { put(p.theme === 'festival' ? 'lanterns' : 'fairyLights', h, 0, 3.6, 0); put('balloons', h, -3.4, 3.4, 0); put('balloons', h, 3.4, 3.4, 0); { const pk = (lookOf(p.host) || {}).party || []; if (pk.includes('lanterns') && p.theme !== 'festival') put('lanterns', h, 0, 4.6, 0); if (pk.includes('diwaliLights')) put('diwaliLights', h, 0, 2.2, 0); }
     if (live && !FAST) { put('danceFloor', h, 0, 6.2, 0); put('speaker', h, 3.2, 6.4, -0.5);
       [p.host].concat(p.guests || []).slice(0, 12).forEach((u, i) => { const gh = homes.find(x => x.status === 'active' && x.user.toLowerCase() === u); if (!gh) return; const a = i / 12 * Math.PI * 2, v = new THREE.Vector3(Math.cos(a) * (i ? 2.7 : 0), 0, 6.2 + Math.sin(a) * (i ? 2.7 : 0)).applyAxisAngle(UPV, h.ry); guests.push({ h: gh, x: h.x + v.x, z: h.z + v.z, ty: (i % 2) * 0.75, party: true, ry: h.ry + a }); }); } });
   Object.keys(mats).forEach(k => { if (K[k]) g.add(K.instances(K.bake(K[k]({})), mats[k], () => null)); }); scene.add(g);
   if (guests.length) { const b = batchOf(ownerC('plain'), guests.length, true); b.forEach(x => { scene.add(x.im); PARTY.objs.push(x); });
     guests.forEach((w, i) => { PP.set(w.x, 0.34, w.z); PQ.setFromAxisAngle(UPV, w.ry); PM.compose(PP, PQ, PS); b.forEach(x => x.im.setMatrixAt(i, PM)); }); b.forEach(x => x.im.instanceMatrix.needsUpdate = true);
-    colourBatch(b, guests, (o, v) => { const k = hashStr(o.h.user); return v === 0 ? SHIRTS[k % SHIRTS.length] : v === 1 ? SKINS[(k >> 2) % SKINS.length] : HAIRS[(k >> 4) % HAIRS.length]; }); PARTY.people = guests; }
+    colourBatch(b, guests, (o, v) => { const k = hashStr(o.h.user), st = styleOf(o.h.user) || {}; return v === 0 ? st.shirt || SHIRTS[k % SHIRTS.length] : v === 1 ? st.skin || SKINS[(k >> 2) % SKINS.length] : st.hair || HAIRS[(k >> 4) % HAIRS.length]; }); PARTY.people = guests; }
   kick(900); }
 setInterval(() => { if (!document.hidden && window.VSOC && window.VSOC.parties.length) partyScene(); }, 6e4);
+// STEP 8 (13 Nov): MOVING TRANSPORT (laptops only; phones do not draw it). A bus, a train and a ferry from the transport kit run on a 5-minute timetable:
+// they leave their home stop at :00, :05, :10… , reach the other end, and come back half way through. Nothing is added to the map layout: the bus uses the
+// real roads (a path found over the road boxes), the train the real track, the ferry the river between two bridges.
+const TRANSIT = { list: [], ready: false };
+function transitScene() { if (TRANSIT.ready || FAST) return; const K = window.VinlandKit; if (!K || !K.bus || !K.trainEngine || !K.ferry) return; TRANSIT.ready = true;
+  const line = pts => { const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return { pts, cum, L: cum[cum.length - 1] }; };
+  const add = (kind, keys, pts, y, speed) => { if (pts.length < 2) return; const ln = line(pts), cars = []; let off = 0;
+    keys.forEach((k, i) => { const m = K[k]({}), len = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3()).z; if (i) off += len / 2; m.traverse(o => { o.frustumCulled = false; }); scene.add(m); cars.push({ m, off }); off += len / 2 + 0.6; });
+    TRANSIT.list.push({ kind, ln, cars, y, T: Math.min(120, Math.max(20, ln.L / speed)), tail: off }); };
+  // bus: Bus Station → Market over the real roads
+  try { driveRoads(); const R = DRV.rects, near = (x, z) => { let bi = 0, bd = 1e9, bp = [x, z]; R.forEach((r, i) => { const px = Math.max(r.x0, Math.min(x, r.x1)), pz = Math.max(r.z0, Math.min(z, r.z1)), d = Math.hypot(px - x, pz - z); if (d < bd) { bd = d; bi = i; bp = [px, pz]; } }); return [bi, bp]; };
+    const mk = marketSlots.filter(q => !q.area), mx = mk.length ? mk.reduce((a, q) => a + q.x, 0) / mk.length : 0, mz = mk.length ? mk.reduce((a, q) => a + q.z, 0) / mk.length + 14 : 60, [a, pa] = near(BUS.x, BUS.z), [b, pb] = near(mx, mz);
+    const mid = r => [(r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2], long = r => (r.x1 - r.x0) >= (r.z1 - r.z0), inR = (p, r) => [Math.max(r.x0 + 1.6, Math.min(p[0], r.x1 - 1.6)), Math.max(r.z0 + 1.6, Math.min(p[1], r.z1 - 1.6))];
+    const touch = (p, q) => p.x0 <= q.x1 && q.x0 <= p.x1 && p.z0 <= q.z1 && q.z0 <= p.z1, prev = new Array(R.length).fill(-2), qu = [a]; prev[a] = -1;
+    while (qu.length && prev[b] === -2) { const k = qu.shift(); for (let j = 0; j < R.length; j++) if (prev[j] === -2 && touch(R[k], R[j])) { prev[j] = k; qu.push(j); } }
+    if (prev[b] !== -2) { const chain = []; for (let k = b; k !== -1; k = prev[k]) chain.unshift(k); const pts = [pa];
+      for (let i = 1; i < chain.length; i++) { const p = R[chain[i - 1]], q = R[chain[i]], c = [(Math.max(p.x0, q.x0) + Math.min(p.x1, q.x1)) / 2, (Math.max(p.z0, q.z0) + Math.min(p.z1, q.z1)) / 2], last = pts[pts.length - 1];
+        const e = long(p) ? [c[0], last[1]] : [last[0], c[1]]; if (Math.hypot(e[0] - last[0], e[1] - last[1]) > 0.5) pts.push(inR(e, p)); pts.push(c); }   // along each road, then turn at the junction
+      const last = pts[pts.length - 1], q = R[b], e = long(q) ? [pb[0], last[1]] : [last[0], pb[1]]; pts.push(inR(e, q)); add('bus', ['bus'], pts, 0.16, 11); } } catch (e) {}
+  // train: out of the station along the main track and back
+  try { const tr = RAIL.tracks[0], pts = []; for (let i = 6; i < Math.min(tr.length, 560); i += 4) pts.push([tr[i][0], tr[i][1]]); add('train', ['trainEngine', 'trainCoach', 'trainCoach'], pts, 0.35, 16); } catch (e) {}
+  // ferry: on the river between Central Bridge and the bridge to its north
+  try { const x = z => (RS.riverE + RS.riverW(z)) / 2 - 6, pts = []; for (let z = -28; z >= -198; z -= 10) pts.push([x(z), z]); add('ferry', ['ferry'], pts, 0.1, 5); } catch (e) {}
+  window.VTRANSIT = TRANSIT; }
+function transitTick() { if (!TRANSIT.list.length) return; const p = (Date.now() % 3e5) / 1000, ez = t => t <= 0 ? 0 : t >= 1 ? 1 : (1 - Math.cos(Math.PI * t)) / 2;
+  TRANSIT.list.forEach(v => { const out = p < 150, t = out ? p / v.T : (p - 150) / v.T, f = ez(t), room = Math.max(1, v.ln.L - v.tail), d0 = out ? f * room : (1 - f) * room, flip = !out && v.kind !== 'train';   // the train backs up; bus and ferry turn round
+    v.moving = t > 0 && t < 1; v.at = null;
+    v.cars.forEach((c, i) => { let d = Math.max(0, Math.min(v.ln.L, v.tail + d0 - c.off)); const cum = v.ln.cum, pts = v.ln.pts; let k = 1; while (k < cum.length - 1 && cum[k] < d) k++;
+      const a = pts[k - 1], b = pts[k], u = (d - cum[k - 1]) / ((cum[k] - cum[k - 1]) || 1), x = a[0] + (b[0] - a[0]) * u, z = a[1] + (b[1] - a[1]) * u; c.m.position.set(x, v.y, z); c.m.rotation.y = Math.atan2(b[0] - a[0], b[1] - a[1]) + (flip ? Math.PI : 0); if (!i) v.at = [x, z, c.m.rotation.y]; }); }); }
+// STEP 8 (13 Nov): bought home looks show on the map for everyone. Wall + roof colour is free to draw (same batch, another colour), so phones get it too.
+// Garden, fence, gate and pet are extra pieces in the home's OWN front yard (nothing moves): laptops only.
+const HLOOK = { g: null, key: '' };
+function homeLooks() { const L = window.VLOOKS || {}, K = window.VinlandKit, hs = homes.filter(h => h.status === 'active' && !h.flat && !h.villa && lookOf(h.user));
+  const key = hs.map(h => { const l = lookOf(h.user); return h.n + ':' + [l.home, l.garden, l.fence, l.gate, l.pet].join('/'); }).join('|'); if (key === HLOOK.key) return; const had = HLOOK.key; HLOOK.key = key;
+  if (had || hs.some(h => lookOf(h.user).home)) drawHomes(homes.filter(h => !h.flat && !h.villa));
+  if (HLOOK.g) { scene.remove(HLOOK.g); HLOOK.g = null; } if (FAST || !K || !K.bake || !K.instances) { kick(600); return; }
+  const mats = {}, O = new THREE.Object3D(), put = (k, h, x, z, ry, sx, sz) => { const v = new THREE.Vector3(x * 0.92, 0, z * 0.92).applyAxisAngle(UPV, h.ry); O.position.set(h.x + v.x, 0.2, h.z + v.z); O.rotation.set(0, h.ry + (ry || 0), 0); O.scale.set(0.92 * (sx || 1), 0.92, 0.92 * (sz || 1)); O.updateMatrix(); (mats[k] = mats[k] || []).push(O.matrix.clone()); };
+  hs.forEach(h => { const l = lookOf(h.user);
+    if (l.garden) put('garden|' + l.garden, h, 0, 3.35, 0, 0.94, 0.62);
+    if (l.fence) { put('fence|' + l.fence, h, -2.95, 5.12, 0, 0.4, 1); put('fence|' + l.fence, h, 2.95, 5.12, 0, 0.4, 1); }
+    if (l.gate) put('gate|' + l.gate, h, 0, 4.95, 0, 0.72, 1);
+    if (l.pet === 'dog') put('dog|', h, -1.7, 3.5, 0.6); if (l.pet === 'cat') put('cat|', h, 1.8, 2.5, -0.5); });
+  const g = HLOOK.g = new THREE.Group(); Object.keys(mats).forEach(k => { const [kind, style] = k.split('|'); if (K[kind]) g.add(K.instances(K.bake(K[kind](style ? { style } : {})), mats[k], () => null)); }); scene.add(g); kick(900); }
 // STEP 6 (13 Nov): PLAY MODE. Citizens who tapped "Start shift" at their REAL workplace stand there for everyone; a shop owner's sign says OPEN.
 // The workplace always comes from the sheet (job / shop), never from the page of the person on shift.
 const SHIFT = { people: [], objs: [], key: '' };
@@ -5471,7 +5521,7 @@ function shiftScene() { const S5 = window.VSOC; if (!S5) return; const list = (S
       if (w.shop && h.shopRef && w.shop.el) { w.shop.open = true; w.shop.el.innerHTML = `<b>${esc(w.shop.job)}</b> <span>@${esc(h.user)}</span> <b style="color:#1f7a3a">· OPEN</b>`; } });
     b.forEach(x => x.im.instanceMatrix.needsUpdate = true);
     const UNI = { police: '#1f3a6e', fire: '#c0392b', medic: '#f4f4f0', teacher: '#47684a', shop: '#c9922e' };
-    colourBatch(b, list, (o, v) => { const k = hashStr(o.h.user); return v === 0 ? UNI[o.w.role] : v === 1 ? SKINS[(k >> 2) % SKINS.length] : HAIRS[(k >> 4) % HAIRS.length]; }); }
+    colourBatch(b, list, (o, v) => { const k = hashStr(o.h.user), st = styleOf(o.h.user) || {}; return v === 0 ? UNI[o.w.role] : v === 1 ? st.skin || SKINS[(k >> 2) % SKINS.length] : st.hair || HAIRS[(k >> 4) % HAIRS.length]; }); }
   kick(900); }
 { const pb = document.getElementById('playBtn'), me = () => { const S5 = window.VSOC; return S5 && S5.user ? homes.find(h => h.status === 'active' && h.user.toLowerCase() === S5.user) : null; };
   const run = code => eval(code);   // play.js runs inside the map, so it can use the walk and drive code that is already here. It is loaded only when Play is pressed.
@@ -5479,7 +5529,7 @@ function shiftScene() { const S5 = window.VSOC; if (!S5) return; const list = (S
     pb.onclick = () => { if (!me()) { if (BOOT && BOOT.toast) BOOT.toast(window.VSOC && window.VSOC.user ? 'Your home is not on the map yet. Play opens when it is built.' : 'Play is for citizens. Log in first: DM KEY to @buildacountry.', 4200); return; }
       if (window.VPLAY) { window.VPLAY.start(); return; } pb.disabled = true;
       fetch('play.js?v=1').then(r => { if (!r.ok) throw 0; return r.text(); }).then(t => { run(t + '\n//# sourceURL=play.js'); pb.disabled = false; if (window.VPLAY) window.VPLAY.start(); }).catch(() => { pb.disabled = false; if (BOOT && BOOT.toast) BOOT.toast('Play could not load. Check your internet and try again.', 3600); }); }; } }
-window.VIN3D_API = { wake: () => kick(900), party: () => { try { shiftScene(); } catch (e) {} try { partyScene(); if (selected && selected.status === 'active' && !PARTY.carded) { PARTY.carded = true; selectHome(selected); } } catch (e) {} },   // the open home card gets its Knock / party lines once the social state arrives
+window.VIN3D_API = { wake: () => kick(900), looks: () => { try { homeLooks(); PARTY.key = ''; SHIFT.key = ''; shiftScene(); partyScene(); if (typeof buildPeople === 'function' && Object.keys(window.VLOOKS || {}).length) buildPeople(); } catch (e) {} }, party: () => { try { shiftScene(); } catch (e) {} try { partyScene(); if (selected && selected.status === 'active' && !PARTY.carded) { PARTY.carded = true; selectHome(selected); } } catch (e) {} },   // the open home card gets its Knock / party lines once the social state arrives
   select: q => { q = String(q).replace(/^@/, '').toLowerCase(); const h = /^\d+$/.test(q) ? homes.find(x => x.n === +q) : homes.find(x => x.status !== 'hidden' && x.user.toLowerCase() === q); if (h) { if (narrow) setMin(false); selectHome(h); kick(2500); } return !!h; } };
 // Phones (13 Nov, step 4): 3D is for a look-around only. The heavy things (walk, drive, night, auto tour) run on laptops; here they show a small note.
 if (PHONE && !OLDP) { const note = () => { if (BOOT && BOOT.toast) BOOT.toast('Best on laptop 💻 Walk, drive, night and the auto tour run on a laptop. On your phone, look around here or use the 2D map.', 4200); };
@@ -5510,6 +5560,8 @@ if (window.__vinHook) window.__vinHook(code => eval(code));   // only the build 
   try { streetLife(); } catch (e) { /* street life is extra: the map opens without it */ }
   try { partyScene(); } catch (e) { /* parties are extra too */ }
   try { shiftScene(); } catch (e) {}
+  try { homeLooks(); } catch (e) {}
+  try { transitScene(); } catch (e) {}
   softShadows();
   if (BOOT) BOOT.progress(96, 'Opening the map…');
   RUN.homes = true; kick(1800);
