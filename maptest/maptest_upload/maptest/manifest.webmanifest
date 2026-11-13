@@ -1,0 +1,16 @@
+{
+  "name": "Vinland Maps",
+  "short_name": "Vinland Maps",
+  "description": "Walk, drive and explore Vinland, the country built by its followers.",
+  "start_url": "./",
+  "scope": "./",
+  "id": "/map/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#14233f",
+  "theme_color": "#14233f",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
