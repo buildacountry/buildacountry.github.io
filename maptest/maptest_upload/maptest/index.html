@@ -4,7 +4,7 @@
 <meta name="robots" content="noindex">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>TEST · Vinland Maps</title>
+<title>Vinland Maps</title>
 <meta name="description" content="A country built by its followers. Follow @buildacountry and your home appears on this map with your username on it.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Vinland Maps">
@@ -4721,7 +4721,7 @@ function downtown() {
     m.traverse(o => { if (!o.isMesh && !o.isLineSegments) return; o.receiveShadow = true; if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
       const r = o.geometry.boundingSphere.radius * 1.2 + o.geometry.boundingSphere.center.length(), sp = cs.getBoundingSphere(new THREE.Sphere()); if (o.isMesh) { o.geometry.boundingSphere = new THREE.Sphere(sp.center, sp.radius + r); o.frustumCulled = true; } });
     g.add(m); return m; };
-  const SFULL = /[?&]stadfull/.test(location.search);   // preview only: show the finished stadium
+  const SFULL = true;   // preview only: show the finished stadium
   DT.flat = []; const ground = (x0, x1, z0, z1, col, y = 0.04) => { DT.flat.push([x0, z0, x1 - x0, z1 - z0, y + 0.04, col]); return B(g, x1 - x0, 0.08, z1 - z0, col, (x0 + x1) / 2, y, (z0 + z1) / 2, N); };   // DT.flat: for the 2D map export
   const places = [];
   // ---- BACK ROW: Business District (offices + empty business lots, given out only when Dev grants them) ----
@@ -4733,8 +4733,8 @@ function downtown() {
       if ((i === 0 && j === 1) || (i === 5 && j === 0)) { const x = (a0 + a1) / 2, z = (z0 + z1) / 2; ground(a0 + 2, a1 - 2, z0 + 2, z1 - 2, '#cfc6b0', 0.06); one('lotSign', { text: 'BUSINESS LOT · AVAILABLE' }, j ? a0 + 1 : a1 - 1, z, j ? -Math.PI / 2 : Math.PI / 2); return; }
       const near = Math.min(Math.abs(z0), Math.abs(z1)) < 80, k = i * 2 + j;
       if (i === 2 && j === 0) { const zc = (z0 + z1) / 2;                                                // the glass HQ gets an open plaza on the middle street, so it stands out
-        ground(a0, a1, z0, z1, '#efe6d4', 0.07); one('glassHQ', {}, a0 + 20, zc, Math.PI / 2, 1);
-        [[a1 - 8, z0 + 8], [a1 - 8, z1 - 8], [a1 - 24, z0 + 8], [a1 - 24, z1 - 8]].forEach(([x, z]) => one('raisedPlanter', {}, x, z, 0)); one('publicClock', {}, a1 - 16, zc, 0); return; }
+        ground(a0, a1, z0, z1, '#efe6d4', 0.07); one('glassHQ', {}, a1 - 20, zc, -Math.PI / 2, 1);   // HQ at the back, its plaza faces the lake road and the Tower (Dev, 14 Nov)
+        [[a0 + 8, z0 + 8], [a0 + 8, z1 - 8], [a0 + 24, z0 + 8], [a0 + 24, z1 - 8]].forEach(([x, z]) => one('raisedPlanter', {}, x, z, 0)); one('publicClock', {}, a0 + 16, zc, 0); return; }
       ground(a0 - 1, a1 + 1, z0 - 1, z1 + 1, '#ddd6c8', 0.07);                                           // footpath all round the block
       B(g, a1 - a0 - 6, 5, z1 - z0 - 6, '#c9a27a', (a0 + a1) / 2, 2.5, (z0 + z1) / 2, N);                       // shop base
       B(g, a1 - a0 - 5.6, 2.2, z1 - z0 - 5.6, '#5f7d8f', (a0 + a1) / 2, 1.5, (z0 + z1) / 2, N);          // shop windows all round
@@ -4758,10 +4758,10 @@ function downtown() {
     const isl = new THREE.Mesh(new THREE.CircleGeometry(36, 48), wallMat('#efe6d4')); isl.rotation.x = -Math.PI / 2; isl.position.set(cx, 0.16, 0); g.add(isl);   // island the Tower stands on
     ground(x0 + 3, cx - 8, -AV, AV, '#efe6d4', 0.13);   // the avenue walks onto the island
     for (let i = 0; i < 20; i++) { const a = i / 20 * Math.PI * 2; if (Math.abs(Math.cos(a)) > 0.92 && Math.cos(a) < 0) continue; B(g, 0.6, 2.4, 0.6, '#ffffff', cx + Math.cos(a) * (LX - 8), 0.1, Math.sin(a) * (LZ - 8), N); }   // fountain jets
-    if (/[?&]towerfull/.test(location.search)) one('vinlandTower', {}, cx, 0, Math.PI / 2, 0.6);
+    if (true) one('vinlandTower', {}, cx, 0, Math.PI / 2, 0.6);
     else { const ring = []; for (let i = 0; i < 36; i++) { const a = i / 36 * Math.PI * 2; ring.push([cx + Math.cos(a) * 26, Math.sin(a) * 26, -a + Math.PI / 2]); } many('sitePanel', { text: 'VINLAND' }, ring);
       one('towerCrane', {}, cx + 10, 8); many('materials', {}, [[cx - 12, -10], [cx - 8, 12]]); }
-    if (!/[?&]towerfull/.test(location.search)) DT.towerBoard = one('milestoneBoard', { text: `Vinland Tower · opens at ${num(DT.TOWER_AT)} citizens · ${num(live)} / ${num(DT.TOWER_AT)}` }, x0 + 10, -AV - 10, Math.PI / 2, 1.1);
+    if (!true) DT.towerBoard = one('milestoneBoard', { text: `Vinland Tower · opens at ${num(DT.TOWER_AT)} citizens · ${num(live)} / ${num(DT.TOWER_AT)}` }, x0 + 10, -AV - 10, Math.PI / 2, 1.1);
     [[-222, -LZ - 6], [LZ + 6, 222]].forEach(([za, zb]) => { ground(x0 + 3, x1 - 3, za, zb, '#a9c97f', 0.06);   // Central Park
       ground(cx - 3, cx + 3, za, zb, '#efe6d4', 0.08); ground(x0 + 3, x1 - 3, (za + zb) / 2 - 3, (za + zb) / 2 + 3, '#efe6d4', 0.08);   // cross paths
       for (let x = x0 + 12; x < x1 - 8; x += 15) for (let z = za + 9; z < zb - 6; z += 17) if (Math.abs(x - cx) > 8 && Math.abs(z - (za + zb) / 2) > 8 && ((x * 7 + z * 3) | 0) % 5) tree(g, x, 0.1, z, ((x + z) / 15 | 0) % 3 ? 'canopy' : 'pink', 1);
