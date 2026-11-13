@@ -179,7 +179,8 @@ const houseSVG = s => `<svg width="${s}" height="${s}" viewBox="0 0 96 96" fill=
 $('#crest').innerHTML = crest(26, '#c9a24a');
 
 // ---------- data (mirrors buildHomes / buildMarket in map.html; plots come from vinland-static.js) ----------
-const PL = ST ? ST.plots.split('\n').map(l => { const a = l.split(','); return { x: +a[0], z: +a[1], a: a[2], block: +a[3] || 0, bid: +a[4] || 0, label: a[5] || '', floor: +a[6] || 0 }; }) : [];
+const PL = ST ? ST.plots.split('\n').map(l => { const a = l.split(','); if (a.length > 7) a.splice(5, a.length - 6, a.slice(5, a.length - 1).join(', ').replace(/,\s+/g, ', '));   // a label may hold a comma ("Beach Lane, Flat 1")
+  return { x: +a[0], z: +a[1], a: a[2], block: +a[3] || 0, bid: +a[4] || 0, label: a[5] || '', floor: +a[6] || 0 }; }) : [];
 const AREA = { F: 'Founder Square', M: 'Middle', E: 'East', W: 'West', NE: 'North-east', NW: 'North-west', S: 'South', SG: 'South, Garden Lane', SE: 'South-east', SW: 'South-west', NSE: 'North Shore east', NSW: 'North Shore west' };
 const CAP = { Central: PL.filter(p => p.a !== 'R').length, Riverside: PL.filter(p => p.a === 'R').length };
 const UNLOCKS = [[250, 'The fog clears'], [500, 'Citizen passports'], [1000, "Citizens' Plaza"], [10000, 'Vinland Tower']];   // same list as the map's old "Locked" tab
@@ -641,8 +642,10 @@ if (!ST) { scr.innerHTML = '<p class="load">Vinland could not load. Refresh to t
 useNotices(null); useDemands(store.get('vin_demands')); useCitizens(store.get('vin_citizens'));
 { const t = ({ town: 'home', times: 'news', parliament: 'news' })[location.hash.slice(1)] || location.hash.slice(1); if (P[t]) tab = t; else if (t === 'support') tab = 'home'; }
 render(); if (location.hash === '#support') supOpen();
-{ let u = ''; try { u = new URLSearchParams(location.search).get('u') || ''; } catch (e) {} if (u && dataOK) find(u); else if (u) qText = u; }   // index.html?u=username opens that home card
-load().then(() => { if (qText && !found && !miss && dataOK && tab === 'home') find(qText); });
+{ let u = ''; try { u = new URLSearchParams(location.search).get('u') || ''; } catch (e) {} if (u && dataOK) find(u); else if (u) qText = u; }
+let wantPP = ''; try { wantPP = new URLSearchParams(location.search).get('pp') || ''; } catch (e) {}   // index.html?pp=username opens that citizen's passport (from Vinland Maps)
+const openWantedPP = () => { if (wantPP && dataOK) { const u = wantPP; wantPP = ''; ppOpen(u, 1); } }; openWantedPP();   // index.html?u=username opens that home card
+load().then(() => { openWantedPP(); if (qText && !found && !miss && dataOK && tab === 'home') find(qText); });
 if (window.__vinKey) { const k = window.__vinKey; window.__vinKey = null; LR.home = !!window.__vinFromHome; loginWithKey(k); } else checkSession();
 })();
 </script>
