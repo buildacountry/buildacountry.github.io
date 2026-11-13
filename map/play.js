@@ -41,6 +41,10 @@ const hud = document.createElement('div'); hud.id = 'playHud'; hud.hidden = true
 <div class="vpfade" id="pFade" hidden></div>`; document.body.appendChild(hud);
 const $ = id => document.getElementById(id), pPanel = $('pPanel'), pPrompt = $('pPrompt'), pObj = $('pObj'), pTag = $('pTag'), mapC = $('pMap').getContext('2d');
 function toast(t, ms = 3600, big = false) { const el = $('pToast'); el.textContent = t; el.className = 'vptoast' + (big ? ' big' : ''); el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { el.hidden = true; }, ms); }
+function intercom(bid) {   // apartment intercom: everyone in the building, by flat, each with Knock (no typing anywhere)
+  const res = homes.filter(o => o.flat && o.flat.bid === bid && o.status === 'active' && o !== P.me).sort((a, c) => a.n - c.n);
+  panel('<h3>🔔 Intercom</h3><p>Who lives in this building. Knock on any flat.</p>' + res.map(o => { const u = o.user.toLowerCase(), done = S5.knocked.has(u);
+    return `<div class="it"><span><b>${esc(o.flat.label || 'Flat')}</b> · @${esc(o.user)}${S5.friends.has(u) ? ' 💛' : ''}</span>${done ? '<span>Knocked 👋</span>' : `<button data-p="iknock" data-u="${esc(u)}">👋 Knock</button>`}</div>`; }).join('')); }
 function panel(html) { P.panel = html ? 'open' : ''; pPanel.innerHTML = html ? '<button class="x" data-p="close" aria-label="Close">×</button>' + html : ''; pPanel.hidden = !html; }
 
 // ---------- you: your look, your car, your work ----------
@@ -158,7 +162,8 @@ function ui() { if (!P.on) return; const now = performance.now(), [x, z, a] = po
       if (best) { P.near = best; lines.push(['E', best.t === 'car' ? (best.c.kind === 'own' ? 'Get in your car' : 'Get in the ' + CARNAME[best.c.kind]) : 'Drive this ' + CARNAME[best.p.k] + ' (' + KMH[best.p.k] + ' km/h)']); }
       else if (P.work && Math.hypot(P.work.x - x, P.work.z - z) < P.work.r) { P.near = { t: 'work' }; lines.push(['E', P.shift ? 'End shift' : 'Start shift at ' + P.work.name]); }
       else if (st && !P.ride) { P.near = { t: 'stop', s: st }; lines.push(['E', st.ic + ' ' + st.n + ' · next in ' + clock((nextDep() - Date.now()) / 1000)]); }
-      const h = WALK.near; if (h && h.status === 'active' && h !== P.me) { const u = h.user.toLowerCase(); if (S5.friends.has(u) && S5.knocked.has(u)) lines.push(['💛', 'Your friend @' + h.user + ' · knocked today']); else if (S5.knocked.has(u)) lines.push(['👋', 'You knocked on @' + h.user + "'s door"]); else { P.knock = u; lines.push(['K', 'Knock on @' + h.user + "'s door" + (S5.friends.has(u) ? ' 💛' : '')]); } } } }
+      const h = WALK.near; if (h && h.flat) { const n = homes.filter(o => o.flat && o.flat.bid === h.flat.bid && o.status === 'active' && o !== P.me).length; if (n) { P.knock = { bid: h.flat.bid }; lines.push(['K', '🔔 Intercom · ' + n + (n === 1 ? ' flat' : ' flats') + ' in this building']); } }
+      else if (h && h.status === 'active' && h !== P.me) { const u = h.user.toLowerCase(); if (S5.friends.has(u) && S5.knocked.has(u)) lines.push(['💛', 'Your friend @' + h.user + ' · knocked today']); else if (S5.knocked.has(u)) lines.push(['👋', 'You knocked on @' + h.user + "'s door"]); else { P.knock = u; lines.push(['K', 'Knock on @' + h.user + "'s door" + (S5.friends.has(u) ? ' 💛' : '')]); } } } }
   const html = lines.map(l => `<div data-p="${l[0] === 'E' ? 'use' : l[0] === 'K' ? 'knock' : ''}"><kbd>${l[0]}</kbd>${esc(l[1])}</div>`).join(''); if (html !== P.promptH) { P.promptH = html; pPrompt.innerHTML = html; }
   // objectives
   let obj = '';
@@ -194,7 +199,8 @@ const PLAYHOOK_TICK = (dt, now) => { if (!P.on) return; if (P.lock && DRV.on) DR
 
 // ---------- buttons and keys ----------
 function act(p, el) {
-  if (p === 'close') panel(''); else if (p === 'use') use(); else if (p === 'knock') { if (P.knock) window.VSOC_DO({ action: 'knock', to: P.knock }); }
+  if (p === 'close') panel(''); else if (p === 'use') use(); else if (p === 'knock') { if (P.knock && P.knock.bid) intercom(P.knock.bid); else if (P.knock) window.VSOC_DO({ action: 'knock', to: P.knock }); }
+  else if (p === 'iknock') { const u = el.dataset.u; el.textContent = 'Knocked 👋'; el.disabled = true; window.VSOC_DO({ action: 'knock', to: u }); }
   else if (p === 'trips') (P.panel ? panel('') : tripsPanel()); else if (p === 'trials') (P.panel ? panel('') : trialsPanel()); else if (p === 'board') (P.panel ? panel('') : boardPanel());
   else if (p === 'trip') tripStart(+el.dataset.i); else if (p === 'trial') trialStart(el.dataset.k);
   else if (p === 'ride') { const to = stops().find(s => s.n === el.dataset.n); if (to && P.at) { P.ride = { from: P.at, to, at: nextDep() }; panel(''); toast(P.at.ic + ' Wait here. It leaves in ' + clock((P.ride.at - Date.now()) / 1000) + '.', 3200); } }

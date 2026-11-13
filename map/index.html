@@ -446,7 +446,7 @@ function parseCSV(text) { const rows = []; let row = [], cell = '', q = false;
 function build2D(text) {
   const seen = new Set(), byNum = new Map(), noNum = [], villas = [], never = ST.never.map(x => x.toLowerCase());
   const st = v => { v = String(v || '').trim().toLowerCase(); return /^(abandon|left|unfollow|gone)/.test(v) ? 'abandoned' : /^(hid|private|anon)/.test(v) ? 'hidden' : 'active'; };
-  parseCSV(text).map(r => ({ n: parseInt(String(r.number || '').replace(/[^\d]/g, ''), 10), user: String(r.username || '').trim().replace(/^@/, '').replace(/\s+/g, '').slice(0, 30), job: (r.profession || r.job || '').trim().slice(0, 24), status: st(r.status) }))
+  parseCSV(text).map(r => ({ n: parseInt(String(r.number || '').replace(/[^\d]/g, ''), 10), user: String(r.username || '').trim().replace(/^@/, '').replace(/\s+/g, '').slice(0, 30), job: (r.profession || r.job || '').trim().slice(0, 24), status: st(r.status), shopCol: String(r.shop || '').trim().toLowerCase() }))
     .forEach(r => { const k = r.user.toLowerCase(); if (!r.user && r.status !== 'hidden') return; if (never.includes(k)) return; if (k && seen.has(k)) return; if (k) seen.add(k);
       if (ST.villas[k] && r.status === 'active') { villas.push(r); return; } if (r.n > 0 && !byNum.has(r.n)) byNum.set(r.n, r); else noNum.push(r); });
   let free = 1; noNum.forEach(r => { while (byNum.has(free)) free++; r.n = free; byNum.set(free, r); });
@@ -580,10 +580,19 @@ function card(h) { V.sel = h; wake(); if (!h) { c2.hidden = true; return; }
   c2.innerHTML = `<button class="x" data-c="close" aria-label="Close">×</button><div class="k">${esc(where)}${h.label ? ' · ' + esc(h.label) + ', building R' + h.bid : ''}</div>
     <div class="t">${h.villa ? 'Villa, plot ' + h.villa : 'Home № ' + h.n.toLocaleString('en-IN')}</div>
     <div class="u">${live ? esc(h.shown) : 'This home is empty now'}${live && h.job ? ' · ' + esc(h.job) : ''}${live && h.gold ? ' · ⭐ Supporter' : ''}</div>
-    ${others.length ? `<div class="k" style="margin-top:8px">Also in this building</div><div class="who">${others.map(o => `<button data-c="pick" data-n="${o.n}">${esc(o.shown)}</button>`).join('')}</div>` : ''}
+    ${others.length ? `<div class="k" style="margin-top:8px">Who else lives here</div>` + others.slice(0, 24).map(o => { const ou = o.status === 'active' ? o.user.toLowerCase() : '', me = SOC.user;   // apartment intercom: knock on any flat
+      return `<div class="soc"><button class="lnk" data-c="pick" data-n="${o.n}" style="background:none;border:0;padding:0;font:inherit;text-align:left;cursor:pointer">${o.label ? esc(o.label) + ' · ' : ''}${esc(o.shown)}</button>${!me || !ou || ou === me ? '' : SOC.knocked.has(ou) ? '<span class="pill">Knocked 👋</span>' : `<button class="push p" data-c="knock" data-u="${esc(ou)}">👋 Knock</button>`}</div>`; }).join('') : ''}
     <div class="row">${live && h.status === 'active' ? `<a class="push p" href="../?pp=${encodeURIComponent(h.user)}">Open passport</a>` : ''}<button class="push${live && h.status === 'active' ? '' : ' p'}" data-c="3d">See in 3D</button></div>${socRows(h)}`;
   c2.hidden = false; }
+// shop spots on the phone map (13 Nov): Market 1–24, New Market 25–44, Beach shops 45–68 (mapdata order). The owner is whoever has that number in the sheet's shop column.
+function shopCard(i) { const q = MD.slots[i], n = i + 1, grp = q[2] === 'm' ? 'Market' : q[2] === 'se' ? 'New Market' : 'Beach shops';
+  const own = V.homes.filter(h => h.status === 'active' && !/staff/.test(h.shopCol) && parseInt(h.shopCol, 10) === n), o = own[0] || null; V.sel = o; wake();
+  c2.innerHTML = `<button class="x" data-c="close" aria-label="Close">×</button><div class="k">${grp} · shop spot ${n}</div>
+    <div class="t">${o ? esc(o.job || 'Shop') : 'Shop spot ' + n}</div><div class="u">${o ? 'Run by ' + esc(o.shown) : 'Ask on Instagram for a shop: comment the shop you want under our latest reel.'}</div>
+    ${o ? `<div class="row"><a class="push p" href="../?pp=${encodeURIComponent(o.user)}">Open passport</a><button class="push" data-c="pick" data-n="${o.n}">Their home</button></div>${socRows(o)}` : ''}`;
+  c2.hidden = false; }
 function pick(px, py) { const wx = V.cx + (px - V.W / 2) / V.s, wz = V.cz + (py - V.H / 2) / V.s, lim = Math.max(7, 16 / V.s); let best = null, bd = lim;
+  if (MD && MD.slots && V.s > 1.5) { let si = -1, sd = 4.2; MD.slots.forEach((q, i) => { const d = Math.hypot(q[0] - wx, q[1] - wz); if (d < sd) { sd = d; si = i; } }); if (si >= 0) return shopCard(si); }
   V.homes.forEach(h => { const d = Math.hypot(h.x - wx, h.z - wz) - (h.bid ? 3 : 0); if (d < bd) { bd = d; best = h; } });
   if (best && best.bid) { const l = V.blds.get(best.bid).list; best = l.find(h => h.status === 'active') || l[0]; }
   card(best); }
@@ -2133,8 +2142,11 @@ function rsDrawBlds(occupied) {
 function selectBuilding(b) {   // a Riverside apartment building: who lives in which flat
   clearSelection(); stopTour(); const S2 = RS.SPEC[b.style], total = S2.floors * (b.per || S2.per), res = homes.filter(h => h.flat && h.flat.bid === b.id && h.status !== 'abandoned').sort((a, c) => a.n - c.n);
   show(`Riverside · Block ${b.block}`, `Building R${b.id}`, `<p class="p">${b.style === 'beach' ? 'Beach Flats on Beach Lane, by the sea' : b.style === 'garden' ? 'Garden villa-apartments' : 'Terrace apartments'} on the waterfront · ${res.length} of ${total} flats taken.</p>
-    <div class="flats">${res.map(h => `<button class="btn ghost flatbtn" data-n="${h.n}">${esc(h.flat.label)} · ${h.status === 'hidden' ? 'Citizen #' + h.n : '@' + esc(h.user)}</button>`).join('') || '<p class="p">No one has moved in yet.</p>'}</div>`);
+    <div class="k" style="margin:8px 0 4px">Who lives here</div>
+    <div class="flats">${res.map(h => { const u = h.status === 'active' ? h.user.toLowerCase() : '', me = window.VSOC && window.VSOC.user, kb = me && u && u !== me ? (window.VSOC.knocked.has(u) ? '<span class="pill">Knocked 👋</span>' : `<button class="btn kbtn" data-u="${esc(u)}">👋 Knock</button>`) : '';
+      return `<div class="frow" style="display:flex;gap:6px;align-items:center"><button class="btn ghost flatbtn" style="flex:1" data-n="${h.n}">${esc(h.flat.label)} · ${h.status === 'hidden' ? 'Citizen #' + h.n : '@' + esc(h.user)}</button>${kb}</div>`; }).join('') || '<p class="p">No one has moved in yet.</p>'}</div>`);
   cardBody.querySelectorAll('.flatbtn').forEach(el => el.onclick = () => selectHome(homes.find(h => h.n === +el.dataset.n)));
+  cardBody.querySelectorAll('.kbtn').forEach(el => el.onclick = () => { el.textContent = 'Knocked 👋'; el.disabled = true; el.className = 'btn ghost'; window.VSOC_DO({ action: 'knock', to: el.dataset.u }); });
   flyTo(new THREE.Vector3(b.x, 6, b.z), new THREE.Vector3(b.x - 60, 40, b.z + 40)); }
 function clearSelection() { selected = null; try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
@@ -4584,9 +4596,15 @@ const PM = new THREE.Matrix4(), PQ = new THREE.Quaternion(), PS = new THREE.Vect
 function mkPath(pts, closed) { const P = closed ? pts.concat([pts[0]]) : pts, seg = []; let L = 0;
   for (let i = 0; i < P.length - 1; i++) { const dx = P[i + 1][0] - P[i][0], dz = P[i + 1][1] - P[i][1], l = Math.hypot(dx, dz); seg.push({ x: P[i][0], z: P[i][1], dx: dx / l, dz: dz / l, a: L, l }); L += l; }
   return { seg, L, closed }; }
+function roadHW(x, z, alongX) { let hw = 0;   // half width of the road box under (x, z) that runs this way (0 = not on a road)
+  for (const r of ROADS) { const [w, d, cx, cz] = r; if (Math.abs(x - cx) <= w / 2 + 0.3 && Math.abs(z - cz) <= d / 2 + 0.3 && (alongX ? w >= d : d >= w)) hw = Math.max(hw, (alongX ? d : w) / 2); }
+  return hw; }
 function pathPoint(p, s, side) { let back = false;
   if (p.closed) s = ((s % p.L) + p.L) % p.L; else { s = ((s % (2 * p.L)) + 2 * p.L) % (2 * p.L); if (s > p.L) { s = 2 * p.L - s; back = true; } }
   let g = p.seg[p.seg.length - 1]; for (const q of p.seg) if (s < q.a + q.l) { g = q; break; }
+  if (ROADS_NEW.on && Math.abs(side) >= 3) {   // pavement walkers (13 Nov): stay on the pavement of THIS road, never on the asphalt
+    if (g.hw === undefined) g.hw = roadHW(g.x + g.dx * g.l / 2, g.z + g.dz * g.l / 2, Math.abs(g.dx) > Math.abs(g.dz));
+    if (g.hw) side = Math.sign(side) * (Math.max(g.hw, 2.4) + 0.85); }
   const t = s - g.a; return { x: g.x + g.dx * t - g.dz * side, z: g.z + g.dz * t + g.dx * side, ang: Math.atan2(g.dx, g.dz) + (back ? Math.PI : 0) }; }
 const PATHS = {
   ring: r => mkPath([[-r, r], [r, r], [r, -r], [-r, -r]], true),
@@ -4642,7 +4660,7 @@ function buildPeople() {
   const sides = [1, -1].filter(sg => homes.some(h => sg * h.x > DIST.roadIn + 4));
   const nDist = sides.length ? Math.round(pickN * 0.2) : 0, nSchool = Math.round(pickN * 0.2), nMid = pickN - nDist - nSchool;
   take(nSchool, h => /teacher|principal|librarian|school/i.test(h.job)).forEach((h, i) => {
-    if (i < nSchool * 0.35) addW(h, PATHS.school.walk, { side: i % 2 ? -1.6 : 1.6 });                       // walking to and from school
+    if (i < nSchool * 0.35) addW(h, PATHS.school.walk, { side: (i % 2 ? -1 : 1) * (ROADS_NEW.on ? ROADS_NEW.side : 1.6) });                       // walking to and from school
     else addW(h, PATHS.school.yard, { side: (rnd() - 0.5) * 1.2, k: /teacher|principal|librarian|school/i.test(h.job) ? 1.1 : 0.82, speed: 1.4 }); });  // students in the yard
   sides.forEach(sg => take(Math.round(nDist / sides.length), h => sg * h.x > DIST.roadIn + 4).forEach(h => addW(h, PATHS.district(sg))));
   const nSq = Math.min(10, Math.round(nMid * 0.14)), sqPath = [{ p: mkPath([[-18.5, -17.8], [18.5, -17.8], [18.5, 14.8], [-18.5, 14.8]], true), w: 3 }, { p: mkPath([[-6.2, 16.5], [6.2, 16.5], [6.2, 25.5], [-6.2, 25.5]], true), w: 2 }, { p: mkPath([[0, 14.8], [0, 30]], false), w: 1 }];
@@ -4683,7 +4701,7 @@ const STREETLAMPS = [];
 // STEP 4C (13 Nov): the SAME roads, rebuilt with assets/roads.js (VinlandRoads): one merged road mesh instead of one box per road, plus
 // 1.6 m pavements, zebra crossings at junctions and its own lamps. Nothing moves: positions come from ROADS, corners stay square (curve 0).
 // ?roads=old / ?roads=new forces one or the other (to compare speed).
-const ROADS_NEW = { on: false, side: 2.2 };
+const ROADS_NEW = { on: false, side: 2.2 };   // ROAD boxes are read by pathPoint/roadHW for pavement walkers
 function realRoads() {
   const force = (/[?&]roads=(old|new)/.exec(location.search) || [])[1];
   if (!window.VinlandRoads || force === 'old' || (FAST && !ROADS_ON_PHONES && force !== 'new')) return false;
