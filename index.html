@@ -260,16 +260,24 @@ function lrRender() {
   const list = `<ol class="steps" aria-label="Login steps">${STEP_NAMES.map((n, i) => `<li class="${st[i] || ''}"><i aria-hidden="true">${st[i] === 'ok' ? '✓' : st[i] === 'bad' ? '!' : i + 1}</i><span>${n}${st[i] === 'now' ? '…' : ''}</span></li>`).join('')}</ol>`;
   let body;
   if (done) body = `<div class="lrcover" aria-hidden="true"></div><h2 id="lrT">${LR.home ? 'Welcome to Vinland' : "You're in, welcome home"} @${esc(LR.user)}</h2>
-      <p>${h ? `Citizen № ${num(h.cn)} · ${esc(homeLine(h))}` : 'Your home is on its way: new homes show on the site within about 5 minutes.'}</p>
+      <p>${h ? `Citizen № ${num(h.cn)} · ${esc(homeLine(h))}${LR.home ? '<br><b>Taking you to your home on the map…</b>' : ''}` : LR.home ? 'Your home is being built 🏗️ It shows up in about 5 minutes. Keep this page open: we take you there the moment it is ready.' : 'Your home is on its way: new homes show on the site within about 5 minutes.'}</p>
       ${LR.saved ? '' : '<div class="lrnote">This browser does not keep logins, so you stay logged in only until you close this page.</div>'}
       ${IN_IG ? '<div class="lrnote"><b>Logged in here, inside Instagram.</b><br>You can open this same link in Chrome or Safari too (works 3 times, for 24 hours).</div>' : ''}
-      <div class="col">${LR.home ? `<button class="push g" data-a="lr-close">Go to my home</button>${h ? '<button class="push" data-a="lr-passport">Open my passport</button>' : ''}` : `${h ? `<button class="push g" data-a="lr-passport">Open my passport</button>` : ''}<button class="push${h ? '' : ' g'}" data-a="lr-close">Go to my page</button>`}</div>`;
+      <div class="col">${LR.home ? `${h ? `<a class="push g" href="${mapLink(h)}" data-a="go-map">Go to my home</a>` : '<button class="push g" data-a="lr-close">Look around Vinland</button>'}${h ? '<button class="push" data-a="lr-passport">Open my passport</button>' : ''}` : `${h ? `<button class="push g" data-a="lr-passport">Open my passport</button>` : ''}<button class="push${h ? '' : ' g'}" data-a="lr-close">Go to my page</button>`}</div>`;
   else if (failed) { const w = WHY[LR.why] || WHY.server, retry = LR.why === 'network' || LR.why === 'server';
     body = `<div style="font-size:40px;line-height:1" aria-hidden="true">🔑</div><h2 id="lrT">${w[0]}</h2><p>${w[1]}</p>${list}
       <div class="col">${retry ? '<button class="push g" data-a="lr-retry">Try again</button>' : ''}<a class="push${retry ? '' : ' g'}" href="https://ig.me/m/buildacountry" target="_blank" rel="noopener" data-a="go-ig">DM KEY on Instagram</a><button class="push" data-a="lr-close">Close</button></div>
       <p class="lrdet">Stopped at step ${st.indexOf('bad') + 1}: ${esc(LR.det)}</p>`; }
   else body = `<div class="lrcover" aria-hidden="true"></div><h2 id="lrT">Opening your door…</h2>${list}`;
   $('#lrIn').innerHTML = body; el.hidden = false; document.body.style.overflow = 'hidden';
+  if (done && LR.home) homeHop(h);
+}
+// HOME DM link (13 Nov): after login, fly straight to their home on the map. A brand-new home takes ~5 min to reach the sheet,
+// so until then we check every 30 s (for up to 15 min) and go the moment it appears; nobody lands on a map without their home.
+function homeHop(h) {
+  if (h) { clearInterval(LR.poll); if (!LR.went) { LR.went = 1; setTimeout(() => { if (!$('#lr').hidden) location.href = mapLink(h); }, 2500); } return; }
+  if (LR.poll) return; let tries = 0;
+  LR.poll = setInterval(async () => { if (++tries > 30 || $('#lr').hidden) return clearInterval(LR.poll); await load(); if (byUser.get(LR.user)) lrRender(); }, 30000);
 }
 function lrClose() { $('#lr').hidden = true; document.body.style.overflow = ''; LR.code = ''; tab = LR.home ? 'home' : 'me'; render(); }
 async function loginWithKey(code) {
