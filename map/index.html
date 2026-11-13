@@ -175,6 +175,7 @@ body.walking #cchip, body.panel-open #cchip, body.searching2d #cchip, body.walki
 #v2d .z2 { position: absolute; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 72px); display: grid; gap: 8px; }
 #c2 { position: absolute; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); max-width: 460px; margin: 0 auto; background: #fffaf0; border: 1px solid #dccb9f; outline: 1px solid #c9a24a; outline-offset: -5px; border-radius: 8px; padding: 16px 18px; box-shadow: 0 10px 24px -10px rgba(20, 35, 63, .55); }
 #c2 .k { font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; color: #6f6650; padding-right: 40px; } #c2 .t { font: 700 22px/1.2 Lora, Georgia, serif; } #c2 .u { font-size: 13.5px; margin-top: 2px; overflow-wrap: anywhere; }
+#c2 .soc { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eadfbf; font-size: 13px; } #c2 .soc > span:first-child { flex: 1; min-width: 0; } #c2 .soc b { display: block; font-weight: 600; } #c2 .soc .push { flex: 0 0 auto; min-height: 40px; padding: 0 14px; font-size: 13px; } #c2 .pill { background: #f1e6c8; color: #14233f; border-radius: 20px; padding: 6px 11px; font: 600 12px Poppins, sans-serif; white-space: nowrap; }
 #c2 .x { position: absolute; right: 8px; top: 8px; width: 40px; height: 40px; border: 0; background: none; font-size: 22px; color: #2f2b28; cursor: pointer; }
 #c2 .row { display: flex; gap: 10px; margin-top: 14px; } #c2 .who { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; } #c2 .who button { background: #f1e6c8; border: 0; border-radius: 20px; padding: 6px 11px; font: 500 12px Poppins, sans-serif; color: #2f2b28; cursor: pointer; }
 #v2d .push { flex: 1; min-height: 46px; border-radius: 13px; display: flex; align-items: center; justify-content: center; font: 600 13.5px Poppins, sans-serif; border: 1px solid rgba(80,60,40,.16); color: #2f2b28; background: #fffaf0; box-shadow: 0 4px 0 #2f2b28; text-decoration: none; cursor: pointer; } #v2d .push:active { transform: translateY(4px); box-shadow: none; } #v2d .push.p { background: #2f2b28; color: #fbf6ec; border-color: #08101f; box-shadow: 0 4px 0 #08101f; }
@@ -523,6 +524,11 @@ function draw() {
     if (s >= 1.3) V.labels.forEach(l => { if (l[3] === 2) text(l[0], X(l[1]), Y(l[2]), '600 11px Poppins, sans-serif', '#14233f'); }); }
   if (V.me && V.me !== sel) { const x = X(V.me.x), y = Y(V.me.z); g.beginPath(); g.arc(x, y, Math.max(7, (V.me.bid ? 7 : 5) * s), 0, 7); g.lineWidth = 3; g.strokeStyle = '#c2552d'; g.stroke(); g.beginPath(); g.arc(x, y, Math.max(7, (V.me.bid ? 7 : 5) * s) + 3, 0, 7); g.lineWidth = 1.2; g.strokeStyle = '#fffdf6'; g.stroke(); }
   const tags = []; if (V.me && V.me !== sel && s < 2.6) tags.push(['You', X(V.me.x), Y(V.me.z) - Math.max(7, 5 * s) - 12, true, false]);
+  if (SOC.friends.size) SOC.friends.forEach(u => { const h = V.byUser.get(u); if (!h || h === sel) return; const x = X(h.x), y = Y(h.z); if (x < -20 || x > W + 20 || y < 40 || y > H + 20) return;   // only you see your own friends
+    g.beginPath(); g.arc(x, y, Math.max(6, (h.bid ? 7 : 5) * s), 0, 7); g.lineWidth = 2.5; g.strokeStyle = '#c9a24a'; g.stroke(); if (s < 2.6 && s >= 1.2) tags.push(['💛 ' + h.shown, x, y - Math.max(7, 5 * s) - 12, false, true]); });
+  SOC.parties.forEach(p => { const h = V.byUser.get(p.host); if (!h) return; const x = X(h.x), y = Y(h.z); if (x < -40 || x > W + 40 || y < 20 || y > H + 40) return; const r = Math.max(14, (h.bid ? 10 : 7.5) * s), live = partyLive(p), C = ['#e8473a', '#f2c14e', '#3f7fbf', '#5fbf6a', '#d88fb0', '#a084c8'];
+    for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; g.beginPath(); g.arc(x + Math.cos(a) * r, y + Math.sin(a) * r, live ? 4.4 : 3.4, 0, 7); g.fillStyle = C[i % 6]; g.fill(); g.lineWidth = .8; g.strokeStyle = '#fffdf6'; g.stroke(); }   // a ring of party lights round the home
+    tags.push([(THEMES[p.theme] || ['🎉'])[0] + ' Party ' + partyWhen(p), x, y - r - 12, true, false]); });
   if (s >= 2.6) { hs.forEach(h => { if (h.status !== 'abandoned') tags.push([h.shown, X(h.x), Y(h.z) - 7.4 * s / 2 - 9, h === sel, h.gold || h.villa]); }); bs.forEach(b => tags.push(['R' + b.bid + ' · ' + b.list.filter(h => h.status !== 'abandoned').length + ' homes', X(b.x), Y(b.z) - 11 * s / 2 - 9, sel && sel.bid === b.bid, false])); }
   else if (sel) tags.push([sel.bid ? 'R' + sel.bid : sel.shown, X(sel.x), Y(sel.z) - (sel.bid ? 11 : 7.4) * Math.max(s, 1.6) / 2 - 14, true, false]);
   tags.sort((a, b) => (b[3] - a[3]) || (Math.hypot(a[1] - W / 2, a[2] - H / 2) - Math.hypot(b[1] - W / 2, b[2] - H / 2)));
@@ -535,7 +541,37 @@ function loop() { if (mode === '2d' && V.dirty) draw(); if (mode === '2d') reque
 function wake() { V.dirty = true; if (!V.looping && mode === '2d') { V.looping = true; requestAnimationFrame(loop); } }
 function zoomAt(k, px, py) { const wx = V.cx + (px - V.W / 2) / V.s, wz = V.cz + (py - V.H / 2) / V.s; V.s *= k; clampV(); V.cx = wx - (px - V.W / 2) / V.s; V.cz = wz - (py - V.H / 2) / V.s; clampV(); wake(); }
 function goTo(h, s) { V.cx = h.x; V.cz = h.z + (V.H ? 60 / Math.max(s || V.s, 1) : 0); if (s) V.s = Math.max(V.s, s); clampV(); wake(); }
-const c2 = $('#c2');
+// ---------- SOCIAL (step 5): knock, friends, neighbours, parties. One small request; Supabase decides who you are. Friends and counts are private: the page only gets your own. ----------
+const SOCIAL_URL = 'https://whhohzvvxhzpcsdcyuks.supabase.co/functions/v1/social';
+const THEMES = { birthday: ['🎂', 'Birthday'], housewarming: ['🏡', 'Housewarming'], festival: ['🪔', 'Festival'], weekend: ['🎉', 'Weekend party'], game: ['🎲', 'Game night'], beach: ['🏖️', 'Beach night'] };
+const SOC = window.VSOC = { parties: [], byHost: new Map(), friends: new Set(), knocked: new Set(), user: '', busy: false };
+const socSess = () => { try { const v = JSON.parse(localStorage.getItem('vin_session') || 'null'); return v && v.token && v.user && (!v.exp || v.exp > Date.now()) ? v : null; } catch (e) { return null; } };
+const socApi = body => fetch(SOCIAL_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json());
+const partyLive = p => { const t = Date.parse(p.start); return t <= Date.now() && t + 36e5 > Date.now(); };
+const partyWhen = p => { const ms = Date.parse(p.start) - Date.now(); if (ms <= 0) return 'on now'; const m = Math.ceil(ms / 6e4); return m < 60 ? 'in ' + m + ' min' : m < 1440 ? 'in ' + Math.round(m / 60) + ' h' : 'in ' + Math.round(m / 1440) + (Math.round(m / 1440) === 1 ? ' day' : ' days'); };
+async function socLoad() { const se = socSess();
+  try { let r = await socApi(se ? { action: 'state', token: se.token } : { action: 'public' }); if (r && !r.ok && se) r = await socApi({ action: 'public' });
+    if (r && r.ok) { SOC.user = r.user || ''; SOC.parties = (r.parties || []).concat(r.mine ? [r.mine] : []).filter(p => Date.parse(p.start) + 36e5 > Date.now()); SOC.byHost = new Map(SOC.parties.map(p => [p.host, p])); SOC.friends = new Set(r.friends || []); SOC.knocked = new Set(r.knockedToday || []); }
+  } catch (e) {}
+  wake(); if (V.sel && !c2.hidden) card(V.sel); if (window.VIN3D_API && window.VIN3D_API.party) window.VIN3D_API.party(); }
+async function socDo(body, okMsg) { const se = socSess(); if (!se || SOC.busy) return; SOC.busy = true;
+  try { const r = await socApi(Object.assign({ token: se.token }, body));
+    if (r && r.ok) { if (body.action === 'knock') { SOC.knocked.add(body.to); if (r.friends) SOC.friends.add(body.to); toast(r.friends ? 'You and @' + body.to + ' are friends now 💛' : 'You knocked on the door 👋', 2600); } else if (okMsg) toast(okMsg, 3200); }
+    else toast(r && r.msg ? r.msg : r && r.error === 'no session' ? 'Please log in again: DM KEY to @buildacountry.' : 'That did not work. Try again.', 3200);
+  } catch (e) { toast('No internet. Try again.', 2600); }
+  SOC.busy = false; if (body.action === 'knock') { wake(); if (V.sel) card(V.sel); } else socLoad(); }
+function nbs2D(h) { if (h.villa) return []; const flat = !!h.bid;
+  return V.homes.filter(o => o !== h && o.status === 'active' && !o.villa && (flat ? o.bid === h.bid : !o.bid)).map(o => [flat ? Math.abs((o.floor || 0) - (h.floor || 0)) + Math.abs(o.n - h.n) / 1000 : Math.hypot(o.x - h.x, o.z - h.z), o]).filter(e => flat || e[0] < 40).sort((a, b) => a[0] - b[0]).slice(0, 6).map(e => e[1]); }
+function socRows(h) { if (h.status !== 'active') return ''; const u = h.user.toLowerCase(), me = SOC.user, own = me && u === me, p = SOC.byHost.get(u); let out = '';
+  if (p) { const th = THEMES[p.theme] || ['🎉', 'Party'], live = partyLive(p), when = live ? 'On now' : new Date(p.start).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' }) + ' · ' + partyWhen(p);
+    out += `<div class="soc"><span><b>${th[0]} ${th[1]} here</b>${esc(when)}${own ? ' · ' + (p.count || 0) + ' coming' : ''}${live && p.guests && p.guests.length ? '<br>With ' + p.guests.slice(0, 6).map(g => '@' + esc(g)).join(', ') + (p.guests.length > 6 ? ' and more' : '') : ''}</span>${own || !me || !V.me ? '' : p.going ? `<button class="push" data-c="going" data-p="${p.id}" data-on="0">Going ✓</button>` : `<button class="push p" data-c="going" data-p="${p.id}" data-on="1">I'm going</button>`}</div>`; }
+  if (me && !own) out += `<div class="soc"><span>${SOC.friends.has(u) ? 'You are friends 💛' : SOC.knocked.has(u) ? 'You knocked today' : 'Say hello to @' + esc(h.user)}</span>${SOC.knocked.has(u) ? '<span class="pill">Knocked 👋</span>' : `<button class="push p" data-c="knock" data-u="${esc(u)}">👋 Knock</button>`}</div>`;
+  if (own) { const nb = nbs2D(h); if (nb.length) out += `<div class="k" style="margin-top:10px">Your neighbours</div><div class="who">${nb.map(o => `<button data-c="pick" data-n="${o.n}">${esc(o.shown)}</button>`).join('')}</div>`; }
+  return out; }
+setInterval(() => { if (document.hidden) return; if (SOC.parties.length) { wake(); } }, 6e4); setInterval(() => { if (!document.hidden) socLoad(); }, 3e5);
+window.VSOC_DO = socDo;
+window.VIN2D = { show: u => { const h = V.byUser.get(String(u).toLowerCase()); if (h) { goTo(h, 4.2); card(h); } return !!h; } };
+const c2 = $('#c2'); socLoad();
 function card(h) { V.sel = h; wake(); if (!h) { c2.hidden = true; return; }
   const b = h.bid ? V.blds.get(h.bid) : null, where = h.villa ? 'Villa Lane, Central' : h.area + ', ' + h.district, live = h.status !== 'abandoned';
   const others = b ? b.list.filter(o => o !== h && o.status !== 'abandoned') : [];
@@ -543,7 +579,7 @@ function card(h) { V.sel = h; wake(); if (!h) { c2.hidden = true; return; }
     <div class="t">${h.villa ? 'Villa, plot ' + h.villa : 'Home № ' + h.n.toLocaleString('en-IN')}</div>
     <div class="u">${live ? esc(h.shown) : 'This home is empty now'}${live && h.job ? ' · ' + esc(h.job) : ''}${live && h.gold ? ' · ⭐ Supporter' : ''}</div>
     ${others.length ? `<div class="k" style="margin-top:8px">Also in this building</div><div class="who">${others.map(o => `<button data-c="pick" data-n="${o.n}">${esc(o.shown)}</button>`).join('')}</div>` : ''}
-    <div class="row">${live && h.status === 'active' ? `<a class="push p" href="../?pp=${encodeURIComponent(h.user)}">Open passport</a>` : ''}<button class="push${live && h.status === 'active' ? '' : ' p'}" data-c="3d">See in 3D</button></div>`;
+    <div class="row">${live && h.status === 'active' ? `<a class="push p" href="../?pp=${encodeURIComponent(h.user)}">Open passport</a>` : ''}<button class="push${live && h.status === 'active' ? '' : ' p'}" data-c="3d">See in 3D</button></div>${socRows(h)}`;
   c2.hidden = false; }
 function pick(px, py) { const wx = V.cx + (px - V.W / 2) / V.s, wz = V.cz + (py - V.H / 2) / V.s, lim = Math.max(7, 16 / V.s); let best = null, bd = lim;
   V.homes.forEach(h => { const d = Math.hypot(h.x - wx, h.z - wz) - (h.bid ? 3 : 0); if (d < bd) { bd = d; best = h; } });
@@ -564,7 +600,9 @@ function init2D() {
   V.cv.addEventListener('wheel', e => { e.preventDefault(); zoomAt(Math.exp(-e.deltaY * .0016), e.clientX, e.clientY); }, { passive: false });
   V.el.addEventListener('click', e => { const z = e.target.closest('[data-z]'); if (z) { zoomAt(+z.dataset.z > 0 ? 1.6 : 1 / 1.6, V.W / 2, V.H / 2); return; }
     const c = e.target.closest('[data-c]'); if (!c) return; const a = c.dataset.c;
-    if (a === 'close') card(null); else if (a === 'pick') { const h = V.homes.find(x => x.n === +c.dataset.n); if (h) card(h); }
+    if (a === 'close') card(null); else if (a === 'pick') { const h = V.homes.find(x => x.n === +c.dataset.n); if (h) { if (!h.bid || !V.sel || V.sel.bid !== h.bid) goTo(h); card(h); } }
+    else if (a === 'knock') socDo({ action: 'knock', to: c.dataset.u });
+    else if (a === 'going') socDo({ action: 'going', party: c.dataset.p, on: c.dataset.on === '1' }, c.dataset.on === '1' ? "You're going 🎉 Open Vinland during the party for your stamp." : '');
     else if (a === '3d' && V.sel) { const h = V.sel, key = h.status === 'hidden' || h.villa ? String(h.n) : h.user; try { history.replaceState(null, '', location.pathname + '?home=' + encodeURIComponent(key)); } catch (er) {} setMode('3d', true); if (window.VIN3D_API) window.VIN3D_API.select(key); }
     else if (a === 'find') { const h = V.byUser.get(c.dataset.u); $('#r2').hidden = true; document.body.classList.remove('searching2d'); $('#q2').blur(); if (h) { goTo(h, 4.2); card(h); } } });
   const q2 = $('#q2'), r2 = $('#r2');
@@ -2120,6 +2158,10 @@ function selectHome(h) {
   const vs = document.getElementById('visitShop'); if (vs) vs.onclick = () => selectShop(h.shopRef || h.staffOf);
   { const row = cardBody.querySelector('.row2'); if (row && h.status !== 'hidden') { const pb = document.createElement('button'); pb.className = 'btn'; pb.textContent = '🛂 My passport'; pb.onclick = () => openPassport(h, where); row.prepend(pb); } }
   { const row = PHONE && !OLDP ? null : cardBody.querySelector('.row2'); if (row) { const wb = document.createElement('button'); wb.className = 'btn ghost'; wb.textContent = '🚶 Walk from this home'; wb.onclick = () => startWalk(h); row.prepend(wb); const db = document.createElement('button'); db.className = 'btn ghost'; db.textContent = '🚗 Drive from here'; db.onclick = () => startDrive(h); wb.after(db); } }
+  { const S5 = window.VSOC, se = S5 && S5.user, u = h.status === 'active' ? h.user.toLowerCase() : '', row = cardBody.querySelector('.row2'), p = S5 && u ? S5.byHost.get(u) : null;   // step 5: knock + party (fixed buttons only)
+    if (p) { const el = document.createElement('p'); el.className = 'p'; const t = Date.parse(p.start), on = t <= Date.now(); el.textContent = '🎉 Party here: ' + (on ? 'on now' : new Date(t).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })) + (se === u ? ' · ' + (p.count || 0) + ' coming' : ''); cardBody.insertBefore(el, row);
+      if (row && se && se !== u) { const b = document.createElement('button'); b.className = 'btn'; b.textContent = p.going ? 'Going ✓' : "I'm going"; b.onclick = () => window.VSOC_DO({ action: 'going', party: p.id, on: !p.going }, p.going ? '' : "You're going 🎉 Open Vinland during the party for your stamp.").then(() => { if (selected === h) selectHome(h); }); row.prepend(b); } }
+    if (row && se && u && se !== u) { const b = document.createElement('button'), done = S5.knocked.has(u); b.className = 'btn' + (done ? ' ghost' : ''); b.textContent = S5.friends.has(u) ? (done ? 'Friends 💛 · knocked' : '👋 Knock (friend 💛)') : done ? 'Knocked 👋' : '👋 Knock'; b.disabled = done; b.onclick = () => window.VSOC_DO({ action: 'knock', to: u }).then(() => { if (selected === h) selectHome(h); }); row.prepend(b); } }
   const sb = document.getElementById('shareHome');
   if (sb) sb.onclick = () => { const url = location.href.split('#')[0] + '#home-' + h.n;
     const ok = () => { sb.textContent = 'Link copied'; setTimeout(() => sb.textContent = 'Copy link to this home', 1800); };
@@ -4627,10 +4669,10 @@ function updatePeople(dt, now) {
   [...body, ...legL, ...legR].forEach(b => b.im.instanceMatrix.needsUpdate = true);
   // tags for the nearest few walkers, only when the camera is close
   const W = wrap.clientWidth, H = wrap.clientHeight, cam = camera.position;
-  const near = walkers.concat(standers).map(w => ({ w, d: Math.hypot(cam.x - w.x, cam.y, cam.z - w.z) })).filter(o => o.d < 70).sort((a, b) => a.d - b.d).slice(0, peopleTags.length);
+  const near = walkers.concat(standers, PARTY.people).map(w => ({ w, d: Math.hypot(cam.x - w.x, cam.y, cam.z - w.z) })).filter(o => o.d < 70).sort((a, b) => a.d - b.d).slice(0, peopleTags.length);
   peopleTags.forEach((el, k) => { const o = near[k]; if (!o) { el.hidden = true; return; } vv.set(o.w.x, 2.6 + (o.w.ty || 0), o.w.z).project(camera);
     if (vv.z >= 1 || Math.abs(vv.x) > 1 || Math.abs(vv.y) > 1) { el.hidden = true; return; }
-    el.hidden = false; el.textContent = (standers.includes(o.w) ? '👮 ' : '') + (o.w.h.status === 'hidden' ? 'Citizen' : '@' + o.w.h.user) + (o.w.h.gold ? ' ⭐' : ''); el.classList.toggle('gold', !!o.w.h.gold); el.style.left = ((vv.x + 1) / 2 * W) + 'px'; el.style.top = ((1 - vv.y) / 2 * H) + 'px'; });
+    el.hidden = false; el.textContent = (o.w.party ? '🎉 ' : standers.includes(o.w) ? '👮 ' : '') + (o.w.h.status === 'hidden' ? 'Citizen' : '@' + o.w.h.user) + (o.w.h.gold ? ' ⭐' : ''); el.classList.toggle('gold', !!o.w.h.gold); el.style.left = ((vv.x + 1) / 2 * W) + 'px'; el.style.top = ((1 - vv.y) / 2 * H) + 'px'; });
 }
 
 // ================= ROAD MARKINGS AND STREET LIGHTS =================
@@ -5371,7 +5413,25 @@ function softShadows() {
   spots.forEach((p, i) => { P0.set(p[0] + 1.6, 0.14, p[1] - 1.9); S0.set(p[2], 1, p[2]); M.compose(P0, q, S0); im.setMatrixAt(i, M); });
   im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; im.renderOrder = 1; scene.add(im);
 }
-window.VIN3D_API = { wake: () => kick(900),
+// STEP 5 (13 Nov): parties. Lights and balloons at the host's home before the party; during the party the guests stand there as themselves (laptops).
+// Phones get the lights and balloons only. Nothing here moves a home or a road; the pieces stand on the home's own front yard and go away after the party.
+const PARTY = { g: null, people: [], objs: [], key: '' };
+function partyScene() { const S5 = window.VSOC, K = window.VinlandKit; if (!S5 || !K || !K.bake || !K.instances) return;
+  const now = Date.now(), list = S5.parties.map(p => ({ p, h: homes.find(x => x.status === 'active' && x.user.toLowerCase() === p.host), live: Date.parse(p.start) <= now && Date.parse(p.start) + 36e5 > now })).filter(o => o.h && !o.h.flat && Date.parse(o.p.start) + 36e5 > now).slice(0, 6);
+  const key = list.map(o => o.p.id + (o.live ? 'L' + (o.p.guests || []).join(',') : '')).join('|'); if (key === PARTY.key) return; PARTY.key = key;
+  if (PARTY.g) { scene.remove(PARTY.g); PARTY.g = null; } PARTY.objs.forEach(b => scene.remove(b.im)); PARTY.objs = []; PARTY.people = []; if (!list.length) { kick(600); return; }
+  const g = PARTY.g = new THREE.Group(), O = new THREE.Object3D(), mats = {}, put = (k, h, dx, dz, ry) => { const v = new THREE.Vector3(dx, 0, dz).applyAxisAngle(UPV, h.ry); O.position.set(h.x + v.x, 0.14, h.z + v.z); O.rotation.set(0, h.ry + (ry || 0), 0); O.updateMatrix(); (mats[k] = mats[k] || []).push(O.matrix.clone()); };
+  const guests = [];
+  list.forEach(({ p, h, live }) => { put(p.theme === 'festival' ? 'lanterns' : 'fairyLights', h, 0, 3.6, 0); put('balloons', h, -3.4, 3.4, 0); put('balloons', h, 3.4, 3.4, 0);
+    if (live && !FAST) { put('danceFloor', h, 0, 6.2, 0); put('speaker', h, 3.2, 6.4, -0.5);
+      [p.host].concat(p.guests || []).slice(0, 12).forEach((u, i) => { const gh = homes.find(x => x.status === 'active' && x.user.toLowerCase() === u); if (!gh) return; const a = i / 12 * Math.PI * 2, v = new THREE.Vector3(Math.cos(a) * (i ? 2.7 : 0), 0, 6.2 + Math.sin(a) * (i ? 2.7 : 0)).applyAxisAngle(UPV, h.ry); guests.push({ h: gh, x: h.x + v.x, z: h.z + v.z, ty: (i % 2) * 0.75, party: true, ry: h.ry + a }); }); } });
+  Object.keys(mats).forEach(k => { if (K[k]) g.add(K.instances(K.bake(K[k]({})), mats[k], () => null)); }); scene.add(g);
+  if (guests.length) { const b = batchOf(ownerC('plain'), guests.length, true); b.forEach(x => { scene.add(x.im); PARTY.objs.push(x); });
+    guests.forEach((w, i) => { PP.set(w.x, 0.34, w.z); PQ.setFromAxisAngle(UPV, w.ry); PM.compose(PP, PQ, PS); b.forEach(x => x.im.setMatrixAt(i, PM)); }); b.forEach(x => x.im.instanceMatrix.needsUpdate = true);
+    colourBatch(b, guests, (o, v) => { const k = hashStr(o.h.user); return v === 0 ? SHIRTS[k % SHIRTS.length] : v === 1 ? SKINS[(k >> 2) % SKINS.length] : HAIRS[(k >> 4) % HAIRS.length]; }); PARTY.people = guests; }
+  kick(900); }
+setInterval(() => { if (!document.hidden && window.VSOC && window.VSOC.parties.length) partyScene(); }, 6e4);
+window.VIN3D_API = { wake: () => kick(900), party: () => { try { partyScene(); if (selected && selected.status === 'active' && !PARTY.carded) { PARTY.carded = true; selectHome(selected); } } catch (e) {} },   // the open home card gets its Knock / party lines once the social state arrives
   select: q => { q = String(q).replace(/^@/, '').toLowerCase(); const h = /^\d+$/.test(q) ? homes.find(x => x.n === +q) : homes.find(x => x.status !== 'hidden' && x.user.toLowerCase() === q); if (h) { if (narrow) setMin(false); selectHome(h); kick(2500); } return !!h; } };
 // Phones (13 Nov, step 4): 3D is for a look-around only. The heavy things (walk, drive, night, auto tour) run on laptops; here they show a small note.
 if (PHONE && !OLDP) { const note = () => { if (BOOT && BOOT.toast) BOOT.toast('Best on laptop 💻 Walk, drive, night and the auto tour run on a laptop. On your phone, look around here or use the 2D map.', 4200); };
@@ -5400,6 +5460,7 @@ if (window.__vinHook) window.__vinHook(code => eval(code));   // only the build 
   drawLayout(false);
   buildPeople();
   try { streetLife(); } catch (e) { /* street life is extra: the map opens without it */ }
+  try { partyScene(); } catch (e) { /* parties are extra too */ }
   softShadows();
   if (BOOT) BOOT.progress(96, 'Opening the map…');
   RUN.homes = true; kick(1800);
