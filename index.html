@@ -330,7 +330,9 @@ function stampsOf(h) { const out = [], when = dayDate(h.joined).toUpperCase();
   const soc = session() && h.user.toLowerCase() === session() ? SOC.stamps : SOC.others[h.user.toLowerCase()];
   (soc || []).forEach(x => { const d = new Date(x.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase(), th = (THEMES[x.theme] || ['', 'Party'])[1].toUpperCase();
     if (x.kind === 'host') out.push({ k: 'host' + x.at, top: 'HOSTED A PARTY', mid: [th.split(' ')[0], 'HOST'], bot: d, col: '#7a3f8c' });
-    else { const hh = byUser.get(x.host); out.push({ k: 'guest' + x.at, top: 'PARTY GUEST', mid: ['AT', hh ? (hh.villa ? 'VILLA ' + hh.villa : '№ ' + hh.n) : 'A PARTY'], bot: d, col: '#2f6a52' }); } });
+    else if (x.kind === 'driver' || x.kind === 'driver10') out.push({ k: x.kind, top: 'ON THE ROAD', mid: x.kind === 'driver' ? ['FIRST', 'TRIP'] : ['10', 'TRIPS'], bot: d, col: '#3f5866' });
+    else if (x.kind === 'treasure') out.push({ k: 'tr' + x.at, top: 'TREASURE HUNT', mid: ['FOUND', 'FIRST'], bot: d, col: '#b8860b' });
+    else if (x.kind === 'guest') { const hh = byUser.get(x.host); out.push({ k: 'guest' + x.at, top: 'PARTY GUEST', mid: ['AT', hh ? (hh.villa ? 'VILLA ' + hh.villa : '№ ' + hh.n) : 'A PARTY'], bot: d, col: '#2f6a52' }); } });
   return out; }
 
 // ---------- SOCIAL (step 5): knock, friends, neighbours, parties. Supabase decides who you are; the page only shows what it is given. ----------
