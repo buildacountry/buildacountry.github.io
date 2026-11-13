@@ -359,7 +359,7 @@ body.walking .topbar { pointer-events: none; }
 </aside>
 <button class="infobtn" id="infoBtn" hidden>About this land</button>
 <main id="panels"><section data-tab="citizens" hidden></section><section data-tab="country" hidden></section><section data-tab="estate" hidden></section><section data-tab="locked" hidden></section></main>
-<div class="controls"><button id="compass" aria-label="Turn the map so north is up" title="North up"><svg viewBox="0 0 40 40" width="26" height="26" aria-hidden="true"><g id="compassNeedle" style="transform-origin:20px 20px"><polygon points="20,4 25,20 15,20" fill="#c8603f"/><polygon points="20,36 25,20 15,20" fill="#cfc6b4"/><text x="20" y="3.2" font-size="0" fill="none">N</text></g><circle cx="20" cy="20" r="2.4" fill="#2f2b28"/></svg><span>N</span></button><button id="all">Whole land</button><button id="flagBtn">The flag</button><button id="tour" aria-pressed="false">Auto tour</button><button id="walkBtn" class="walkbtn">🚶 Walk</button><button id="driveBtn" class="walkbtn">🚗 Drive</button><button id="supportBtn">☕ Support</button><button id="nightBtn" aria-pressed="false">🌙 Night</button><button id="crackBtn" class="crack" aria-label="Light a Diwali cracker" title="Light a cracker" hidden>🎆</button><button id="moreBtn" class="fab" aria-label="More map buttons: whole land, flag, tour, north" aria-expanded="false">⋯</button></div><div class="quick" id="quick"></div>
+<div class="controls"><button id="compass" aria-label="Turn the map so north is up" title="North up"><svg viewBox="0 0 40 40" width="26" height="26" aria-hidden="true"><g id="compassNeedle" style="transform-origin:20px 20px"><polygon points="20,4 25,20 15,20" fill="#c8603f"/><polygon points="20,36 25,20 15,20" fill="#cfc6b4"/><text x="20" y="3.2" font-size="0" fill="none">N</text></g><circle cx="20" cy="20" r="2.4" fill="#2f2b28"/></svg><span>N</span></button><button id="all">Whole land</button><button id="flagBtn">The flag</button><button id="tour" aria-pressed="false">Auto tour</button><button id="walkBtn" class="walkbtn">🚶 Walk</button><button id="playBtn" hidden title="Play as your citizen (laptop)">🎮 Play</button><button id="driveBtn" class="walkbtn">🚗 Drive</button><button id="supportBtn">☕ Support</button><button id="nightBtn" aria-pressed="false">🌙 Night</button><button id="crackBtn" class="crack" aria-label="Light a Diwali cracker" title="Light a cracker" hidden>🎆</button><button id="moreBtn" class="fab" aria-label="More map buttons: whole land, flag, tour, north" aria-expanded="false">⋯</button></div><div class="quick" id="quick"></div>
 <div id="driveHud" hidden><div class="wtop"><span id="driveSpeed">0 km/h</span><button id="driveExit">✕ Exit drive</button></div><button id="driveHorn" aria-label="Horn">📯</button><div id="driveJoy" aria-label="Steering joystick"><span></span></div><div id="driveNear" hidden></div><div id="driveHint" hidden></div><div id="driveTags"></div></div>
 <div id="walkHud" hidden><div class="wtop"><span id="walkCount">Just you here</span><button id="walkExit">✕ Exit walk</button></div><div class="wemo" aria-label="Wave"><button data-emoji="👋" aria-label="Wave">👋</button><button data-emoji="🎉" aria-label="Celebrate">🎉</button><button data-emoji="🪔" aria-label="Diya">🪔</button><button data-emoji="❤️" aria-label="Love">❤️</button></div><div id="walkJoy" aria-label="Joystick"><span></span></div><div id="walkNear" hidden></div><div id="walkHint" hidden></div><div id="walkTags"></div></div>
 <div class="toast" id="toast" hidden></div>
@@ -551,7 +551,7 @@ const partyLive = p => { const t = Date.parse(p.start); return t <= Date.now() &
 const partyWhen = p => { const ms = Date.parse(p.start) - Date.now(); if (ms <= 0) return 'on now'; const m = Math.ceil(ms / 6e4); return m < 60 ? 'in ' + m + ' min' : m < 1440 ? 'in ' + Math.round(m / 60) + ' h' : 'in ' + Math.round(m / 1440) + (Math.round(m / 1440) === 1 ? ' day' : ' days'); };
 async function socLoad() { const se = socSess();
   try { let r = await socApi(se ? { action: 'state', token: se.token } : { action: 'public' }); if (r && !r.ok && se) r = await socApi({ action: 'public' });
-    if (r && r.ok) { SOC.user = r.user || ''; SOC.parties = (r.parties || []).concat(r.mine ? [r.mine] : []).filter(p => Date.parse(p.start) + 36e5 > Date.now()); SOC.byHost = new Map(SOC.parties.map(p => [p.host, p])); SOC.friends = new Set(r.friends || []); SOC.knocked = new Set(r.knockedToday || []); }
+    if (r && r.ok) { SOC.user = r.user || ''; SOC.parties = (r.parties || []).concat(r.mine ? [r.mine] : []).filter(p => Date.parse(p.start) + 36e5 > Date.now()); SOC.byHost = new Map(SOC.parties.map(p => [p.host, p])); SOC.friends = new Set(r.friends || []); SOC.knocked = new Set(r.knockedToday || []); SOC.shifts = r.shifts || []; }
   } catch (e) {}
   wake(); if (V.sel && !c2.hidden) card(V.sel); if (window.VIN3D_API && window.VIN3D_API.party) window.VIN3D_API.party(); }
 async function socDo(body, okMsg) { const se = socSess(), kn = body.action === 'knock'; if (!se || (kn ? SOC.knocked.has(body.to) : SOC.busy)) return; if (!kn) SOC.busy = true;
@@ -567,10 +567,11 @@ function socRows(h) { if (h.status !== 'active') return ''; const u = h.user.toL
   if (p) { const th = THEMES[p.theme] || ['🎉', 'Party'], live = partyLive(p), when = live ? 'On now' : new Date(p.start).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' }) + ' · ' + partyWhen(p);
     out += `<div class="soc"><span><b>${th[0]} ${th[1]} here</b>${esc(when)}${own ? ' · ' + (p.count || 0) + ' coming' : ''}${live && p.guests && p.guests.length ? '<br>With ' + p.guests.slice(0, 6).map(g => '@' + esc(g)).join(', ') + (p.guests.length > 6 ? ' and more' : '') : ''}</span>${own || !me || !V.me ? '' : p.going ? `<button class="push" data-c="going" data-p="${p.id}" data-on="0">Going ✓</button>` : `<button class="push p" data-c="going" data-p="${p.id}" data-on="1">I'm going</button>`}</div>`; }
   if (me && !own) out += `<div class="soc"><span>${SOC.friends.has(u) ? 'You are friends 💛' : SOC.knocked.has(u) ? 'You knocked today' : 'Say hello to @' + esc(h.user)}</span>${SOC.knocked.has(u) ? '<span class="pill">Knocked 👋</span>' : `<button class="push p" data-c="knock" data-u="${esc(u)}">👋 Knock</button>`}</div>`;
+  if ((SOC.shifts || []).includes(u)) out += `<div class="soc"><span><b>🟢 On shift now</b>At work in Vinland${h.job ? ' · ' + esc(h.job) : ''}</span></div>`;
   if (own) { const nb = nbs2D(h); if (nb.length) out += `<div class="k" style="margin-top:10px">Your neighbours</div><div class="who">${nb.map(o => `<button data-c="pick" data-n="${o.n}">${esc(o.shown)}</button>`).join('')}</div>`; }
   return out; }
 setInterval(() => { if (document.hidden) return; if (SOC.parties.length) { wake(); } }, 6e4); setInterval(() => { if (!document.hidden) socLoad(); }, 3e5);
-window.VSOC_DO = socDo;
+window.VSOC_DO = socDo; window.VSOC_API = body => { const se = socSess(); return socApi(Object.assign(se ? { token: se.token } : {}, body)); }; window.VSOC_LOAD = () => socLoad();
 window.VIN2D = { show: u => { const h = V.byUser.get(String(u).toLowerCase()); if (h) { goTo(h, 4.2); card(h); } return !!h; } };
 const c2 = $('#c2'); socLoad();
 function card(h) { V.sel = h; wake(); if (!h) { c2.hidden = true; return; }
@@ -4670,10 +4671,10 @@ function updatePeople(dt, now) {
   [...body, ...legL, ...legR].forEach(b => b.im.instanceMatrix.needsUpdate = true);
   // tags for the nearest few walkers, only when the camera is close
   const W = wrap.clientWidth, H = wrap.clientHeight, cam = camera.position;
-  const near = walkers.concat(standers, PARTY.people).map(w => ({ w, d: Math.hypot(cam.x - w.x, cam.y, cam.z - w.z) })).filter(o => o.d < 70).sort((a, b) => a.d - b.d).slice(0, peopleTags.length);
+  const near = walkers.concat(standers, PARTY.people, SHIFT.people).map(w => ({ w, d: Math.hypot(cam.x - w.x, cam.y, cam.z - w.z) })).filter(o => o.d < 70).sort((a, b) => a.d - b.d).slice(0, peopleTags.length);
   peopleTags.forEach((el, k) => { const o = near[k]; if (!o) { el.hidden = true; return; } vv.set(o.w.x, 2.6 + (o.w.ty || 0), o.w.z).project(camera);
     if (vv.z >= 1 || Math.abs(vv.x) > 1 || Math.abs(vv.y) > 1) { el.hidden = true; return; }
-    el.hidden = false; el.textContent = (o.w.party ? '🎉 ' : standers.includes(o.w) ? '👮 ' : '') + (o.w.h.status === 'hidden' ? 'Citizen' : '@' + o.w.h.user) + (o.w.h.gold ? ' ⭐' : ''); el.classList.toggle('gold', !!o.w.h.gold); el.style.left = ((vv.x + 1) / 2 * W) + 'px'; el.style.top = ((1 - vv.y) / 2 * H) + 'px'; });
+    el.hidden = false; el.textContent = (o.w.shift ? '🟢 On shift · ' : o.w.party ? '🎉 ' : standers.includes(o.w) ? '👮 ' : '') + (o.w.h.status === 'hidden' ? 'Citizen' : '@' + o.w.h.user) + (o.w.h.gold ? ' ⭐' : ''); el.classList.toggle('gold', !!o.w.h.gold); el.style.left = ((vv.x + 1) / 2 * W) + 'px'; el.style.top = ((1 - vv.y) / 2 * H) + 'px'; });
 }
 
 // ================= ROAD MARKINGS AND STREET LIGHTS =================
@@ -4727,7 +4728,7 @@ function streetLife() {
     cand.sort((a, b) => a[0] - b[0]).forEach(c => { if (got.length >= n || got.some(g => Math.hypot(g[1] - c[1], g[2] - c[2]) < 22)) return; got.push(c); put('chaiStall', c[1], c[2], c[3], { canopy: CANOPY[got.length % 4] }); }); });
   // draw: one bake per piece type
   const g = new THREE.Group(); g.name = 'streetLife'; let pieces = 0;
-  Object.keys(mats).forEach(k => { if (!K[k]) return; const baked = K.bake(K[k]({})), t = tints[k]; g.add(K.instances(baked, mats[k], i => t[i])); pieces += mats[k].length; });
+  Object.keys(mats).forEach(k => { if (!K[k]) return; const baked = K.bake(K[k]({})), t = tints[k]; const gi = K.instances(baked, mats[k], i => t[i]); g.add(gi); (LIFE.inst = LIFE.inst || {})[k] = gi; pieces += mats[k].length; });
   // driving: a few cars round the ring roads of the middle town (left lane, like India) and up and down the longest roads
   const loops = []; R.forEach(r => { if (r.ax && Math.abs(r.x) < 1 && r.z < 0 && Math.abs(r.w + 2 * r.z) < 1 && [[r.w, r.d, 0, -r.z], [r.d, r.w, r.z, 0], [r.d, r.w, -r.z, 0]].every(q => seen.has(key(q)))) loops.push(-r.z); });
   const paths = []; loops.forEach(h => { [1, -1].forEach(dir => { const e = h + dir * 1.25, c = [[-e, -e], [e, -e], [e, e], [-e, e]]; paths.push({ pts: dir > 0 ? c : c.slice().reverse(), loop: true }); }); });
@@ -4739,7 +4740,7 @@ function streetLife() {
     const inst = K.instances(baked, Array.from({ length: n }, () => new THREE.Matrix4()), k === 'carTaxi' || k === 'autoRickshaw' ? null : i => ({ body: cols[i] }));
     inst.children.filter(c => c.isLineSegments).forEach(c => inst.remove(c));   // ink lines are fixed in place, so moving cars go without them
     g.add(inst); for (let i = 0; i < n; i++) { const p = paths[(ti * 3 + i * 5) % paths.length]; LIFE.cars.push({ meshes: inst.children, i, p, s: rnd() * p.len, v: k === 'scooter' || k === 'autoRickshaw' ? 5 + rnd() * 2 : 6.5 + rnd() * 3.5 }); } });
-  scene.add(g); LIFE.on = true; LIFE.group = g; LIFE.mats = mats; LIFE.stats = { pieces, moving: LIFE.cars.length, kinds: Object.fromEntries(Object.keys(mats).map(k => [k, mats[k].length])), drawCalls: g.children.reduce((t, c) => t + c.children.length, 0) };
+  scene.add(g); LIFE.on = true; LIFE.group = g; LIFE.mats = mats; LIFE.tints = tints; LIFE.stats = { pieces, moving: LIFE.cars.length, kinds: Object.fromEntries(Object.keys(mats).map(k => [k, mats[k].length])), drawCalls: g.children.reduce((t, c) => t + c.children.length, 0) };
   updateTraffic(0);
 }
 const TRAF = { o: null };
@@ -5091,6 +5092,7 @@ function startWalk(from) {
   }, 30);
 }
 function stopWalk() {
+  if (PLAYHOOK.onStop) PLAYHOOK.onStop();
   if (!WALK.on && walkHud.hidden) return; WALK.on = false; controls.enabled = true; document.body.classList.remove('walking'); walkHud.hidden = true; walkNear.hidden = true;
   WALK.keys = {}; WALK.joy.x = WALK.joy.y = 0; walkKnob.style.transform = '';
   if (WALK.batches) WALK.batches.forEach(b => b.im.count = 0); walkTags.innerHTML = ''; WALK.others.clear();
@@ -5169,7 +5171,7 @@ function walkFrame(dt, now) {
     if (best !== WALK.near) { WALK.near = best;
       if (best) { walkNear.innerHTML = best.status === 'abandoned' ? `🏚️ Home #${best.n} · empty` : `🏠 ${best.status === 'hidden' ? 'A citizen' : '@' + esc(best.user)}'s home${best.job ? ' · ' + esc(best.job) : ''}`; walkNear.hidden = false; }
       else walkNear.hidden = true; } }
-  walkSend(now);
+  walkSend(now); if (PLAYHOOK.tick) PLAYHOOK.tick(dt, now);
 }
 // ---- live: Supabase Realtime (lazy-loaded the first time someone walks) ----
 let sbLoad = null;
@@ -5241,7 +5243,7 @@ function buildCar(look) {   // one merged mesh per material + one set of outline
 }
 const DRV = { on: false, x: 0, z: 43, y: 0, a: 0, v: 0, steer: 0, camYaw: 0, camH: 4.4, lookOff: 0, look: null, joy: { x: 0, y: 0, id: null }, keys: {}, car: null, user: null,
   seed: 'd' + Math.random().toString(36).slice(2, 8), grid: null, rects: null, cleared: {}, wait: 0, waitAt: null, tags: [], near: null, tagT: 0, tagList: [], hornT: 0, audio: null };
-const DRV_VMAX = 11.2, DRV_VREV = 4, DRV_ACC = 4.4, DRV_BRAKE = 11, DRV_DRAG = 2.0, DRV_CELL = 24;   // 11.2 m/s shows as ~40 km/h: a calm town speed, no boost
+let DRV_VMAX = 11.2; const PLAYHOOK = { tick: null, onStop: null }; const DRV_VREV = 4, DRV_ACC = 4.4, DRV_BRAKE = 11, DRV_DRAG = 2.0, DRV_CELL = 24;   // 11.2 m/s shows as ~40 km/h: a calm town speed, no boost
 // ---- the roads, as rectangles in buckets: an exact check, no big grid, nothing heavy to build ----
 function driveRoads() {
   if (DRV.grid) return; const R = [];
@@ -5290,6 +5292,7 @@ function startDrive(from) {
   driveToast(PHONE ? 'Push the stick up to drive, sideways to steer. 📯 for the horn.' : 'Arrow keys or WASD to drive, Space to brake, H for the horn.');
 }
 function stopDrive() {
+  if (PLAYHOOK.onStop) PLAYHOOK.onStop();
   if (!DRV.on) return; DRV.on = false; controls.enabled = true; document.body.classList.remove('walking', 'driving'); driveHud.hidden = true; driveNear.hidden = true;
   DRV.keys = {}; DRV.joy.x = DRV.joy.y = 0; DRV.joy.id = null; driveKnob.style.transform = ''; DRV.tags.forEach(el => el.hidden = true);
   if (DRV.car) scene.remove(DRV.car); if (DRV.blink) DRV.blink.visible = false;
@@ -5396,6 +5399,7 @@ function driveFrame(dt, now) {
     el.hidden = false; el.style.opacity = Math.max(0.5, 1 - o[0] / 110).toFixed(2); el.style.left = ((vv.x + 1) / 2 * W) + 'px'; el.style.top = ((1 - vv.y) / 2 * H) + 'px'; });
   if (DRV.hornEl && DRV.hornEl.isConnected) { const age = (now - +DRV.hornEl.dataset.t) / 1000; vv.set(DRV.x, DRV.y + 2.4 + age, DRV.z).project(camera);
     DRV.hornEl.style.left = ((vv.x + 1) / 2 * W) + 'px'; DRV.hornEl.style.top = ((1 - vv.y) / 2 * H) + 'px'; DRV.hornEl.style.opacity = Math.max(0, 1 - age); }
+  if (PLAYHOOK.tick) PLAYHOOK.tick(dt, now);
 }
 
 
@@ -5432,7 +5436,32 @@ function partyScene() { const S5 = window.VSOC, K = window.VinlandKit; if (!S5 |
     colourBatch(b, guests, (o, v) => { const k = hashStr(o.h.user); return v === 0 ? SHIRTS[k % SHIRTS.length] : v === 1 ? SKINS[(k >> 2) % SKINS.length] : HAIRS[(k >> 4) % HAIRS.length]; }); PARTY.people = guests; }
   kick(900); }
 setInterval(() => { if (!document.hidden && window.VSOC && window.VSOC.parties.length) partyScene(); }, 6e4);
-window.VIN3D_API = { wake: () => kick(900), party: () => { try { partyScene(); if (selected && selected.status === 'active' && !PARTY.carded) { PARTY.carded = true; selectHome(selected); } } catch (e) {} },   // the open home card gets its Knock / party lines once the social state arrives
+// STEP 6 (13 Nov): PLAY MODE. Citizens who tapped "Start shift" at their REAL workplace stand there for everyone; a shop owner's sign says OPEN.
+// The workplace always comes from the sheet (job / shop), never from the page of the person on shift.
+const SHIFT = { people: [], objs: [], key: '' };
+function workOf(h) { if (!h || h.status !== 'active') return null; const J = h.job || '';
+  if (h.shopRef || h.staffOf) { const sh = h.shopRef || h.staffOf, v = new THREE.Vector3(h.shopRef ? -1.2 : 1.6, 0, 4.4).applyAxisAngle(UPV, sh.ry || 0); return { role: 'shop', shop: sh, x: sh.x, z: sh.z, sx: sh.x + v.x, sz: sh.z + v.z, r: 14, name: h.shopRef ? 'your shop' : 'the shop' }; }
+  const big = isCop(h) ? ['police', POL.x, POL.z, 'Police HQ'] : /fire/i.test(J) ? ['fire', FIRE.x, FIRE.z, 'the Fire Station'] : /doctor|nurse|surgeon|medic|dentist|pharmac|paramedic/i.test(J) ? ['medic', HOSP_POS.x, HOSP_POS.z, 'the Hospital'] : /teacher|principal|professor|tutor/i.test(J) ? ['teacher', EDU.school.x, EDU.school.z, 'the School'] : null;
+  if (!big) return null; let bx = big[1], bz = big[2], bd = 1e9;   // stand on the pavement of the nearest road, a few steps towards the building
+  ROADS.forEach(([w, d, x, z]) => { const px = Math.max(x - w / 2, Math.min(big[1], x + w / 2)), pz = Math.max(z - d / 2, Math.min(big[2], z + d / 2)), dd = Math.hypot(px - big[1], pz - big[2]); if (dd > 1 && dd < bd) { bd = dd; bx = px; bz = pz; } });
+  const l = Math.hypot(big[1] - bx, big[2] - bz) || 1; return { role: big[0], x: big[1], z: big[2], sx: bx + (big[1] - bx) / l * 3.2, sz: bz + (big[2] - bz) / l * 3.2, r: bd + 14, name: big[3] }; }
+function shiftScene() { const S5 = window.VSOC; if (!S5) return; const list = (S5.shifts || []).filter(u => !(window.VPLAY && window.VPLAY.state.on && u === S5.user)).map(u => homes.find(x => x.status === 'active' && x.user.toLowerCase() === u)).filter(Boolean).map(h => ({ h, w: workOf(h) })).filter(o => o.w).slice(0, 40);
+  const key = list.map(o => o.h.user).join('|'); if (key === SHIFT.key) return; SHIFT.key = key;
+  SHIFT.objs.forEach(b => scene.remove(b.im)); SHIFT.objs = []; SHIFT.people = []; shops.forEach(sh => { if (sh.el && sh.open) { sh.open = false; sh.el.innerHTML = `<b>${esc(sh.job)}</b> <span>@${esc(sh.owner.user)}</span>`; } });
+  if (list.length) { const b = batchOf(ownerC('plain'), list.length, true); b.forEach(x => SHIFT.objs.push(x)); const seen = {};
+    list.forEach(({ h, w }, i) => { const k = Math.round(w.sx) + ',' + Math.round(w.sz), n = seen[k] = (seen[k] || 0) + 1, x = w.sx + (n - 1) * 1.3, z = w.sz; PP.set(x, 0.2, z); PQ.setFromAxisAngle(UPV, Math.atan2(x - w.x, z - w.z)); PM.compose(PP, PQ, PS); b.forEach(q => q.im.setMatrixAt(i, PM)); SHIFT.people.push({ h, x, z, ty: (n % 2) * 0.75, shift: true });
+      if (w.shop && h.shopRef && w.shop.el) { w.shop.open = true; w.shop.el.innerHTML = `<b>${esc(w.shop.job)}</b> <span>@${esc(h.user)}</span> <b style="color:#1f7a3a">· OPEN</b>`; } });
+    b.forEach(x => x.im.instanceMatrix.needsUpdate = true);
+    const UNI = { police: '#1f3a6e', fire: '#c0392b', medic: '#f4f4f0', teacher: '#47684a', shop: '#c9922e' };
+    colourBatch(b, list, (o, v) => { const k = hashStr(o.h.user); return v === 0 ? UNI[o.w.role] : v === 1 ? SKINS[(k >> 2) % SKINS.length] : HAIRS[(k >> 4) % HAIRS.length]; }); }
+  kick(900); }
+{ const pb = document.getElementById('playBtn'), me = () => { const S5 = window.VSOC; return S5 && S5.user ? homes.find(h => h.status === 'active' && h.user.toLowerCase() === S5.user) : null; };
+  const run = code => eval(code);   // play.js runs inside the map, so it can use the walk and drive code that is already here. It is loaded only when Play is pressed.
+  if (pb && !PHONE) { pb.hidden = false;
+    pb.onclick = () => { if (!me()) { if (BOOT && BOOT.toast) BOOT.toast(window.VSOC && window.VSOC.user ? 'Your home is not on the map yet. Play opens when it is built.' : 'Play is for citizens. Log in first: DM KEY to @buildacountry.', 4200); return; }
+      if (window.VPLAY) { window.VPLAY.start(); return; } pb.disabled = true;
+      fetch('play.js?v=1').then(r => { if (!r.ok) throw 0; return r.text(); }).then(t => { run(t + '\n//# sourceURL=play.js'); pb.disabled = false; if (window.VPLAY) window.VPLAY.start(); }).catch(() => { pb.disabled = false; if (BOOT && BOOT.toast) BOOT.toast('Play could not load. Check your internet and try again.', 3600); }); }; } }
+window.VIN3D_API = { wake: () => kick(900), party: () => { try { shiftScene(); } catch (e) {} try { partyScene(); if (selected && selected.status === 'active' && !PARTY.carded) { PARTY.carded = true; selectHome(selected); } } catch (e) {} },   // the open home card gets its Knock / party lines once the social state arrives
   select: q => { q = String(q).replace(/^@/, '').toLowerCase(); const h = /^\d+$/.test(q) ? homes.find(x => x.n === +q) : homes.find(x => x.status !== 'hidden' && x.user.toLowerCase() === q); if (h) { if (narrow) setMin(false); selectHome(h); kick(2500); } return !!h; } };
 // Phones (13 Nov, step 4): 3D is for a look-around only. The heavy things (walk, drive, night, auto tour) run on laptops; here they show a small note.
 if (PHONE && !OLDP) { const note = () => { if (BOOT && BOOT.toast) BOOT.toast('Best on laptop 💻 Walk, drive, night and the auto tour run on a laptop. On your phone, look around here or use the 2D map.', 4200); };
@@ -5462,6 +5491,7 @@ if (window.__vinHook) window.__vinHook(code => eval(code));   // only the build 
   buildPeople();
   try { streetLife(); } catch (e) { /* street life is extra: the map opens without it */ }
   try { partyScene(); } catch (e) { /* parties are extra too */ }
+  try { shiftScene(); } catch (e) {}
   softShadows();
   if (BOOT) BOOT.progress(96, 'Opening the map…');
   RUN.homes = true; kick(1800);
