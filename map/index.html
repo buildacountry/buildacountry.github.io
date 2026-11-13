@@ -152,6 +152,7 @@ html body #backBtn, #v2d .b2 a.vback { order: 0; white-space: nowrap; display: f
 @media (max-width: 380px) { #backBtn span, #v2d .b2 a.vback span { display: none; } .mechip { max-width: 86px; } }
 #modeSw { top: calc(env(safe-area-inset-top, 0px) + 70px) !important; }
 body .controls { top: auto !important; }
+.laponly { opacity: .55; }
 /* ===== 12 Nov: 2D | 3D switch, loading screen, 2D plan (colours match the site: navy, gold, cream) ===== */
 #vload { position: fixed; inset: 0; z-index: 60; background: #f6ecd6; display: grid; place-items: center; text-align: center; color: #2f2b28; transition: opacity .35s; }
 #vload[hidden], #v2d[hidden], #vtoast[hidden], #c2[hidden], #r2[hidden] { display: none; }
@@ -361,7 +362,7 @@ body.walking .topbar { pointer-events: none; }
 <div id="driveHud" hidden><div class="wtop"><span id="driveSpeed">0 km/h</span><button id="driveExit">✕ Exit drive</button></div><button id="driveHorn" aria-label="Horn">📯</button><div id="driveJoy" aria-label="Steering joystick"><span></span></div><div id="driveNear" hidden></div><div id="driveHint" hidden></div><div id="driveTags"></div></div>
 <div id="walkHud" hidden><div class="wtop"><span id="walkCount">Just you here</span><button id="walkExit">✕ Exit walk</button></div><div class="wemo" aria-label="Wave"><button data-emoji="👋" aria-label="Wave">👋</button><button data-emoji="🎉" aria-label="Celebrate">🎉</button><button data-emoji="🪔" aria-label="Diya">🪔</button><button data-emoji="❤️" aria-label="Love">❤️</button></div><div id="walkJoy" aria-label="Joystick"><span></span></div><div id="walkNear" hidden></div><div id="walkHint" hidden></div><div id="walkTags"></div></div>
 <div class="toast" id="toast" hidden></div>
-<div id="v2d" hidden><canvas id="plan" aria-label="2D plan of Vinland. Drag to move, pinch to zoom, tap a home."></canvas>
+<div id="v2d" hidden><canvas id="plan" aria-label="Map of Vinland. Drag to move, pinch to zoom, tap a home."></canvas>
   <div class="b2"><a href="../" class="vback" aria-label="Back to Vinland">←<span>Vinland</span></a><div class="b2s"><input id="q2" type="search" placeholder="Search a citizen" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" aria-label="Search a citizen"><div id="r2" hidden></div></div><a class="mechip" href="../#me" data-me hidden></a></div>
   <div class="z2"><button data-z="1" aria-label="Zoom in">+</button><button data-z="-1" aria-label="Zoom out">−</button></div>
   <div id="c2" hidden aria-live="polite"></div></div>
@@ -371,6 +372,7 @@ body.walking .topbar { pointer-events: none; }
   <b>Building Vinland…</b><small>Starting…</small><div class="bar"><i></i></div><button type="button">Open the quick 2D map instead</button></div></div>
 <div id="vtoast" hidden role="status"></div>
 <script src="../vinland-static.js"></script>
+<script src="mapdata.js"></script>
 <script>
 // ================= MAP BOOT (12 Nov): 2D | 3D, loading screen, saved citizens list =================
 // This small script runs first. The 2D plan is plain canvas drawing (no 3D engine), so it opens at once.
@@ -386,8 +388,8 @@ const WEAK = PHONE && ((navigator.deviceMemory && navigator.deviceMemory <= 3) |
 const hasGL = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl') || c.getContext('experimental-webgl')); } catch (e) { return false; } })();
 // Which view opens: the person's own choice wins; else laptop = 3D; phone = what the speed check found last time, or a first guess from the phone's memory / cores.
 function pickMode() { const v = qs.get('view'); if (v === '2d' || v === '3d') return v; if (!hasGL || !ST) return hasGL ? '3d' : '2d';
-  const c = LS.get('vin_map_mode'); if (c === '2d' || c === '3d') return c; if (!PHONE) return '3d';
-  const a = LS.get('vin_map_auto'); if (a === '2d' || a === '3d') return a; return WEAK ? '2d' : '3d'; }
+  if (PHONE) return '2d';   // 13 Nov (step 4): phones always open in Maps mode (instant, never lags). 3D is one tap away, for a look-around.
+  const c = LS.get('vin_map_mode'); return c === '2d' ? '2d' : '3d'; }
 
 // ---------- citizens list: saved copy first (the site saves it too), fresh copy in the background ----------
 const C = { text: LS.get('vin_citizens'), p: null, subs: [] };
@@ -414,6 +416,7 @@ let started3d = false, mode = null, samples = [], judged = false;
 async function start3D() {
   if (started3d) return; started3d = true; showLoad();
   try { progress(8, 'Loading the 3D engine…'); await loadScript(CDN[0]); progress(30); await loadScript(CDN[1]);
+    await Promise.all(['roads.js', 'kit.js'].map(f => loadScript(f).catch(() => null)));   // step 4: real roads + street life. If one fails to load, the map still opens with the old roads and no street pieces.
     progress(40, 'Building the land…'); await nextPaint(); await nextPaint();
     window.VIN3D(); }
   catch (e) { started3d = false; hideLoad(); if (mode === '3d') { setMode('2d'); toast('3D could not start here. Showing the quick 2D map.'); } }
@@ -424,11 +427,12 @@ function frameTime(ms) { if (judged || !PHONE || qs.get('view') || LS.get('vin_m
   if (med > 50) { LS.set('vin_map_auto', '2d'); setMode('2d'); toast('3D is slow on this phone, so here is the quick 2D map. Tap 3D any time.'); } else LS.set('vin_map_auto', '3d'); }
 
 // ---------- 2D plan ----------
-const B = { x0: -480, z0: -900, x1: 1140, z1: 680 };   // the part of the world the plan picture covers, in metres (tools/export_plan.py reads this)
-window.VIN_PLAN = B;
-const V = { el: $('#v2d'), cv: $('#plan'), ctx: null, s: 1, cx: 300, cz: -100, W: 0, H: 0, dpr: 1, homes: [], blds: new Map(), byUser: new Map(), sel: null, img: null, dirty: false, ready: false, labels: [] };
+const B = { x0: -480, z0: -900, x1: 1140, z1: 680 };   // the part of the world Maps mode shows, in metres
+const V = { el: $('#v2d'), cv: $('#plan'), ctx: null, s: 1, cx: 300, cz: -100, W: 0, H: 0, dpr: 1, homes: [], blds: new Map(), byUser: new Map(), sel: null, me: null, dirty: false, ready: false, labels: [] };
+const MD = window.VIN_MAPDATA || null;   // roads, water, parks, big buildings, shop spots (tools/export_mapdata.py)
 const AREA = { F: 'Founder Square', M: 'Middle', E: 'East', W: 'West', NE: 'North-east', NW: 'North-west', S: 'South', SG: 'South, Garden Lane', SE: 'South-east', SW: 'South-west', NSE: 'North Shore east', NSW: 'North Shore west' };
-const PL = ST ? ST.plots.split('\n').map(l => { const a = l.split(','); return { x: +a[0], z: +a[1], a: a[2], block: +a[3] || 0, bid: +a[4] || 0, label: a[5] || '', floor: +a[6] || 0 }; }) : [];
+const PL = ST ? ST.plots.split('\n').map(l => { const a = l.split(','); if (a.length > 7) a.splice(5, a.length - 6, a.slice(5, a.length - 1).join(', ').replace(/,\s+/g, ', '));   // a label may hold a comma ("Beach Lane, Flat 1")
+  return { x: +a[0], z: +a[1], a: a[2], block: +a[3] || 0, bid: +a[4] || 0, label: a[5] || '', floor: +a[6] || 0 }; }) : [];
 function parseCSV(text) { const rows = []; let row = [], cell = '', q = false;
   for (let i = 0; i < text.length; i++) { const c = text[i];
     if (q) { if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (c === '"') q = false; else cell += c; }
@@ -452,7 +456,18 @@ function build2D(text) {
   V.byUser = new Map(V.homes.filter(h => h.user && h.status === 'active').map(h => [h.user.toLowerCase(), h]));
   { const c = document.getElementById('cchipN'); if (c) c.textContent = V.homes.filter(h => h.status !== 'abandoned').length.toLocaleString('en-IN'); }
   const cen = f => { const l = PL.filter(f); return l.length ? [l.reduce((a, p) => a + p.x, 0) / l.length, l.reduce((a, p) => a + p.z, 0) / l.length] : null; };
-  const c1 = cen(p => p.a !== 'R'), c2 = cen(p => p.a === 'R'); V.labels = [c1 && ['Central', c1[0], c1[1]], c2 && ['Riverside', c2[0], c2[1]], ST.coast && ['Vinland Beach', 0, (ST.coast.shore + ST.coast.beach0) / 2]].filter(Boolean);
+  if (!V.labels.length) {   // names by zoom level. ONLY names that exist today: districts, areas (the same words as in addresses), named lanes and places. No street is named until citizens vote.
+    const L = V.labels, add = (t, c, lv) => { if (c) L.push([t, c[0], c[1], lv]); };
+    add('Central', cen(p => p.a !== 'R'), 0); add('Riverside', cen(p => p.a === 'R'), 0); if (ST.coast) L.push(['Vinland Beach', 0, (ST.coast.shore + ST.coast.beach0) / 2, 0]);
+    Object.keys(AREA).forEach(k => add(k === 'SG' ? 'Garden Lane' : k === 'F' ? 'Founder Square' : AREA[k], cen(p => p.a === k), 1));
+    [...new Set(PL.filter(p => p.a === 'R' && !/^Beach Lane/.test(p.label)).map(p => p.block))].forEach(b => add('Block ' + b, cen(p => p.a === 'R' && p.block === b && !/^Beach Lane/.test(p.label)), 1));
+    add('Beach Lane', cen(p => /^Beach Lane/.test(p.label)), 1);
+    if (ST.lots) { const l = Object.values(ST.lots); add('Villa Lane', [l.reduce((a, p) => a + p[0], 0) / l.length, l.reduce((a, p) => a + p[1], 0) / l.length], 1); }
+    if (MD) { [['m', 'Market'], ['se', 'New Market'], ['beach', 'Beach shops']].forEach(([k, t]) => { const l = MD.slots.filter(q => q[2] === k); if (l.length) add(t, [l.reduce((a, q) => a + q[0], 0) / l.length, l.reduce((a, q) => a + q[1], 0) / l.length], 1); });
+      const gv = MD.places.filter(q => /Parliament|Embassy|Police|Fire/.test(q[0])); if (gv.length) add('Government Row', [0, Math.max(...gv.map(q => q[2] + q[4])) + 14], 1);
+      MD.places.forEach(q => { if (q[0]) L.push([q[0], q[1] + q[3] / 2, q[2] + q[4] / 2, 2]); }); }
+  }
+  { let me = ''; try { const v = JSON.parse(localStorage.getItem('vin_session') || 'null'); if (v && v.user) me = String(v.user).toLowerCase(); } catch (e) {} V.me = me ? V.byUser.get(me) || null : null; }
   V.ready = true; if (V.sel) V.sel = V.homes.find(h => h.n === V.sel.n) || null; V.dirty = true;
 }
 const X = x => (x - V.cx) * V.s + V.W / 2, Y = z => (z - V.cz) * V.s + V.H / 2;
@@ -463,9 +478,28 @@ function clampV() { const smin = Math.min(V.W / (B.x1 - B.x0), V.H / (B.z1 - B.z
 function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 function draw() {
   V.dirty = false; if (V.ready && !window.__vinReady) window.__vinReady = performance.now(); const g = V.ctx, W = V.W, H = V.H, s = V.s; g.setTransform(V.dpr, 0, 0, V.dpr, 0, 0);
-  g.fillStyle = '#86a548'; g.fillRect(0, 0, W, H);   // same green as the land, so the edge of the picture never shows as a grey bar
-  if (V.img) { g.imageSmoothingQuality = 'high'; g.drawImage(V.img, X(B.x0), Y(B.z0), (B.x1 - B.x0) * s, (B.z1 - B.z0) * s); }
-  else { g.fillStyle = '#d7e3bd'; g.fillRect(X(B.x0), Y(B.z0), (B.x1 - B.x0) * s, (B.z1 - B.z0) * s); }
+  // MAPS MODE (13 Nov, step 4): everything is drawn as shapes, so it is crisp at every zoom and needs no picture and no 3D engine.
+  g.fillStyle = '#dde6c4'; g.fillRect(0, 0, W, H);
+  const wx0 = V.cx - W / 2 / s, wx1 = V.cx + W / 2 / s, wz0 = V.cz - H / 2 / s, wz1 = V.cz + H / 2 / s;
+  if (ST.coast) { const ys = Y(ST.coast.shore), yb = Y(ST.coast.beach0); if (ys > 0) { g.fillStyle = '#a5d3e8'; g.fillRect(0, 0, W, ys); } if (yb > 0) { g.fillStyle = '#f4e6bb'; g.fillRect(0, Math.max(0, ys), W, yb - Math.max(0, ys)); } }
+  if (MD) {
+    const FC = { w: '#a5d3e8', g: '#c3dc9f', p: '#f1e8d2' };
+    for (const f of MD.flat) { if (f[1] > wx1 || f[1] + f[3] < wx0 || f[2] > wz1 || f[2] + f[4] < wz0) continue; g.fillStyle = FC[f[0]];
+      if (f[7]) { g.beginPath(); g.arc(X(f[1] + f[3] / 2), Y(f[2] + f[4] / 2), f[3] / 2 * s, 0, 7); g.fill(); } else g.fillRect(X(f[1]), Y(f[2]), f[3] * s, f[4] * s); }
+    // roads: a soft edge first, then the road itself, so junctions join cleanly. Never thinner than a hairline when zoomed out.
+    const rd = (grow, col) => { g.fillStyle = col; for (const r of MD.roads) { const x = r[2] - r[0] / 2, z = r[3] - r[1] / 2; if (x > wx1 || x + r[0] < wx0 || z > wz1 || z + r[1] < wz0) continue;
+      const pw = Math.max(r[0] * s, 1.3) + grow, pd = Math.max(r[1] * s, 1.3) + grow; g.fillRect(X(r[2]) - pw / 2, Y(r[3]) - pd / 2, pw, pd); } };
+    if (s > .55) rd(Math.min(3, .8 + s * .5), '#bfb49a'); rd(0, '#fffdf6');
+    if (s > 1.4) { g.strokeStyle = '#e7c66a'; g.lineWidth = Math.max(.6, .22 * s); g.setLineDash([2.1 * s, 2.4 * s]); g.beginPath();   // centre dashes, like the real roads
+      for (const r of MD.roads) { const x = r[2] - r[0] / 2, z = r[3] - r[1] / 2; if (x > wx1 || x + r[0] < wx0 || z > wz1 || z + r[1] < wz0) continue;
+        if (r[0] > r[1]) { g.moveTo(X(x), Y(r[3])); g.lineTo(X(x + r[0]), Y(r[3])); } else { g.moveTo(X(r[2]), Y(z)); g.lineTo(X(r[2]), Y(z + r[1])); } } g.stroke(); g.setLineDash([]); }
+    g.lineWidth = Math.max(.7, Math.min(1.4, s * .25)); g.strokeStyle = '#8a7a5a';
+    for (const q of MD.places) { if (q[1] > wx1 || q[1] + q[3] < wx0 || q[2] > wz1 || q[2] + q[4] < wz0) continue; rr(g, X(q[1]), Y(q[2]), q[3] * s, q[4] * s, Math.min(5, 2 * s)); g.fillStyle = '#ead7ae'; g.fill(); if (s > .8) g.stroke(); }
+    if (s > 1.5) { const w = 5.4 * s; g.strokeStyle = '#14233f'; for (const q of MD.slots) { if (q[0] < wx0 - 6 || q[0] > wx1 + 6 || q[1] < wz0 - 6 || q[1] > wz1 + 6) continue; rr(g, X(q[0]) - w / 2, Y(q[1]) - w / 2, w, w, Math.min(3, w * .2)); g.fillStyle = '#4f9c95'; g.fill(); g.stroke(); } }
+  }
+  if (s >= 1.15) { const hw = 7.4 * s, bw = 11 * s, seen = new Set(); g.fillStyle = '#ece4cf'; g.strokeStyle = '#cfc4a6'; g.lineWidth = .8;
+    for (const p of PL) { if (p.x < wx0 - 8 || p.x > wx1 + 8 || p.z < wz0 - 8 || p.z > wz1 + 8) continue; if (p.bid) { if (seen.has(p.bid)) continue; seen.add(p.bid); }
+      const w = p.bid ? bw : hw; rr(g, X(p.x) - w / 2, Y(p.z) - w / 2, w, w, Math.min(4, w * .2)); g.fill(); g.stroke(); } }
   if (!V.ready) return;
   const m = 14 / s + 8, x0 = V.cx - W / 2 / s - m, x1 = V.cx + W / 2 / s + m, z0 = V.cz - H / 2 / s - m, z1 = V.cz + H / 2 / s + m, vis = h => h.x > x0 && h.x < x1 && h.z > z0 && h.z < z1;
   const hs = V.homes.filter(h => !h.bid && vis(h)), bs = [...V.blds.values()].filter(vis), sel = V.sel;
@@ -482,8 +516,14 @@ function draw() {
   if (sel) { const w = (sel.bid ? 11 : 7.4) * Math.max(s, 1.6) + 8; g.lineWidth = 3; g.strokeStyle = '#c9a24a'; rr(g, X(sel.x) - w / 2, Y(sel.z) - w / 2, w, w, 6); g.stroke(); g.lineWidth = 1.2; g.strokeStyle = '#14233f'; rr(g, X(sel.x) - w / 2 - 2, Y(sel.z) - w / 2 - 2, w + 4, w + 4, 8); g.stroke(); }
   // name tags: only when zoomed in, nearest to the middle first, never on top of each other
   g.textAlign = 'center'; g.textBaseline = 'middle';
-  if (s < 1.15) { g.font = '700 ' + Math.max(15, Math.min(26, 30 * s + 8)) + 'px Lora, Georgia, serif'; V.labels.forEach(l => { const x = X(l[1]), y = Y(l[2]); g.lineWidth = 4; g.strokeStyle = 'rgba(255,250,240,.9)'; g.strokeText(l[0], x, y); g.fillStyle = '#14233f'; g.fillText(l[0], x, y); }); }
-  const tags = []; if (s >= 2.6) { hs.forEach(h => { if (h.status !== 'abandoned') tags.push([h.shown, X(h.x), Y(h.z) - 7.4 * s / 2 - 9, h === sel, h.gold || h.villa]); }); bs.forEach(b => tags.push(['R' + b.bid + ' · ' + b.list.filter(h => h.status !== 'abandoned').length + ' homes', X(b.x), Y(b.z) - 11 * s / 2 - 9, sel && sel.bid === b.bid, false])); }
+  { const lv = s < .85 ? 0 : s < 3.4 ? 1 : 2, put = [], halo = 'rgba(255,253,246,.92)';   // far: districts · closer: areas, lanes, markets · close: named buildings
+    const text = (t, x, y, font, col) => { g.font = font; const w = g.measureText(t).width; if (x + w / 2 < 0 || x - w / 2 > W || y < 60 || y > H) return; if (put.some(u => Math.abs(u[0] - x) < (u[2] + w) / 2 + 6 && Math.abs(u[1] - y) < 18)) return; put.push([x, y, w]); g.lineWidth = 4; g.strokeStyle = halo; g.strokeText(t, x, y); g.fillStyle = col; g.fillText(t, x, y); };
+    V.labels.forEach(l => { if (l[3] === 0 && lv <= 1) text(l[0], X(l[1]), Y(l[2]), '700 ' + (lv === 0 ? Math.max(15, Math.min(26, 30 * s + 8)) : 19) + 'px Lora, Georgia, serif', lv === 0 ? '#14233f' : 'rgba(20,35,63,.5)'); });
+    if (lv >= 1) V.labels.forEach(l => { if (l[3] === 1 && s < 5.5) text(l[0], X(l[1]), Y(l[2]), '600 ' + (s < 1.6 ? 11.5 : 13) + 'px Poppins, sans-serif', '#5b4a2a'); });
+    if (s >= 1.3) V.labels.forEach(l => { if (l[3] === 2) text(l[0], X(l[1]), Y(l[2]), '600 11px Poppins, sans-serif', '#14233f'); }); }
+  if (V.me && V.me !== sel) { const x = X(V.me.x), y = Y(V.me.z); g.beginPath(); g.arc(x, y, Math.max(7, (V.me.bid ? 7 : 5) * s), 0, 7); g.lineWidth = 3; g.strokeStyle = '#c2552d'; g.stroke(); g.beginPath(); g.arc(x, y, Math.max(7, (V.me.bid ? 7 : 5) * s) + 3, 0, 7); g.lineWidth = 1.2; g.strokeStyle = '#fffdf6'; g.stroke(); }
+  const tags = []; if (V.me && V.me !== sel && s < 2.6) tags.push(['You', X(V.me.x), Y(V.me.z) - Math.max(7, 5 * s) - 12, true, false]);
+  if (s >= 2.6) { hs.forEach(h => { if (h.status !== 'abandoned') tags.push([h.shown, X(h.x), Y(h.z) - 7.4 * s / 2 - 9, h === sel, h.gold || h.villa]); }); bs.forEach(b => tags.push(['R' + b.bid + ' · ' + b.list.filter(h => h.status !== 'abandoned').length + ' homes', X(b.x), Y(b.z) - 11 * s / 2 - 9, sel && sel.bid === b.bid, false])); }
   else if (sel) tags.push([sel.bid ? 'R' + sel.bid : sel.shown, X(sel.x), Y(sel.z) - (sel.bid ? 11 : 7.4) * Math.max(s, 1.6) / 2 - 14, true, false]);
   tags.sort((a, b) => (b[3] - a[3]) || (Math.hypot(a[1] - W / 2, a[2] - H / 2) - Math.hypot(b[1] - W / 2, b[2] - H / 2)));
   g.font = '600 11px Poppins, sans-serif'; const used = []; let n = 0;
@@ -503,7 +543,7 @@ function card(h) { V.sel = h; wake(); if (!h) { c2.hidden = true; return; }
     <div class="t">${h.villa ? 'Villa, plot ' + h.villa : 'Home № ' + h.n.toLocaleString('en-IN')}</div>
     <div class="u">${live ? esc(h.shown) : 'This home is empty now'}${live && h.job ? ' · ' + esc(h.job) : ''}${live && h.gold ? ' · ⭐ Supporter' : ''}</div>
     ${others.length ? `<div class="k" style="margin-top:8px">Also in this building</div><div class="who">${others.map(o => `<button data-c="pick" data-n="${o.n}">${esc(o.shown)}</button>`).join('')}</div>` : ''}
-    <div class="row"><button class="push p" data-c="3d">See in 3D</button>${live && h.status === 'active' ? `<a class="push" href="../?u=${encodeURIComponent(h.user)}">Open in Vinland</a>` : ''}</div>`;
+    <div class="row">${live && h.status === 'active' ? `<a class="push p" href="../?pp=${encodeURIComponent(h.user)}">Open passport</a>` : ''}<button class="push${live && h.status === 'active' ? '' : ' p'}" data-c="3d">See in 3D</button></div>`;
   c2.hidden = false; }
 function pick(px, py) { const wx = V.cx + (px - V.W / 2) / V.s, wz = V.cz + (py - V.H / 2) / V.s, lim = Math.max(7, 16 / V.s); let best = null, bd = lim;
   V.homes.forEach(h => { const d = Math.hypot(h.x - wx, h.z - wz) - (h.bid ? 3 : 0); if (d < bd) { bd = d; best = h; } });
@@ -511,8 +551,8 @@ function pick(px, py) { const wx = V.cx + (px - V.W / 2) / V.s, wz = V.cz + (py 
   card(best); }
 function init2D() {
   if (V.ctx) return; V.ctx = V.cv.getContext('2d'); fit(); addEventListener('resize', () => { if (mode === '2d') { fit(); clampV(); wake(); } });
-  V.s = Math.min(V.W / 760, V.H / 900); V.cx = 40; V.cz = -40; clampV();   // opens on Central; pinch out for the whole country
-  const im = new Image(); im.decoding = 'async'; im.onload = () => { V.img = im; wake(); }; im.src = '../vinland-plan.jpg';
+  { let a = 1e9, b = 1e9, c = -1e9, d = -1e9; (MD ? MD.roads : []).forEach(r => { a = Math.min(a, r[2] - r[0] / 2); c = Math.max(c, r[2] + r[0] / 2); b = Math.min(b, r[3] - r[1] / 2); d = Math.max(d, r[3] + r[1] / 2); });
+    if (c > a) { b = Math.min(b, ST.coast ? ST.coast.shore - 30 : b); V.s = Math.min(V.W / (c - a + 60), (V.H - 150) / (d - b + 40)); V.cx = (a + c) / 2; V.cz = (b + d) / 2 - 45 / V.s; } else { V.s = 0; V.cx = (B.x0 + B.x1) / 2; V.cz = (B.z0 + B.z1) / 2; } } clampV();   // opens on the whole land; a logged-in citizen opens on their own home (see `use` below)
   const pts = new Map(); let moved = 0, pinch = 0, lastTap = 0;
   V.cv.addEventListener('pointerdown', e => { if (!$('#r2').hidden) { $('#r2').hidden = true; document.body.classList.remove('searching2d'); } V.cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); if (pts.size === 1) moved = 0; if (pts.size === 2) { const p = [...pts.values()]; pinch = Math.hypot(p[0][0] - p[1][0], p[0][1] - p[1][1]); } });
   V.cv.addEventListener('pointermove', e => { const o = pts.get(e.pointerId); if (!o) return; const dx = e.clientX - o[0], dy = e.clientY - o[1]; pts.set(e.pointerId, [e.clientX, e.clientY]);
@@ -532,7 +572,8 @@ function init2D() {
     const all = [...V.byUser.keys()], hit = all.filter(u => u.startsWith(k)).concat(all.filter(u => !u.startsWith(k) && u.includes(k))).slice(0, 6);
     document.body.classList.add('searching2d'); r2.innerHTML = hit.length ? hit.map(u => `<button data-c="find" data-u="${esc(u)}">@${esc(V.byUser.get(u).user)} <span>№ ${V.byUser.get(u).villa ? 'Villa' : V.byUser.get(u).n}</span></button>`).join('') : '<p>No home with that name yet. Follow @buildacountry and comment HOME.</p>'; r2.hidden = false; });
   q2.addEventListener('keydown', e => { if (e.key === 'Enter') { const b = r2.querySelector('button'); if (b) b.click(); } });
-  const use = t => { if (!okCSV(t)) return; build2D(t); if (wantHome && !V.sel) { const h = /^\d+$/.test(wantHome) ? V.homes.find(x => x.n === +wantHome) : V.byUser.get(wantHome); if (h) { goTo(h, 4.2); card(h); } } wake(); };
+  const use = t => { if (!okCSV(t)) return; build2D(t); if (wantHome && !V.sel) { const h = /^\d+$/.test(wantHome) ? V.homes.find(x => x.n === +wantHome) : V.byUser.get(wantHome); if (h) { goTo(h, 4.2); card(h); } }
+    else if (!wantHome && V.me && !V.opened) { V.opened = true; goTo(V.me, 3.4); } wake(); };
   use(C.text); C.subs.push(use); refresh().then(t => { if (!V.ready && !t) toast('We could not reach the citizens list. Check your internet and try again.'); });
 }
 
@@ -543,13 +584,13 @@ function init2D() {
 // ---------- the 2D | 3D switch ----------
 function setMode(m, byUser) {
   if (m === '3d' && !hasGL) { toast('This phone cannot show 3D. Here is the 2D map.'); m = '2d'; }
-  mode = m; if (byUser) LS.set('vin_map_mode', m);
+  mode = m; if (byUser && !PHONE) LS.set('vin_map_mode', m);
   document.body.classList.toggle('mode2d', m === '2d'); V.el.hidden = m !== '2d';
   document.querySelectorAll('#modeSw button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === m)));
   api.paused = m !== '3d';
   if (m === '2d') { init2D(); fit(); clampV(); wake(); } else if (!started3d) start3D(); else if (window.VIN3D_API) window.VIN3D_API.wake();
 }
-const api = window.VIN_BOOT = { paused: false, PHONE, citizensText, refresh, progress, frameTime, t0: T0,
+const api = window.VIN_BOOT = { paused: false, PHONE, toast, citizensText, refresh, progress, frameTime, t0: T0,
   ready() { if (!window.__vinReady) window.__vinReady = performance.now(); hideLoad(); },
   fail(msg) { hideLoad(); setMode('2d'); toast(msg || '3D could not start here. Showing the quick 2D map.'); } };
 $('#modeSw').addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.m !== mode) setMode(b.dataset.m, true); });
@@ -565,6 +606,7 @@ if (!window.THREE) { throw new Error('no 3D engine'); }
 const BOOT = window.VIN_BOOT || null, OLDP = /[?&]old=1/.test(location.search);   // ?old=1 = the old slow settings, to compare speed on a real phone
 const wrap = document.getElementById('scene');
 const PHONE = matchMedia('(hover: none) and (pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches;   // 13 Nov: touch-only devices. Laptops/PCs never get phone cuts
+const ROADS_ON_PHONES = true;   // set by measurement (tools/map_smooth.py + draw calls): see HANDOFF step 4C
 const FAST = PHONE && !OLDP;   // phones (12 Nov): no antialias, pixel ratio max 1.25, no real shadows (a soft fake shadow under each home instead), name tags 10x a second
 const renderer = new THREE.WebGLRenderer({ antialias: !FAST, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, FAST ? 1.25 : 2));   // laptops: up to 2 (sharp), like before 12 Nov
@@ -2077,7 +2119,7 @@ function selectHome(h) {
      <div class="row2"><button class="btn ghost" id="shareHome">Copy link to this home</button>${h.shopRef || h.staffOf ? `<button class="btn ghost" id="visitShop">${h.shopRef ? 'Visit their shop' : 'Visit their workplace'}</button>` : ''}${link}</div>`);
   const vs = document.getElementById('visitShop'); if (vs) vs.onclick = () => selectShop(h.shopRef || h.staffOf);
   { const row = cardBody.querySelector('.row2'); if (row && h.status !== 'hidden') { const pb = document.createElement('button'); pb.className = 'btn'; pb.textContent = '🛂 My passport'; pb.onclick = () => openPassport(h, where); row.prepend(pb); } }
-  { const row = cardBody.querySelector('.row2'); if (row) { const wb = document.createElement('button'); wb.className = 'btn ghost'; wb.textContent = '🚶 Walk from this home'; wb.onclick = () => startWalk(h); row.prepend(wb); const db = document.createElement('button'); db.className = 'btn ghost'; db.textContent = '🚗 Drive from here'; db.onclick = () => startDrive(h); wb.after(db); } }
+  { const row = PHONE && !OLDP ? null : cardBody.querySelector('.row2'); if (row) { const wb = document.createElement('button'); wb.className = 'btn ghost'; wb.textContent = '🚶 Walk from this home'; wb.onclick = () => startWalk(h); row.prepend(wb); const db = document.createElement('button'); db.className = 'btn ghost'; db.textContent = '🚗 Drive from here'; db.onclick = () => startDrive(h); wb.after(db); } }
   const sb = document.getElementById('shareHome');
   if (sb) sb.onclick = () => { const url = location.href.split('#')[0] + '#home-' + h.n;
     const ok = () => { sb.textContent = 'Link copied'; setTimeout(() => sb.textContent = 'Copy link to this home', 1800); };
@@ -4097,7 +4139,7 @@ function frame(now) {
   const busy = !FAST || moving;
   const due = busy || now - RUN.lastDraw >= (reduce ? 1000 : NIGHT.on ? 33 : 100);
   if (!panelOpen && RUN.homes && due) {
-    updatePeople(Math.min(0.25, (now - RUN.lastDraw) / 1000) || dt, now); renderer.render(scene, camera);
+    updatePeople(Math.min(0.25, (now - RUN.lastDraw) / 1000) || dt, now); updateTraffic(Math.min(0.25, (now - RUN.lastDraw) / 1000) || dt); renderer.render(scene, camera);
     if (moving || !FAST || now - RUN.lastTags >= 100 || RUN.tagsFor !== selected) { RUN.lastTags = now; RUN.tagsFor = selected; updateLabels(); updateLayoutLabels(); updateEduLabels(); updateSupTags(); if (window.__vinPerf) window.__vinPerf.tags++; }
     if (BOOT) { if (RUN.wasBusy && moving && RUN.shown > 2) BOOT.frameTime(now - RUN.lastDraw); if (++RUN.shown === 2) BOOT.ready(); }
     RUN.lastDraw = now; RUN.wasBusy = moving;
@@ -4549,7 +4591,7 @@ function buildPeople() {
   const order = pool.map((_, i) => i).sort(() => rnd() - 0.5).map(i => pool[i]).sort((a, b) => (styleOf(b.user) ? 1 : 0) - (styleOf(a.user) ? 1 : 0)), used = new Set();   // styled citizens are always out walking
   const take = (n, pref) => { const out = []; (pref ? order.filter(pref) : []).concat(order).forEach(h => { if (out.length < n && !used.has(h)) { used.add(h); out.push(h); } }); return out; };
   const pickPath = list => { let t = rnd() * list.reduce((a, q) => a + q.w, 0); for (const q of list) { t -= q.w; if (t <= 0) return q.p; } return list[0].p; };
-  const addW = (h, list, o = {}) => { const p = pickPath(list); picked.push({ h, p, side: o.side !== undefined ? o.side : (rnd() < 0.5 ? -2.2 : 2.2), s: rnd() * 2 * p.L, dir: rnd() < 0.5 ? -1 : 1, speed: (o.speed || 1.1) + rnd() * 0.7, phase: rnd() * 6.28, k: o.k || 1.1 }); };
+  const addW = (h, list, o = {}) => { const p = pickPath(list); picked.push({ h, p, side: o.side !== undefined ? o.side : (rnd() < 0.5 ? -1 : 1) * ROADS_NEW.side, s: rnd() * 2 * p.L, dir: rnd() < 0.5 ? -1 : 1, speed: (o.speed || 1.1) + rnd() * 0.7, phase: rnd() * 6.28, k: o.k || 1.1 }); };
   // middle district: the square ring roads (as before)
   const ringPaths = []; for (let r = 48; r <= (openRoadsTo + 1) * S; r += 24) ringPaths.push({ p: PATHS.ring(r), w: 1 });
   // East/West districts: only the sides that have homes
@@ -4594,6 +4636,77 @@ function updatePeople(dt, now) {
 // ================= ROAD MARKINGS AND STREET LIGHTS =================
 // Yellow dashed centre line on every road at least 4 m wide, and a street light every 26 m along it (alternating sides).
 const STREETLAMPS = [];
+// STEP 4C (13 Nov): the SAME roads, rebuilt with assets/roads.js (VinlandRoads): one merged road mesh instead of one box per road, plus
+// 1.6 m pavements, zebra crossings at junctions and its own lamps. Nothing moves: positions come from ROADS, corners stay square (curve 0).
+// ?roads=old / ?roads=new forces one or the other (to compare speed).
+const ROADS_NEW = { on: false, side: 2.2 };
+function realRoads() {
+  const force = (/[?&]roads=(old|new)/.exec(location.search) || [])[1];
+  if (!window.VinlandRoads || force === 'old' || (FAST && !ROADS_ON_PHONES && force !== 'new')) return false;
+  const key = r => r.map(v => Math.round(v * 10)).join(','), seen = new Set(), boxes = ROADS.filter(r => { const k = key(r); if (seen.has(k)) return false; seen.add(k); return true; });
+  let net; try { net = window.VinlandRoads.build(window.VinlandRoads.fromMapBoxes(boxes), { pavement: 1.6, crossings: true, lamps: true, curve: 0 }); } catch (e) { return false; }
+  scene.traverse(o => { if (o.isMesh && o.material === ROAD && o.geometry.type === 'BoxGeometry' && o.geometry.parameters.height === 0.1 && seen.has(key([o.geometry.parameters.width, o.geometry.parameters.depth, o.position.x, o.position.z]))) o.visible = false; });   // the old road boxes
+  scene.add(net.group); STREETLAMPS.push(...net.lamps); ROADS_NEW.on = true; ROADS_NEW.side = 3.3; ROADS_NEW.stats = net.stats;   // walkers move out onto the pavements (2.5 to 4.1 m from the middle)
+  return true;
+}
+// STEP 4B (13 Nov): life on the streets, from the OK'd asset kit (kit.js): benches, dustbins, chai stalls, parked scooters and cars, and a few cars driving.
+// Every piece type is ONE bake drawn as InstancedMesh. Nothing here moves a road, plot or home: pieces only stand on the grass verge beside the
+// pavement, on free ground near the markets and the beach, or drive on the existing roads. Phones get far fewer pieces. ?life=off switches it off (to compare speed).
+const LIFE = { cars: [], on: false, stats: null };
+function streetLife() {
+  const K = window.VinlandKit; if (LIFE.on || !K || !K.bake || /[?&]life=off/.test(location.search)) return;
+  let sd = 4242; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;   // its own dice, so nothing else on the map changes
+  const key = r => r.map(v => Math.round(v * 10)).join(','), seen = new Set(), R = ROADS.filter(r => { const k = key(r); if (seen.has(k)) return false; seen.add(k); return true; })
+    .map(([w, d, x, z]) => ({ ax: w > d, L: Math.max(w, d), W: Math.min(w, d), x, z, w, d }));
+  const inRoad = (px, pz, grow, not) => R.some(r => r !== not && Math.abs(px - r.x) < r.w / 2 + grow && Math.abs(pz - r.z) < r.d / 2 + grow);
+  const nearPlot = (px, pz, lim) => PLOTS.some(p => Math.abs(p[0] - px) < lim && Math.abs(p[1] - pz) < lim);
+  const nearSlot = (px, pz, lim) => marketSlots.some(q => Math.hypot(q.x - px, q.z - pz) < lim);
+  const O = new THREE.Object3D(), mats = {}, tints = {}, put = (k, x, z, ry, tint) => { O.position.set(x, 0.14, z); O.rotation.set(0, ry, 0); O.updateMatrix(); (mats[k] = mats[k] || []).push(O.matrix.clone()); (tints[k] = tints[k] || []).push(tint || null); };
+  const at = (r, along, side) => r.ax ? [r.x + along, r.z + side] : [r.x + side, r.z + along], face = (r, side) => r.ax ? (side > 0 ? Math.PI : 0) : (side > 0 ? -Math.PI / 2 : Math.PI / 2);   // turned to face the road
+  const PAINT = ['#c8603f', '#3f7fbf', '#f6f0e2', '#2f2b28', '#c9922e', '#2f7a68', '#d88fb0', '#9aa3a8'], WOOD = ['#8a5a3a', '#3f5866', '#47684a'], CANOPY = ['#c8603f', '#2f7a68', '#e8b830', '#3f7fbf'];
+  const SEA_Z = window.VIN_STATIC && window.VIN_STATIC.coast ? window.VIN_STATIC.coast.shore : -820;
+  const core = r => Math.abs(r.x) < 300 && Math.abs(r.z) < 300;   // phones: only the middle of Central
+  // benches (and a dustbin beside some): on the verge just behind the pavement, between the lamps, never at a junction
+  R.forEach(r => { if (r.L < 60 || r.W > 5.5 || !ROADS_NEW.on || (FAST && !core(r))) return; let k = 0;
+    for (let a = -r.L / 2 + 19; a <= r.L / 2 - 19; a += FAST ? 104 : 52, k++) { const side = (k % 2 ? -1 : 1) * (r.W / 2 + 2.25), [x, z] = at(r, a, side);
+      if (inRoad(x, z, 6, r) || nearSlot(x, z, 6) || !nearPlot(x, z, 16)) continue; put('bench', x, z, face(r, side), { wood: WOOD[(rnd() * 3) | 0] });
+      if (!FAST && rnd() < 0.4) { const [bx, bz] = at(r, a + 1.9, side); put('dustbin', bx, bz, face(r, side)); } } });
+  // parked scooters on the verge in front of homes; parked cars at the kerb, only on the wide roads (6 m and more), where two lanes stay free
+  R.forEach(r => { if (r.L < 40 || !ROADS_NEW.on || (FAST && !core(r))) return;
+    for (let a = -r.L / 2 + 9; a <= r.L / 2 - 9; a += 6.5) { const sgn = rnd() < 0.5 ? -1 : 1;
+      if (r.W <= 5.5) { if (rnd() > (FAST ? 0.03 : 0.07)) continue; const side = sgn * (r.W / 2 + 2.1), [x, z] = at(r, a, side); if (inRoad(x, z, 5, r) || !nearPlot(x, z, 9)) continue; put('scooter', x, z, (r.ax ? Math.PI / 2 : 0) + (rnd() < 0.5 ? Math.PI : 0), { body: PAINT[(rnd() * 8) | 0] }); }
+      else { if (FAST || rnd() > 0.45) continue;   // phones: no parked cars (each car type costs draw calls)
+        const side = sgn * (r.W / 2 - 1.05), [x, z] = at(r, a, side); if (inRoad(x, z, 3, r)) continue; put(['carHatch', 'carSedan', 'carSUV', 'carVan', 'carPickup'][(rnd() * 5) | 0], x, z, (r.ax ? Math.PI / 2 : 0) + (sgn > 0 ? 0 : Math.PI), { body: PAINT[(rnd() * 8) | 0] }); } } });
+  // chai stalls: a few on free ground next to the Market, the New Market and the beach shops (never on a road, a plot or a shop)
+  [['m', 3], ['se', 2], ['beach', 3]].forEach(([area, n]) => { const l = marketSlots.filter(q => (q.area || 'm') === area); if (!l.length) return; const cand = [], got = [];
+    R.forEach(r => { if (r.L < 20) return; for (let a = -r.L / 2 + 8; a <= r.L / 2 - 8; a += 4) for (const sg of [-1, 1]) { const side = sg * (r.W / 2 + 2.6), [x, z] = at(r, a, side), dm = Math.min(...l.map(q => Math.hypot(q.x - x, q.z - z)));
+      if (dm < 7.5 || dm > 26 || inRoad(x, z, 5.6, r) || nearSlot(x, z, 7.5) || nearPlot(x, z, 9) || z < SEA_Z + 6) continue; cand.push([dm, x, z, face(r, side)]); } });   // on the verge beside a road, close to the shops, never on a road, a plot or a shop
+    cand.sort((a, b) => a[0] - b[0]).forEach(c => { if (got.length >= n || got.some(g => Math.hypot(g[1] - c[1], g[2] - c[2]) < 22)) return; got.push(c); put('chaiStall', c[1], c[2], c[3], { canopy: CANOPY[got.length % 4] }); }); });
+  // draw: one bake per piece type
+  const g = new THREE.Group(); g.name = 'streetLife'; let pieces = 0;
+  Object.keys(mats).forEach(k => { if (!K[k]) return; const baked = K.bake(K[k]({})), t = tints[k]; g.add(K.instances(baked, mats[k], i => t[i])); pieces += mats[k].length; });
+  // driving: a few cars round the ring roads of the middle town (left lane, like India) and up and down the longest roads
+  const loops = []; R.forEach(r => { if (r.ax && Math.abs(r.x) < 1 && r.z < 0 && Math.abs(r.w + 2 * r.z) < 1 && [[r.w, r.d, 0, -r.z], [r.d, r.w, r.z, 0], [r.d, r.w, -r.z, 0]].every(q => seen.has(key(q)))) loops.push(-r.z); });
+  const paths = []; loops.forEach(h => { [1, -1].forEach(dir => { const e = h + dir * 1.25, c = [[-e, -e], [e, -e], [e, e], [-e, e]]; paths.push({ pts: dir > 0 ? c : c.slice().reverse(), loop: true }); }); });
+  R.filter(r => r.L > 240 && r.W <= 5.5).sort((a, b) => b.L - a.L).slice(0, FAST ? 2 : 8).forEach(r => { const a = at(r, -r.L / 2 + 6, 0), b = at(r, r.L / 2 - 6, 0), lx = r.ax ? 0 : 1.25, lz = r.ax ? -1.25 : 0;   // out in one lane, back in the other
+    paths.push({ pts: [[a[0] + lx, a[1] + lz], [b[0] + lx, b[1] + lz], [b[0] - lx, b[1] - lz], [a[0] - lx, a[1] - lz]], loop: true }); });
+  paths.forEach(p => { p.seg = []; p.len = 0; for (let i = 0; i < p.pts.length; i++) { const a = p.pts[i], b = p.pts[(i + 1) % p.pts.length], l = Math.hypot(b[0] - a[0], b[1] - a[1]); p.seg.push([a[0], a[1], (b[0] - a[0]) / l, (b[1] - a[1]) / l, p.len, l]); p.len += l; } });
+  const TYPES = FAST ? ['carHatch'] : ['carHatch', 'carSedan', 'carSUV', 'carTaxi', 'autoRickshaw', 'scooter', 'carVan', 'carPickup', 'carSports'], perType = FAST ? 4 : 3;
+  if (paths.length) TYPES.forEach((k, ti) => { if (!K[k]) return; const n = perType, baked = K.bake(K[k]({})), cols = Array.from({ length: n }, () => PAINT[(rnd() * 8) | 0]);
+    const inst = K.instances(baked, Array.from({ length: n }, () => new THREE.Matrix4()), k === 'carTaxi' || k === 'autoRickshaw' ? null : i => ({ body: cols[i] }));
+    inst.children.filter(c => c.isLineSegments).forEach(c => inst.remove(c));   // ink lines are fixed in place, so moving cars go without them
+    g.add(inst); for (let i = 0; i < n; i++) { const p = paths[(ti * 3 + i * 5) % paths.length]; LIFE.cars.push({ meshes: inst.children, i, p, s: rnd() * p.len, v: k === 'scooter' || k === 'autoRickshaw' ? 5 + rnd() * 2 : 6.5 + rnd() * 3.5 }); } });
+  scene.add(g); LIFE.on = true; LIFE.group = g; LIFE.mats = mats; LIFE.stats = { pieces, moving: LIFE.cars.length, kinds: Object.fromEntries(Object.keys(mats).map(k => [k, mats[k].length])), drawCalls: g.children.reduce((t, c) => t + c.children.length, 0) };
+  updateTraffic(0);
+}
+const TRAF = { o: null };
+function updateTraffic(dt) {
+  if (!LIFE.cars.length) return; const O = TRAF.o || (TRAF.o = new THREE.Object3D()), touched = new Set();
+  for (const c of LIFE.cars) { c.s = (c.s + c.v * dt) % c.p.len; let sg = c.p.seg[0]; for (const q of c.p.seg) { if (c.s >= q[4]) sg = q; else break; }
+    const t = c.s - sg[4]; O.position.set(sg[0] + sg[2] * t, 0.14, sg[1] + sg[3] * t); O.rotation.set(0, Math.atan2(sg[2], sg[3]), 0); O.updateMatrix();
+    for (const m of c.meshes) { m.setMatrixAt(c.i, O.matrix); touched.add(m); } }
+  touched.forEach(m => { m.instanceMatrix.needsUpdate = true; });
+}
 function roadDress() { if (roadDress.done) return; roadDress.done = true;
   const dash = [], lamps = [], seen = new Set();
   ROADS.forEach(([w, d, x, z]) => {
@@ -5260,6 +5373,9 @@ function softShadows() {
 }
 window.VIN3D_API = { wake: () => kick(900),
   select: q => { q = String(q).replace(/^@/, '').toLowerCase(); const h = /^\d+$/.test(q) ? homes.find(x => x.n === +q) : homes.find(x => x.status !== 'hidden' && x.user.toLowerCase() === q); if (h) { if (narrow) setMin(false); selectHome(h); kick(2500); } return !!h; } };
+// Phones (13 Nov, step 4): 3D is for a look-around only. The heavy things (walk, drive, night, auto tour) run on laptops; here they show a small note.
+if (PHONE && !OLDP) { const note = () => { if (BOOT && BOOT.toast) BOOT.toast('Best on laptop 💻 Walk, drive, night and the auto tour run on a laptop. On your phone, look around here or use the 2D map.', 4200); };
+  ['tour', 'nightBtn', 'walkBtn', 'driveBtn'].forEach(id => { const b = document.getElementById(id); if (b) { b.onclick = note; b.classList.add('laponly'); b.setAttribute('aria-label', b.textContent.trim() + ' (best on laptop)'); } }); }
 if (window.__vinHook) window.__vinHook(code => eval(code));   // only the build tools set this (tools/export_plan.py)
 
 // ----- load the sheet -----
@@ -5280,9 +5396,10 @@ if (window.__vinHook) window.__vinHook(code => eval(code));   // only the build 
   if (lTxt) { const cell = parseCSV('a\n' + lTxt)[0]; if (cell && cell.a) loadLayoutText(cell.a); }
   if (BOOT) { BOOT.progress(78, 'Placing the homes…'); await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0))); }
   buildHomes(rows);
-  roadDress();
+  if (!realRoads()) roadDress();
   drawLayout(false);
   buildPeople();
+  try { streetLife(); } catch (e) { /* street life is extra: the map opens without it */ }
   softShadows();
   if (BOOT) BOOT.progress(96, 'Opening the map…');
   RUN.homes = true; kick(1800);
