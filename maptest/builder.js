@@ -65,7 +65,7 @@ function overlapsHome(it) { if (typeOf(it) !== 'o' || it.k === '#tree') return f
 function meter() { let calls = 0, tris = 0; DT.groups.forEach(g => g.traverse(o => { if (!o.isMesh && !o.isLineSegments) return; calls++; if (o.isMesh) { const ge = o.geometry; tris += (ge.index ? ge.index.count : ge.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1); } }));
   E.cost = { calls, tris: Math.round(tris) }; const col = f => f > 1 ? '#d23b2c' : f > 0.7 ? '#e0a020' : '#3a9a55', bar = f => `<span class="bar"><b style="width:${Math.min(100, f * 100)}%;background:${col(f)}"></b></span>`, fc = calls / BUDGET.calls, ft = tris / BUDGET.tris, worst = Math.max(fc, ft), nOver = L.objects.filter(overlapsHome).length;
   $('vbM').innerHTML = `<span style="color:${col(worst)}">● Phone cost: ${worst > 1 ? 'too heavy' : worst > 0.7 ? 'getting heavy' : 'good'}</span><span>Draw calls ${calls} / ${BUDGET.calls}</span>${bar(fc)}<span>Triangles ${E.cost.tris.toLocaleString('en-IN')} / ${BUDGET.tris.toLocaleString('en-IN')}</span>${bar(ft)}<span>${L.objects.length} pieces · ${L.ground.length} areas · ${L.roads.length} roads</span>${nOver ? `<span class="warn">⚠ ${nOver} piece${nOver > 1 ? 's' : ''} on a home</span>` : ''}`; }
-function autosave() { try { localStorage.setItem('vin_layout_draft', JSON.stringify(L)); } catch (e) {} }
+function autosave() { try { localStorage.setItem('vin_layout_draft', JSON.stringify({ base: window.VIN_LAYOUT_BASE, layout: L })); } catch (e) {} }
 
 // ---------- undo / redo ----------
 const snapshot = () => JSON.stringify({ objects: L.objects, ground: L.ground, roads: L.roads, places: L.places, prefabs: L.prefabs });
