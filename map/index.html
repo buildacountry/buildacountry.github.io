@@ -388,7 +388,8 @@ const PHONE = matchMedia('(hover: none) and (pointer: coarse)').matches && !matc
 const WEAK = PHONE && ((navigator.deviceMemory && navigator.deviceMemory <= 3) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4));
 const hasGL = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl') || c.getContext('experimental-webgl')); } catch (e) { return false; } })();
 // Which view opens: the person's own choice wins; else laptop = 3D; phone = what the speed check found last time, or a first guess from the phone's memory / cores.
-function pickMode() { const v = qs.get('view'); if (v === '2d' || v === '3d') return v; if (!hasGL || !ST) return hasGL ? '3d' : '2d';
+const EDITING = /[?&]edit\b/.test(location.search) && !PHONE; window.VIN_EDIT = EDITING;   // the Vinland Builder: /map/?edit, laptop only
+function pickMode() { if (EDITING) return '3d'; const v = qs.get('view'); if (v === '2d' || v === '3d') return v; if (!hasGL || !ST) return hasGL ? '3d' : '2d';
   if (PHONE) return '2d';   // 13 Nov (step 4): phones always open in Maps mode (instant, never lags). 3D is one tap away, for a look-around.
   const c = LS.get('vin_map_mode'); return c === '2d' ? '2d' : '3d'; }
 
@@ -418,6 +419,11 @@ async function start3D() {
   if (started3d) return; started3d = true; showLoad();
   try { progress(8, 'Loading the 3D engine…'); await loadScript(CDN[0]); progress(30); await loadScript(CDN[1]);
     await Promise.all(['roads.js', 'kit.js'].map(f => loadScript(f).catch(() => null)));   // step 4: real roads + street life. If one fails to load, the map still opens with the old roads and no street pieces.
+    if (!window.VIN_LAYOUT) { const txt = await fetch('layout.json', { cache: 'no-cache' }).then(r => r.ok ? r.text() : '').catch(() => '');
+      let h = 5381; for (let i = 0; i < txt.length; i++) h = ((h << 5) + h + txt.charCodeAt(i)) | 0; window.VIN_LAYOUT_BASE = String(h);   // fingerprint of the layout on the site
+      let site = null; try { site = txt ? JSON.parse(txt) : null; } catch (e) {}
+      let draft = null; if (EDITING) try { const d = JSON.parse(localStorage.getItem('vin_layout_draft') || 'null'); if (d && d.base === window.VIN_LAYOUT_BASE && d.layout) draft = d.layout; else localStorage.removeItem('vin_layout_draft'); } catch (e) {}   // the Builder's autosave only counts if the site layout has not changed since
+      window.VIN_LAYOUT = draft || site || { v: 1, objects: [], ground: [], roads: [], places: [], prefabs: {} }; window.VIN_LAYOUT_DRAFT = !!draft; }
     progress(40, 'Building the land…'); await nextPaint(); await nextPaint();
     window.VIN3D(); }
   catch (e) { started3d = false; hideLoad(); if (mode === '3d') { setMode('2d'); toast('3D could not start here. Showing the quick 2D map.'); } }
@@ -643,6 +649,7 @@ function setMode(m, byUser) {
 const api = window.VIN_BOOT = { paused: false, PHONE, toast, citizensText, refresh, progress, frameTime, t0: T0,
   ready() { if (!window.__vinReady) window.__vinReady = performance.now(); hideLoad(); },
   fail(msg) { hideLoad(); setMode('2d'); toast(msg || '3D could not start here. Showing the quick 2D map.'); } };
+if (/[?&]edit\b/.test(location.search) && PHONE) setTimeout(() => toast('Builder works on laptop. Open this page on a laptop to edit the map.', 6000), 1200);
 $('#modeSw').addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.m !== mode) setMode(b.dataset.m, true); });
 $('#vload button').addEventListener('click', () => { hideLoad(); setMode('2d', true); });
 if (!ST) { document.body.insertAdjacentHTML('beforeend', '<p style="position:fixed;inset:0;display:grid;place-items:center;font:16px sans-serif">The map could not load. Refresh to try again.</p>'); return; }
@@ -3321,16 +3328,22 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
   const N = { edge: false, shadow: false }, g = new THREE.Group();
   const rdD = (w, d, x, z) => { ROADS.push([w, d, x, z]); B(g, w, 0.1, d, ROAD, x, 0.04, z, N); };
   const L = RSX.z1 - RSX.z0, ZC = (RSX.z0 + RSX.z1) / 2, xa = RS.lanes[0] + 2.5, xb = RSX.lanes[2] - 2.5;
-  RSX.lanes.forEach(x => rdD(5, L + 5, x, ZC));                                                       // the new long lanes
+  RSX.lanes.forEach(x => { if (x === 1075) return rdD(5, L + 5, x, ZC);                                // the new long lanes
+    // Dev, 15 Nov: the two inner lanes stop at the bridge roads; the land between them (z -226..226) is one planned park (Stadium Park, Blossom Avenue, Tower site)
+    rdD(5, -226 - (RSX.z0 - 2.5), x, (RSX.z0 - 2.5 - 226) / 2); rdD(5, RSX.z1 + 2.5 - 226, x, (226 + RSX.z1 + 2.5) / 2); });
   [RSX.z0, RSX.z1, -226, 226].forEach(z => rdD(xb - xa, 5, (xa + xb) / 2, z));                         // ends + the two bridge roads, all the way in
   RSX.streets.forEach(z => rdD(xb - xa, 5, (xa + xb) / 2, z));                                         // block streets through all three rows
+  // Downtown grid (Dev, 14 Nov, land-use plan v2): the same cross streets through all three rows, so every block is the same size.
+  // (front row skips z -80: the stadium sits there)
+  // (Downtown side streets are drawn by Dev in the Builder now: layout.json roads)
   // 12 Nov: join the two ends to the waterfront. The first lane (x 640) and the waterfront road now run to the inland end roads,
   // and both end roads carry on across the strip to the waterfront road (no dead ends by the sea or at the south end).
   { const lz0 = RS.z0 - 9, lz1 = RS.z1 + 9, wr = RS.road + 3.5, wEnd = RS.z1 + 20;
     rdD(5, lz0 - (RSX.z0 - 2.5), RS.lanes[0], (lz0 + RSX.z0 - 2.5) / 2); rdD(5, RSX.z1 + 2.5 - lz1, RS.lanes[0], (lz1 + RSX.z1 + 2.5) / 2);
     [RSX.z0, RSX.z1].forEach(z => rdD(xa - wr, 5, (wr + xa) / 2, z));
     rdD(7, RSX.z1 + 2.5 - wEnd, RS.road, (wEnd + RSX.z1 + 2.5) / 2); }
-  rdD(785 - 2.5 - xa, 5, (xa + 782.5) / 2, 0); rdD(1075 - 2.5 - 932.5, 5, (932.5 + 1072.5) / 2, 0);   // Central Bridge road: first row + far row
+  rdD(992.5 - xa, 6, (xa + 992.5) / 2, 0);   // Central Bridge road, one straight avenue up to the Tower site (15 Nov; no roundabout, Dev)
+  rdD(5, 222 - 4, 930, -(226 + 4) / 2);                                                              // service road behind the stadium car parks: bridge road (z -226) to the avenue
   [[712.5], [857.5], [1002.5]].forEach(([x]) => [[RSX.z0, -226], [226, RSX.z1]].forEach(([za, zb]) => rdD(4, zb - za - 5, x, (za + zb) / 2)));   // the inner lane down the middle of each row
   window.RSX_OBJ = bakeKeep(g, 'riverside');
 })();
@@ -4702,6 +4715,99 @@ function updatePeople(dt, now) {
     el.hidden = false; el.textContent = (o.w.shift ? '🟢 On shift · ' : o.w.party ? '🎉 ' : standers.includes(o.w) ? '👮 ' : '') + (o.w.h.status === 'hidden' ? 'Citizen' : '@' + o.w.h.user) + (o.w.h.gold ? ' ⭐' : ''); el.classList.toggle('gold', !!o.w.h.gold); el.style.left = ((vv.x + 1) / 2 * W) + 'px'; el.style.top = ((1 - vv.y) / 2 * H) + 'px'; });
 }
 
+// ================= DOWNTOWN (step 9, Dev's sketch 13 Nov: plans/step9_downtown.md) =================
+// The empty Riverside inland land x 640..1075, z -226..310. Rows: front 640-785 (stadium + downtown street), middle 785-930
+// (Vinland Tower site + City Centre), back 930-1075 (Business District); transport hub at x 930-1075, z 226-310.
+// Milestones are honest: the stadium opens at 2,000 citizens, the Tower at 10,000; until then fenced sites with a live board.
+const DT = { R0: [640, 785], R1: [785, 930], R2: [930, 1075], STADIUM_AT: 2000, TOWER_AT: 10000, groups: [] };
+// THE LAYOUT (14 Nov): Downtown is no longer code. It is DATA in map/layout.json (objects, ground paint, roads, place names, Dev's own buildings),
+// edited with the Vinland Builder (/map/?edit, laptop). This function draws that file. The old code that produced the first layout.json is kept in
+// tools/downtown_to_layout.js. Citizen homes and Riverside flats are NOT in the layout: they stay automatic (sheet order).
+// Phone speed is automatic: 5+ copies of a piece become one instanced batch, still pieces are merged per colour, groups are culled off screen.
+const LAYOUT_GROUND = { grass: '#8fbf6a', plaza: '#efe6d4', water: '#6fb3cc', parking: '#4a4c52', sand: '#e6d3a3', woods: '#7fae5c', pitch: '#6fae5a' };
+function customBuilding(sp) {   // a building made from parts in the Builder ("My buildings"). Front = +z. Plain boxes, so it merges into the cheap per-colour meshes.
+  sp = sp || {}; const g = new THREE.Group(), N = { shadow: false, edge: false }, fl = Math.max(1, Math.min(40, sp.floors | 0 || 2)), w = Math.max(3, +sp.w || 10), d = Math.max(3, +sp.d || 8), FH = 3.2, SH = sp.shop ? 4 : 0, H = SH + fl * FH - (sp.shop ? FH : 0),
+    wall = sp.wall || '#e9e3d6', glass = sp.glass || '#8fb8cc', rc = sp.roofCol || '#b5543a';
+  B(g, w, H, d, wall, 0, 0, 0);
+  const y0 = f => (sp.shop ? SH + (f - 1) * FH : f * FH), f0 = sp.shop ? 1 : 0, faces = [[0, d / 2 + 0.06, w, 0], [0, -d / 2 - 0.06, w, 0], [w / 2 + 0.06, 0, d, 1], [-w / 2 - 0.06, 0, d, 1]];
+  if (sp.win !== 'none') faces.forEach(([x, z, len, side]) => { const put = (off, ww, y, hh) => side ? B(g, 0.12, hh, ww, glass, x, y, off, N) : B(g, ww, hh, 0.12, glass, off, y, z, N);
+    if (sp.win === 'bands') { for (let f = f0; f < fl; f++) put(0, len - 1.2, y0(f) + 0.9, 1.5); }
+    else if (sp.win === 'tall') { const n = Math.max(1, Math.floor((len - 1) / 3)); for (let c = 0; c < n; c++) put((c - (n - 1) / 2) * (len - 1) / n, 1.3, y0(f0) + 0.6, (fl - f0) * FH - 1.2); }
+    else { const n = Math.max(1, Math.floor((len - 1) / 2.8)); for (let f = f0; f < fl; f++) for (let c = 0; c < n; c++) put((c - (n - 1) / 2) * (len - 1) / n, 1.3, y0(f) + 0.9, 1.5); } });
+  if (sp.shop) { B(g, w - 1, 2.6, 0.14, glass, 0, 0.5, d / 2 + 0.07, N); B(g, 1.3, 2.7, 0.2, '#5a4632', 0, 0, d / 2 + 0.1, N); B(g, w, 0.7, 0.3, '#3b3a46', 0, 3.2, d / 2 + 0.16, N);
+    const aw = B(g, w - 0.6, 0.14, 1.9, sp.awning || '#c8603f', 0, 2.75, d / 2 + 0.95, N); aw.rotation.x = 0.22; }
+  const rt = sp.roof || 'flat';
+  if (rt === 'pyramid') { const m = new THREE.Mesh(new THREE.ConeGeometry(Math.SQRT1_2, 1, 4, 1), wallMat(rc)); m.rotation.y = Math.PI / 4; const q = new THREE.Group(); q.add(m); q.scale.set(w + 0.8, Math.min(w, d) * 0.38, d + 0.8); q.position.y = H + Math.min(w, d) * 0.19; g.add(q); }
+  else if (rt === 'gable') { const rh = Math.min(w, d) * 0.34, sh = new THREE.Shape(); sh.moveTo(-w / 2 - 0.4, 0); sh.lineTo(w / 2 + 0.4, 0); sh.lineTo(0, rh); sh.lineTo(-w / 2 - 0.4, 0);
+    const m = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: d + 0.8, bevelEnabled: false }), wallMat(rc)); m.position.set(0, H, -d / 2 - 0.4); g.add(m); }
+  else { B(g, w + 0.5, 0.3, d + 0.5, rc, 0, H, 0, N); [[0, d / 2, w + 0.5, 0.3], [0, -d / 2, w + 0.5, 0.3], [w / 2, 0, 0.3, d + 0.5], [-w / 2, 0, 0.3, d + 0.5]].forEach(([x, z, a, b]) => B(g, a, 0.9, b, wall, x, H + 0.3, z, N));
+    if (rt === 'terrace') { B(g, Math.min(4, w * 0.4), 2.4, Math.min(3, d * 0.4), wall, -w * 0.2, H + 0.3, -d * 0.15, N); B(g, 2.4, 0.12, 2.4, sp.awning || '#c8603f', w * 0.2, H + 2.3, d * 0.12, N); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => B(g, 0.1, 2, 0.1, '#5a4632', w * 0.2 + a * 1.1, H + 0.3, d * 0.12 + b * 1.1, N)); } }
+  g.userData.asset = 'custom'; return g; }
+const GLB = { cache: {}, files: {} };   // imported models (map/assets/*.glb). GLTFLoader is downloaded only when a layout uses one.
+function glbLoad(file) { if (GLB.cache[file]) return GLB.cache[file];
+  return GLB.cache[file] = (THREE.GLTFLoader ? Promise.resolve() : loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js')).then(() => new Promise((ok, no) => new THREE.GLTFLoader().load(GLB.files[file] || 'assets/' + encodeURIComponent(file), q => ok(q.scene), undefined, no))); }
+function layoutRoads() { const L = window.VIN_LAYOUT; if (!L || !L.roads || /[?&]nodt/.test(location.search)) return;   // Builder roads are real roads: they join ROADS before lines, junctions, lamps, cars and walkers are worked out
+  L.roads.forEach(r => { const w = +r.w || 8, hz = Math.abs(r.x1 - r.x0) >= Math.abs(r.z1 - r.z0), e = hz ? [Math.abs(r.x1 - r.x0), w, (r.x0 + r.x1) / 2, r.z0] : [w, Math.abs(r.z1 - r.z0), r.x0, (r.z0 + r.z1) / 2]; if (e[0] < 1 || e[1] < 1) return;
+    ROADS.push(e); B(scene, e[0], 0.1, e[1], ROAD, e[2], 0.045, e[3], { shadow: false, edge: false }); }); }
+function downtown() {
+  const K = window.VinlandKit, L = window.VIN_LAYOUT; if (!K || !K.bake || !K.instances || !K.make || !L || /[?&]nodt/.test(location.search)) return;
+  DT.groups.forEach(o => { scene.remove(o); o.traverse(m => { if (m.geometry && !m.isInstancedMesh && m.userData.own) m.geometry.dispose(); }); }); DT.groups = []; DT.done = true; DT.byId = new Map();
+  const g = new THREE.Group(); scene.add(g); DT.groups.push(g); const N = { shadow: false, edge: false }, Q = new THREE.Quaternion(), UP = new THREE.Vector3(0, 1, 0);
+  const live = homes.filter(h => h.status !== 'abandoned').length, num = n => n.toLocaleString('en-IN'), EDIT = !!window.VIN_EDIT;
+  const SOPEN = live >= DT.STADIUM_AT || /[?&]stadfull/.test(location.search), TOPEN = /[?&]towerfull/.test(location.search);
+  const ok = c => !c || (c === 'tower:open' ? TOPEN : c === 'tower:site' ? !TOPEN : c === 'stadium:open' ? SOPEN : c === 'stadium:site' ? !SOPEN : true);
+  DT.ok = ok; const txt = v => typeof v === 'string' ? v.replace('{live}', num(live)) : v, optsOf = o => { const src = (PHONE && o.po) || o.o || {}, out = {}; Object.keys(src).forEach(k => { out[k] = txt(src[k]); }); return out; };
+  const make = (key, opts) => key[0] === '@' ? customBuilding((L.prefabs || {})[key.slice(1)]) : K[key] ? K.make(key, opts || {}) : new THREE.Group();
+  const one = (key, opts, x, z, ry = 0, sc = 1, y = 0) => { const o = make(key, opts); o.position.set(x, y, z); o.rotation.y = ry; o.scale.setScalar(sc); g.add(o); return o; };
+  const many = (key, opts, list, tints) => { if (!list.length) return; if (list.length <= 4) { list.forEach(([x, z, ry = 0, sc = 1, y = 0]) => one(key, opts, x, z, ry, sc, y)); return; }   // few copies: merged below, cheaper than instancing
+    const mats = list.map(([x, z, ry = 0, sc = 1, y = 0]) => { Q.setFromAxisAngle(UP, ry); return new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), Q, new THREE.Vector3(sc, sc, sc)); });
+    const m = K.instances(K.bake(make(key, opts)), mats, tints || (() => null)); const cs = new THREE.Box3(); mats.forEach(M => cs.expandByPoint(new THREE.Vector3().setFromMatrixPosition(M)));   // cull the whole group when off screen (r128 can't on its own)
+    m.traverse(o => { if (!o.isMesh && !o.isLineSegments) return; o.receiveShadow = true; if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+      const r = o.geometry.boundingSphere.radius * 1.2 + o.geometry.boundingSphere.center.length(), sp = cs.getBoundingSphere(new THREE.Sphere()); if (o.isMesh) { o.geometry.boundingSphere = new THREE.Sphere(sp.center, sp.radius + r); o.frustumCulled = true; } });
+    g.add(m); return m; };
+  const screen = (lines, w, h, x, y, z, ry, bg = '#101826', fg = '#ffd23f') => { const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512 * h / w); const x2 = c.getContext('2d');
+    x2.fillStyle = bg; x2.fillRect(0, 0, c.width, c.height); x2.strokeStyle = fg; x2.lineWidth = 10; x2.strokeRect(5, 5, c.width - 10, c.height - 10); x2.textAlign = 'center'; x2.textBaseline = 'middle';
+    lines.forEach((t, i) => { x2.fillStyle = i ? '#ffffff' : fg; x2.font = `900 ${i ? 46 : 58}px Poppins, sans-serif`; x2.fillText(t, c.width / 2, c.height * (i + 1) / (lines.length + 1)); });
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) })); m.position.set(x, y, z); m.rotation.y = ry; g.add(m); return m; };
+  DT.flat = []; const places = [], keep = new Set(), batches = new Map();
+  (L.ground || []).forEach(a => { if (!ok(a.if)) return; const y = a.y === undefined ? 0.07 : a.y; DT.flat.push([a.x0, a.z0, a.x1 - a.x0, a.z1 - a.z0, y + 0.04, a.c]); B(g, a.x1 - a.x0, 0.08, a.z1 - a.z0, a.c, (a.x0 + a.x1) / 2, y, (a.z0 + a.z1) / 2, N);
+    if (a.name) places.push([a.name, a.x0, a.z0, a.x1 - a.x0, a.z1 - a.z0]); });
+  (L.objects || []).forEach(o => { if (!ok(o.if)) return; const k = o.k, r = o.r || 0, s = o.s === undefined ? 1 : o.s, y = o.y || 0; let m = null;
+    if (o.name) places.push([o.name, o.x - 6, o.z - 6, 12, 12]);
+    if (k === '#box') { m = B(g, o.w, o.h, o.d, o.c, o.x, y, o.z, N); if (r) m.rotation.y = r; if (s !== 1) m.scale.multiplyScalar(s); }
+    else if (k === '#tree') tree(g, o.x, y, o.z, o.kind || 'canopy', s);
+    else if (k === '#disc') { m = new THREE.Mesh(new THREE.CircleGeometry(1, o.seg || 40), wallMat(o.c)); m.rotation.x = -Math.PI / 2; m.scale.set(o.sx * s, o.sz * s, 1); m.position.set(o.x, y, o.z); if (r) m.rotation.z = r; g.add(m); if (o.flat) DT.flat.push(o.flat); }
+    else if (k === '#screen') screen((o.lines || []).map(txt), o.w * s, o.h * s, o.x, y, o.z, r, o.bg, o.fg);
+    else if (k === '#flats') { m = aptStyle('terrace', o.ci || 0); m.position.set(o.x, y, o.z); m.rotation.y = r; m.scale.setScalar(s); g.add(m); }
+    else if (k.slice(0, 4) === 'glb:') { const file = k.slice(4), hold = new THREE.Group(); hold.position.set(o.x, y, o.z); hold.rotation.y = r; g.add(hold); keep.add(hold);   // an imported model: loads after the land, never blocks it
+      glbLoad(file).then(sc => { const c = sc.clone(true), bb = new THREE.Box3().setFromObject(c), sz = bb.getSize(new THREE.Vector3()), f = (o.size || 10) * s / (Math.max(sz.x, sz.z) || 1); c.scale.setScalar(f); c.position.set(-(bb.min.x + bb.max.x) / 2 * f, -bb.min.y * f, -(bb.min.z + bb.max.z) / 2 * f); hold.add(c); kick(900); }).catch(() => {}); }
+    else { const b = PHONE && o.pb ? o.pb : o.b; if (b) { const id = b + '|' + k + '|' + JSON.stringify((PHONE && o.po) || o.o || {}); if (!batches.has(id)) batches.set(id, { k, o: optsOf(o), list: [], tints: [] }); const q = batches.get(id), e = [o.x, o.z, r, s, y], t = (PHONE && o.pt) || o.t || null;
+        if (PHONE && o.pi !== undefined) { q.list[o.pi] = e; q.tints[o.pi] = t; } else { q.list.push(e); q.tints.push(t); } }
+      else { m = one(k, optsOf(o), o.x, o.z, r, s, y); if (o.t && K.instances) { /* single tinted piece: the tint is applied through a one-copy batch */ g.remove(m); m = K.instances(K.bake(make(k, optsOf(o))), [new THREE.Matrix4().compose(new THREE.Vector3(o.x, y, o.z), Q.setFromAxisAngle(UP, r).clone(), new THREE.Vector3(s, s, s))], () => o.t); g.add(m); }
+        if (o.keep) keep.add(m); } } });
+  batches.forEach(q => { const list = q.list.filter(Boolean), tints = q.tints.filter((t, i) => q.list[i]); many(q.k, q.o, list, tints.some(Boolean) ? i => tints[i] : null); });
+  (L.places || []).forEach(p => { if (ok(p.if)) places.push([p.n, p.x, p.z, p.w, p.d]); });
+  // phone speed: squash every still piece into one mesh per colour (the two live boards and the instanced offices stay as they are)
+  try { const still = new THREE.Group();
+    g.children.slice().forEach(c => { if (keep.has(c)) return; let inst = false; c.traverse(o => { if (o.isInstancedMesh) inst = true; }); if (!inst) { g.remove(c); still.add(c); } });
+    // plain-coloured pieces → a few meshes with per-vertex colour; textured / glowing / see-through pieces go through the kit's bake
+    still.updateMatrixWorld(true); const plain = new Map(), drop = [], col = new THREE.Color(), NOMERGE = [C.glass, '#ffd98a', '#f6d27a'].map(c => new THREE.Color(c));
+    still.traverse(o => { if (!o.isMesh) return; const m = o.material, u = m.userData || {};
+      if (!m.color || o.isInstancedMesh || NOMERGE.some(c => m.color.equals(c))) return;   // window glass and lamp bulbs stay findable for the night lights
+      const key = [m.isMeshBasicMaterial ? 'b' : 't', m.side, o.castShadow ? 's' : 'n', m.map ? m.map.uuid : '', m.emissiveMap ? m.emissiveMap.uuid : '', u.glow || '', u.dayGlow || '', m.transparent ? m.opacity + '' + m.blending : ''].join('|');
+      if (!plain.has(key)) plain.set(key, { m, sh: o.castShadow, pos: [], nor: [], col: [], uv: [] });
+      const ge = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); ge.applyMatrix4(o.matrixWorld); if (!ge.attributes.normal) ge.computeVertexNormals();
+      const P = plain.get(key), n = ge.attributes.position.count, c = new Float32Array(n * 3); col.copy(m.color); for (let i = 0; i < n; i++) { c[i * 3] = col.r; c[i * 3 + 1] = col.g; c[i * 3 + 2] = col.b; }
+      P.pos.push(ge.attributes.position.array); P.nor.push(ge.attributes.normal.array); P.col.push(c); P.uv.push(ge.attributes.uv ? ge.attributes.uv.array : new Float32Array(n * 2)); drop.push(o); });
+    drop.forEach(o => o.parent.remove(o));
+    const cat = a => { const out = new Float32Array(a.reduce((t, x) => t + x.length, 0)); let k = 0; a.forEach(x => { out.set(x, k); k += x.length; }); return out; };
+    plain.forEach(P => { const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.BufferAttribute(cat(P.pos), 3)); ge.setAttribute('normal', new THREE.BufferAttribute(cat(P.nor), 3)); ge.setAttribute('color', new THREE.BufferAttribute(cat(P.col), 3)); if (P.m.map || P.m.emissiveMap) ge.setAttribute('uv', new THREE.BufferAttribute(cat(P.uv), 2)); ge.computeBoundingSphere();
+      const mat = P.m.clone(); mat.vertexColors = true; mat.color.set('#ffffff'); mat.userData = Object.assign({}, P.m.userData);
+      const mesh = new THREE.Mesh(ge, mat); mesh.castShadow = P.sh; mesh.receiveShadow = true; g.add(mesh); });
+    const bk = K.instances(K.bake(still), [new THREE.Matrix4()]); bk.traverse(o => { if (o.isMesh) o.frustumCulled = true; }); g.add(bk); } catch (e) { console.log('downtown bake', e); }
+  window.DT_PLACES = places; if (!EDIT && typeof bakeShadows === 'function') try { bakeShadows(); } catch (e) {}
+}
+
 // ================= ROAD MARKINGS AND STREET LIGHTS =================
 // Yellow dashed centre line on every road at least 4 m wide, and a street light every 26 m along it (alternating sides).
 const STREETLAMPS = [];
@@ -4872,7 +4978,7 @@ function nightFrame(now) {
       pos.needsUpdate = true; f.p.material.opacity = lt < 0.9 ? 0.6 : Math.max(0, 1 - burst / 2.6); f.p.material.size = lt < 0.9 ? 2.2 : 3.2; }); }
 }
 const nightBtn = document.getElementById('nightBtn');
-function setNight(on) { buildNight(); NIGHT.on = on; nightBtn.setAttribute('aria-pressed', String(on)); nightBtn.textContent = on ? '☀️ Day' : (FESTIVAL === 'diwali' ? '🪔 Night' : '🌙 Night'); try { localStorage.setItem('night', on ? '1' : '0'); } catch (e) {} track(on ? 'night-on' : 'night-off'); }
+function setNight(on) { buildNight(); NIGHT.on = on; try { if (window.VinlandKit && VinlandKit.setNight) DT.groups.forEach(g => VinlandKit.setNight(g, on)); } catch (e) {} nightBtn.setAttribute('aria-pressed', String(on)); nightBtn.textContent = on ? '☀️ Day' : (FESTIVAL === 'diwali' ? '🪔 Night' : '🌙 Night'); try { localStorage.setItem('night', on ? '1' : '0'); } catch (e) {} track(on ? 'night-on' : 'night-off'); }
 nightBtn.textContent = FESTIVAL === 'diwali' ? '🪔 Night' : '🌙 Night';
 nightBtn.onclick = () => setNight(!NIGHT.on);
 
@@ -5106,10 +5212,13 @@ function startWalk(from) {
     if (!WALK.grid) buildWalkGrid();
     let sx = 0, sz = 43, a = Math.PI;
     if (from && from.x !== undefined) { sx = from.x; sz = from.z; }
+    const fb = from && from.flat && RS.blds.find(b => b.id === from.flat.bid);   // flat people: start on the pavement outside the front door, not inside the building (15 Nov)
+    if (fb) { sx = fb.x + Math.sin(fb.ry) * 16; sz = fb.z + Math.cos(fb.ry) * 16; }
     [WALK.x, WALK.z] = nearestFree(sx, sz);
-    if (from && from.x !== undefined) { const ox = WALK.x - from.x, oz = WALK.z - from.z, l = Math.hypot(ox, oz) || 1;   // step a few metres out, so you see your home
+    if (fb) { a = Math.atan2(fb.x - WALK.x, fb.z - WALK.z); }
+    else if (from && from.x !== undefined) { const ox = WALK.x - from.x, oz = WALK.z - from.z, l = Math.hypot(ox, oz) || 1;   // step a few metres out, so you see your home
       for (let k = 0; k < 10 && freeAt(WALK.x + ox / l * 0.5, WALK.z + oz / l * 0.5); k++) { WALK.x += ox / l * 0.5; WALK.z += oz / l * 0.5; } }
-    if (from && from.x !== undefined && Math.hypot(from.x - WALK.x, from.z - WALK.z) > 0.1) a = Math.atan2(from.x - WALK.x, from.z - WALK.z);   /* start outside your home, looking at it */
+    if (!fb && from && from.x !== undefined && Math.hypot(from.x - WALK.x, from.z - WALK.z) > 0.1) a = Math.atan2(from.x - WALK.x, from.z - WALK.z);   /* start outside your home, looking at it */
     WALK.ang = a; WALK.yaw = a; WALK.on = true; controls.enabled = false;
     WALK.batches.forEach(b => { b.im.count = 1; }); colourSlot(0, WALK.shirt, hashStr(WALK.me));
     walkToast(PHONE ? 'Use the joystick to walk. Drag anywhere to look around.' : 'WASD or arrow keys to walk, Shift to run. Drag to look around.');
@@ -5529,6 +5638,8 @@ function shiftScene() { const S5 = window.VSOC; if (!S5) return; const list = (S
     pb.onclick = () => { if (!me()) { if (BOOT && BOOT.toast) BOOT.toast(window.VSOC && window.VSOC.user ? 'Your home is not on the map yet. Play opens when it is built.' : 'Play is for citizens. Log in first: DM KEY to @buildacountry.', 4200); return; }
       if (window.VPLAY) { window.VPLAY.start(); return; } pb.disabled = true;
       fetch('play.js?v=1').then(r => { if (!r.ok) throw 0; return r.text(); }).then(t => { run(t + '\n//# sourceURL=play.js'); pb.disabled = false; if (window.VPLAY) window.VPLAY.start(); }).catch(() => { pb.disabled = false; if (BOOT && BOOT.toast) BOOT.toast('Play could not load. Check your internet and try again.', 3600); }); }; } }
+// THE VINLAND BUILDER (14 Nov): /map/?edit on a laptop. builder.js is downloaded only then, and runs inside the map like play.js. Visitors never load it.
+if (window.VIN_EDIT) { const runB = code => eval(code); setTimeout(() => fetch('builder.js?v=1', { cache: 'no-cache' }).then(r => { if (!r.ok) throw 0; return r.text(); }).then(t => runB(t + '\n//# sourceURL=builder.js')).catch(() => { if (BOOT && BOOT.toast) BOOT.toast('The Builder could not load (builder.js is missing).', 5000); }), 300); }
 window.VIN3D_API = { wake: () => kick(900), looks: () => { try { homeLooks(); PARTY.key = ''; SHIFT.key = ''; shiftScene(); partyScene(); if (typeof buildPeople === 'function' && Object.keys(window.VLOOKS || {}).length) buildPeople(); } catch (e) {} }, party: () => { try { shiftScene(); } catch (e) {} try { partyScene(); if (selected && selected.status === 'active' && !PARTY.carded) { PARTY.carded = true; selectHome(selected); } } catch (e) {} },   // the open home card gets its Knock / party lines once the social state arrives
   select: q => { q = String(q).replace(/^@/, '').toLowerCase(); const h = /^\d+$/.test(q) ? homes.find(x => x.n === +q) : homes.find(x => x.status !== 'hidden' && x.user.toLowerCase() === q); if (h) { if (narrow) setMin(false); selectHome(h); kick(2500); } return !!h; } };
 // Phones (13 Nov, step 4): 3D is for a look-around only. The heavy things (walk, drive, night, auto tour) run on laptops; here they show a small note.
@@ -5554,10 +5665,12 @@ if (window.__vinHook) window.__vinHook(code => eval(code));   // only the build 
   if (lTxt) { const cell = parseCSV('a\n' + lTxt)[0]; if (cell && cell.a) loadLayoutText(cell.a); }
   if (BOOT) { BOOT.progress(78, 'Placing the homes…'); await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0))); }
   buildHomes(rows);
+  try { layoutRoads(); } catch (e) {}
   if (!realRoads()) roadDress();
   drawLayout(false);
   buildPeople();
   try { streetLife(); } catch (e) { /* street life is extra: the map opens without it */ }
+  try { downtown(); } catch (e) { console.log('downtown', e); }
   try { partyScene(); } catch (e) { /* parties are extra too */ }
   try { shiftScene(); } catch (e) {}
   try { homeLooks(); } catch (e) {}

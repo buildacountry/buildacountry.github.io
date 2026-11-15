@@ -140,7 +140,7 @@
   // ---- homes ----
   // Starter house: the map's normal home (1 plot, 10 x 10 m): two storeys, terracotta gable roof, arched windows with
   // green shutters, a small balcony, front garden behind a low stone wall. Slots: wall, roof.
-  def({ key: 'houseStarter', name: 'Starter house', cat: 'Homes', part: 1, budget: 700, size: '1 plot · 10 × 10 m',
+  def({ key: 'houseStarter', name: 'Starter house', cat: 'Homes', part: 1, budget: 700, size: '1 plot \u00b7 10 \u00d7 10 m',
     opts: { wall: colours('Wall', SETS.walls), roof: colours('Roof', SETS.roofs) },
     make(o) {
       const g = new THREE.Group(), W = slot('wall', pick(o, 'wall', SETS.walls)), R = slot('roof', pick(o, 'roof', SETS.roofs));
@@ -164,7 +164,7 @@
 
   // Villa: the same Villa as on Villa Lane (wide house, columned veranda with a balcony, garage with a roof terrace,
   // red sports car, pool). Lot 37 x 24 m. Slots: wall, roof, body (the car).
-  def({ key: 'villa', name: 'Villa', cat: 'Homes', part: 1, budget: 1500, size: 'Villa Lane lot · 37 × 24 m',
+  def({ key: 'villa', name: 'Villa', cat: 'Homes', part: 1, budget: 1500, size: 'Villa Lane lot \u00b7 37 \u00d7 24 m',
     opts: { wall: colours('Wall', ['#f3e6cc', '#f2cfb3', '#c9d8b6', '#c8dbe6', '#f6f0e2']), roof: colours('Roof', SETS.roofs), car: colours('Car', ['#d8231f'].concat(SETS.cars)) },
     make(o) {
       const g = new THREE.Group(), W = slot('wall', o.wall || '#f3e6cc'), R = slot('roof', pick(o, 'roof', SETS.roofs)), TRIM = '#e6d3b0', COL = '#fbf4e6', WIN = '#3d5a5e', SH = '#5c7a5c';
@@ -204,7 +204,7 @@
     } });
 
   // Mansion: three storeys, columned entrance, a copper-domed tower, a pool and an iron gate. 4 plots, 20 x 20 m. Slots: wall, roof.
-  def({ key: 'mansion', name: 'Mansion', cat: 'Homes', part: 1, budget: 2500, size: '4 plots · 20 × 20 m',
+  def({ key: 'mansion', name: 'Mansion', cat: 'Homes', part: 1, budget: 2500, size: '4 plots \u00b7 20 \u00d7 20 m',
     opts: { wall: colours('Wall', SETS.walls), roof: colours('Roof', SETS.roofs) },
     make(o) {
       const g = new THREE.Group(), W = slot('wall', pick(o, 'wall', SETS.walls)), R = slot('roof', pick(o, 'roof', SETS.roofs)), TRIM = PAL.sand2;
@@ -243,7 +243,7 @@
 
   // Penthouse tower: a downtown apartment tower with shops at the base. The top floor is the penthouse:
   // glass rooms on a roof garden with a pool and a pergola. 20 x 20 m. Slot: wall.
-  def({ key: 'penthouse', name: 'Penthouse tower', cat: 'Homes', part: 1, budget: 3500, size: 'Downtown · 20 × 20 m · 12 floors',
+  def({ key: 'penthouse', name: 'Penthouse tower', cat: 'Homes', part: 1, budget: 3500, size: 'Downtown \u00b7 20 \u00d7 20 m \u00b7 12 floors',
     opts: { wall: colours('Wall', SETS.walls) },
     make(o) {
       const g = new THREE.Group(), W = slot('wall', pick(o, 'wall', SETS.walls)), TRIM = PAL.sand2, FL = 3, N = 10, top = 4.6 + N * FL;
@@ -284,7 +284,7 @@
     for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, f = grp(g, px, py, 0, a);
       TAPER(f, 0.75, 0.08, 2.0, i % 2 ? PAL.leaf2 : PAL.leaf, 0, 0, 1.0, { tw: 0.15, td: 0.3, tz: 0.3 }, { rx: 0.7, edge: false }); }
   }
-  def({ key: 'beachFlats', name: 'Beach Flats', cat: 'Homes', part: 2, budget: 1500, size: '1 plot · 10 × 10 m · 4 flats · Riverside, Beach Lane', night: true,
+  def({ key: 'beachFlats', name: 'Beach Flats', cat: 'Homes', part: 2, budget: 1500, size: '1 plot \u00b7 10 \u00d7 10 m \u00b7 4 flats \u00b7 Riverside, Beach Lane', night: true,
     opts: { set: choices('Colours', SETS.beachSets.map(s => s[0])) },
     make(o) {
       const s = SETS.beachSets.find(x => x[0] === o.set) || SETS.beachSets[0];
@@ -360,16 +360,8 @@
       tris.push([...v(U), ...v(D), ...v(D2)], [...v(U), ...v(D2), ...v(U2)], [...v(U), ...v(U2), ...v(Ui2)], [...v(U), ...v(Ui2), ...v(Ui)], [...v(D), ...v(Di2), ...v(D2)], [...v(D), ...v(Di), ...v(Di2)]); }
     return flat(tris);
   }
-  def({ key: 'vinlandTower', name: 'Vinland Tower', cat: 'Landmarks', part: 1, budget: 6000, size: 'Plaza 120 × 120 m · 243 m tall', night: true,
-    opts: {},
-    make(o) {
-      const g = new THREE.Group(), tex = towerTextures();
-      const GLASS = (() => { const k = 'vtGlass'; if (!mats[k]) { const m = toon('#c4deed'); if (tex) { m.map = tex.day; m.emissiveMap = tex.night; } m.userData.glow = '#ffffff'; mats[k] = m; } return mats[k]; })();
-      const GOLD = (() => { const m = glowMat('#f0dcaa', '#f0b040'); m.side = THREE.DoubleSide; m.userData.dayGlow = '#241d0e'; m.emissive.set('#241d0e'); return m; })();   // light champagne, a soft sheen by day
-      const WHITE = glowMat('#f7f5f0', '#8a8478'), SILVER = glowMat('#e9eff2', '#d8c49a'), OBS = glowMat('#a9d0e2', '#ffffff'), LOBBY = glowMat('#cfe0ea', '#f3d79a');
-      const BEACON = glowMat('#ff4a30', '#ff3a20'), STONE = '#e9e1d2', PAVE = '#f3ede1', TRIM = PAL.sand2;
-      const y0 = 12, H = 150, r0 = 19, r1 = 7.5, yTop = y0 + H, rAt = y => r1 + (r0 - r1) * Math.pow(1 - Math.min(1, Math.max(0, (y - y0) / H)), 1.5);
-      // --- plaza ---
+  // the Vinland Tower's arrival plaza (avenue, pools, lamps, ring of trees, fountain, benches, Vinland flag), shared by both styles
+  function towerPlaza(g, PAVE, TRIM) {
       B(g, 120, 0.3, 120, '#e3d8c4', 0, 0, 0, { shadow: false });
       CYL(g, 34, 34, 0.3, 16, PAVE, 0, 0.3, 0, { shadow: false });
       B(g, 16, 0.08, 30, PAVE, 0, 0.3, 45, FLAT);                                                   // the avenue in
@@ -387,6 +379,16 @@
       { const f = grp(g, -12, 0.3, 58);                                                             // the Vinland flag
         CYL(f, 1.4, 1.6, 0.6, 8, TRIM, 0, 0, 0); CYL(f, 0.16, 0.22, 16, 6, PAL.iron, 0, 0.6, 0, { edge: false, open: true });
         ICO(f, 0.45, 0, '#e2b04a', 0, 16.8, 0, NE); B(f, 6, 3.6, 0.12, PAL.terra, 3.1, 12.4, 0, NE); }
+  }
+  // Vinland Tower, 'glass' style (the 13 Nov look: silver-blue glass, gold ribbon crown, observation deck). Kept so nothing breaks.
+  function glassTower(o) {
+      const g = new THREE.Group(), tex = towerTextures();
+      const GLASS = (() => { const k = 'vtGlass'; if (!mats[k]) { const m = toon('#c4deed'); if (tex) { m.map = tex.day; m.emissiveMap = tex.night; } m.userData.glow = '#ffffff'; mats[k] = m; } return mats[k]; })();
+      const GOLD = (() => { const m = glowMat('#f0dcaa', '#f0b040'); m.side = THREE.DoubleSide; m.userData.dayGlow = '#241d0e'; m.emissive.set('#241d0e'); return m; })();   // light champagne, a soft sheen by day
+      const WHITE = glowMat('#f7f5f0', '#8a8478'), SILVER = glowMat('#e9eff2', '#d8c49a'), OBS = glowMat('#a9d0e2', '#ffffff'), LOBBY = glowMat('#cfe0ea', '#f3d79a');
+      const BEACON = glowMat('#ff4a30', '#ff3a20'), STONE = '#e9e1d2', PAVE = '#f3ede1', TRIM = PAL.sand2;
+      const y0 = 12, H = 150, r0 = 19, r1 = 7.5, yTop = y0 + H, rAt = y => r1 + (r0 - r1) * Math.pow(1 - Math.min(1, Math.max(0, (y - y0) / H)), 1.5);
+      towerPlaza(g, PAVE, TRIM);
       // --- lobby podium ---
       CYL(g, 23, 24, 11.4, 16, LOBBY, 0, 0.6, 0, { open: true });
       CYL(g, 25.5, 25.5, 1, 16, WHITE, 0, 11.6, 0);
@@ -416,11 +418,53 @@
       CYL(g, 0.12, 0.75, 26, 8, WHITE, 0, yMeet - 2, 0);                                            // the needle and its red light
       BALL(g, 1.2, BEACON, 0, yMeet + 24.4, 0, NE);
       return g;
-    } });
+  }
+  // Vinland Tower, 'classic' style (15 Nov, default): warm stone art deco supertall that belongs with the Town Hall.
+  // Cream / sand stone shaft with stepped setbacks, vertical window strips, copper-green bands, a big CLOCK on all 4 sides
+  // near the top, a copper crown, a glowing lantern and a spire with a red beacon. Same plaza and footprint as before.
+  function decoTower(o) {
+    const g = new THREE.Group(), PAVE = '#f3ede1', TRIM = PAL.sand2;
+    towerPlaza(g, PAVE, TRIM);
+    const ST = glowMat(PAL.cream, '#6a5a40'), ST2 = glowMat(PAL.sand, '#5c4c34'), COP = PAL.copper, WIN = glowMat(PAL.glass, '#ffcf6a'), LANT = glowMat('#f6e3a8', '#fff0b8'), FACE = glowMat('#f6f3ea', '#fff3c4');
+    const tier = (w, y0, h, cols, stone) => {                                                        // a stone block with window strips, fins and corner piers
+      B(g, w, h, w, stone, 0, y0, 0);
+      [0, 1, 2, 3].forEach(k => { const s = grp(grp(g, 0, 0, 0, k * Math.PI / 2), 0, 0, w / 2);
+        for (let i = 0; i < cols; i++) { const x = -w / 2 + (i + 0.5) * w / cols; P(s, w / cols * 0.42, h - 3, WIN, x, y0 + 1.5, 0.04); }   // tall window strips
+        for (let i = 1; i < cols; i++) B(s, 0.7, h, 0.7, stone, -w / 2 + i * w / cols, y0, 0.1, { edge: false }); });
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => B(g, w * 0.09, h + 1.2, w * 0.09, ST, a * w / 2, y0, b * w / 2, NE));   // corner piers
+      B(g, w + 1, 0.9, w + 1, COP, 0, y0 + h, 0, NE);                                                  // copper band at each setback
+    };
+    // lobby podium: arched windows, copper canopy over the door
+    B(g, 44, 14, 44, ST2, 0, 0.3, 0); B(g, 45, 1, 45, COP, 0, 14.3, 0, NE);
+    [0, 1, 2, 3].forEach(k => { const s = grp(grp(g, 0, 0, 0, k * Math.PI / 2), 0, 0, 22.03);
+      for (let i = 0; i < 5; i++) { if (k === 0 && i === 2) continue; const x = -16 + i * 8; P(s, 4, 7, WIN, x, 2, 0); ARCH(s, 4, WIN, x, 9, 0); } });
+    P(g, 6, 8, glowMat(PAL.glassWarm, '#ffcf6a'), 0, 0.3, 22.06); ARCH(g, 6, glowMat(PAL.glassWarm, '#ffcf6a'), 0, 8.3, 22.06);
+    B(g, 16, 0.7, 6, COP, 0, 9.4, 25); [-7, 7].forEach(x => B(g, 0.5, 9, 0.5, COP, x, 0.3, 27.6, NE));
+    // the shaft: four stone tiers stepping in, alternating cream and sand
+    let y = 15.3; [[34, 92, 6, ST], [28, 44, 5, ST2], [22, 28, 4, ST]].forEach(([w, h, c, s]) => { tier(w, y, h, c, s); y += h + 0.9; });
+    // clock tier: big clock face on all 4 sides
+    B(g, 17, 20, 17, ST2, 0, y, 0);
+    [0, 1, 2, 3].forEach(k => { const s = grp(grp(g, 0, 0, 0, k * Math.PI / 2), 0, 0, 8.55);
+      put(s, geo('clockface', () => new THREE.CircleGeometry(1, 12)), FACE, 0, y + 10, 0.03, { edge: true, s: [6.2, 6.2, 1], shadow: false });
+      put(s, geo('ring', () => new THREE.RingGeometry(0.96, 1, 24)), COP, 0, y + 10, 0.05, { edge: false, shadow: false, s: [6.6, 6.6, 1] });
+      B(s, 0.35, 4.6, 0.1, BK.DARK, 0, y + 10, 0.08, FLAT); B(s, 3.2, 0.35, 0.1, BK.DARK, 1.6, y + 10, 0.08, FLAT); });   // hands at about 10:10... close enough
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => B(g, 2, 22, 2, ST, a * 8.5, y, b * 8.5, NE));
+    y += 20; B(g, 18.5, 1, 18.5, COP, 0, y, 0, NE); y += 1;
+    // copper crown: stepped copper roof, lantern that glows at night, spire with a red beacon
+    B(g, 13, 6, 13, COP, 0, y, 0); y += 6;
+    HIP(g, 13.5, 8, 13.5, COP, 0, y, 0); y += 5;
+    CYL(g, 2.6, 2.6, 6, 8, LANT, 0, y, 0); [0, 1, 2, 3, 4, 5, 6, 7].forEach(i => { const a = i / 8 * Math.PI * 2 + Math.PI / 8; B(g, 0.35, 6, 0.35, COP, Math.sin(a) * 2.7, y, Math.cos(a) * 2.7, FLAT); });
+    y += 6; CYL(g, 0.2, 3.2, 4, 8, COP, 0, y, 0); y += 4;
+    CYL(g, 0.1, 0.45, 26, 6, COP, 0, y, 0); BALL(g, 0.9, glowMat('#ff4a30', '#ff3a20'), 0, y + 26.4, 0, NE);
+    return g;
+  }
 
+  def({ key: 'vinlandTower', name: 'Vinland Tower', cat: 'Landmarks', part: 1, budget: 6000, size: 'Plaza 120 \u00d7 120 m \u00b7 250 m tall', night: true,
+    opts: { style: choices('Style', ['campanile', 'glass', 'classic']), state: choices('State', ['done', 'site']) },   // campanile = new default; glass = the 13 Nov look; classic = shelved art deco try
+    make: o => (o.style === 'glass' ? glassTower(o) : o.style === 'classic' ? decoTower(o) : campanile(o)) });
   // ---- cars (made-up shapes: no real brands, no logos, no badges) ----
   // Hatchback: small city car. Slot: body.
-  def({ key: 'carHatch', name: 'Hatchback', cat: 'Cars', part: 1, budget: 400, size: '1.9 × 4.2 m',
+  def({ key: 'carHatch', name: 'Hatchback', cat: 'Cars', part: 1, budget: 400, size: '1.9 \u00d7 4.2 m',
     opts: { body: colours('Paint', SETS.cars) },
     make(o) {
       const g = new THREE.Group(), body = slot('body', pick(o, 'body', SETS.cars));
@@ -443,7 +487,7 @@
   const wheels4 = (g, r, w, x, zf, zb) => [[-x, zf], [x, zf], [-x, zb], [x, zb]].forEach(([a, b]) => WHEEL(g, r, w, a, b));
 
   // Sedan: three-box family car. Slot: body.
-  def({ key: 'carSedan', name: 'Sedan', cat: 'Cars', part: 1, budget: 400, size: '1.9 × 4.6 m', opts: { body: colours('Paint', ['#3f7fbf'].concat(SETS.cars)) },
+  def({ key: 'carSedan', name: 'Sedan', cat: 'Cars', part: 1, budget: 400, size: '1.9 \u00d7 4.6 m', opts: { body: colours('Paint', ['#3f7fbf'].concat(SETS.cars)) },
     make(o) { const g = new THREE.Group(), b = slot('body', o.body || '#3f7fbf');
       TAPER(g, 1.9, 0.68, 4.6, b, 0, 0.3, 0, { tw: 0.95, td: 0.97 });
       TAPER(g, 1.74, 0.6, 2.5, PAL.glass, 0, 0.98, -0.2, { tw: 0.82, td: 0.6 }, NE);
@@ -451,7 +495,7 @@
       carEnds(g, 1.9, 2.3, -2.3, 0.72); wheels4(g, 0.38, 0.28, 0.92, 1.45, -1.45); return g; } });
 
   // SUV: tall and boxy, roof rails. Slot: body.
-  def({ key: 'carSUV', name: 'SUV', cat: 'Cars', part: 1, budget: 450, size: '2 × 4.6 m', opts: { body: colours('Paint', ['#9aa3a8'].concat(SETS.cars)) },
+  def({ key: 'carSUV', name: 'SUV', cat: 'Cars', part: 1, budget: 450, size: '2 \u00d7 4.6 m', opts: { body: colours('Paint', ['#9aa3a8'].concat(SETS.cars)) },
     make(o) { const g = new THREE.Group(), b = slot('body', o.body || '#9aa3a8');
       TAPER(g, 2, 0.92, 4.6, b, 0, 0.38, 0, { tw: 0.97, td: 0.95 });
       TAPER(g, 1.88, 0.72, 3.3, PAL.glass, 0, 1.28, -0.35, { tw: 0.92, td: 0.86, tz: -0.03 }, NE);
@@ -461,7 +505,7 @@
       carEnds(g, 2, 2.3, -2.3, 0.98); wheels4(g, 0.46, 0.32, 0.96, 1.5, -1.5); return g; } });
 
   // Pickup: cab in front, open bed at the back. Slot: body.
-  def({ key: 'carPickup', name: 'Pickup', cat: 'Cars', part: 1, budget: 450, size: '2 × 5.2 m', opts: { body: colours('Paint', ['#2f7a68'].concat(SETS.cars)) },
+  def({ key: 'carPickup', name: 'Pickup', cat: 'Cars', part: 1, budget: 450, size: '2 \u00d7 5.2 m', opts: { body: colours('Paint', ['#2f7a68'].concat(SETS.cars)) },
     make(o) { const g = new THREE.Group(), b = slot('body', o.body || '#2f7a68');
       TAPER(g, 2, 0.8, 5.2, b, 0, 0.38, 0, { tw: 0.97, td: 0.98 });
       TAPER(g, 1.86, 0.74, 1.9, PAL.glass, 0, 1.18, 0.55, { tw: 0.9, td: 0.72, tz: -0.04 }, NE);
@@ -471,7 +515,7 @@
       carEnds(g, 2, 2.6, -2.6, 0.92); wheels4(g, 0.45, 0.32, 0.96, 1.75, -1.6); return g; } });
 
   // Sports car: low red wedge, rear spoiler (the Villa's car). Slot: body.
-  def({ key: 'carSports', name: 'Sports car', cat: 'Cars', part: 1, budget: 450, size: '2.2 × 4.8 m', opts: { body: colours('Paint', ['#d8231f'].concat(SETS.cars)) },
+  def({ key: 'carSports', name: 'Sports car', cat: 'Cars', part: 1, budget: 450, size: '2.2 \u00d7 4.8 m', opts: { body: colours('Paint', ['#d8231f'].concat(SETS.cars)) },
     make(o) { const g = new THREE.Group(), b = slot('body', o.body || '#d8231f');
       TAPER(g, 2.2, 0.55, 4.8, b, 0, 0.25, 0, { tw: 0.94, td: 0.96 });
       TAPER(g, 1.9, 0.2, 1.6, b, 0, 0.8, 1.5, { tw: 0.9, td: 0.8, tz: -0.1 });
@@ -481,7 +525,7 @@
       [[-1, 1.5, 0.42], [1, 1.5, 0.42], [-1, -1.5, 0.48], [1, -1.5, 0.48]].forEach(([s, z, r]) => WHEEL(g, r, 0.38, s * 1.06, z, 12)); return g; } });
 
   // Van: tall box with a sloped nose, sliding door. Slot: body.
-  def({ key: 'carVan', name: 'Van', cat: 'Cars', part: 1, budget: 450, size: '2 × 4.9 m', opts: { body: colours('Paint', ['#f6f0e2'].concat(SETS.cars)) },
+  def({ key: 'carVan', name: 'Van', cat: 'Cars', part: 1, budget: 450, size: '2 \u00d7 4.9 m', opts: { body: colours('Paint', ['#f6f0e2'].concat(SETS.cars)) },
     make(o) { const g = new THREE.Group(), b = slot('body', o.body || '#f6f0e2');
       TAPER(g, 2, 1.9, 4.9, b, 0, 0.32, -0.1, { tw: 0.96, td: 0.86, tz: -0.07 });
       put(g, geo('pane', () => new THREE.PlaneGeometry(1, 1)), PAL.glass, 0, 1.75, 2.0, { rx: -0.42, s: [1.7, 0.9, 1], edge: false, shadow: false });
@@ -490,7 +534,7 @@
       carEnds(g, 2, 2.35, -2.55, 0.85); wheels4(g, 0.4, 0.3, 0.94, 1.55, -1.65); return g; } });
 
   // Taxi: black and yellow city taxi (kaali-peeli), with a roof light. Slots: body, roof.
-  def({ key: 'carTaxi', name: 'Taxi', cat: 'Cars', part: 1, budget: 450, size: '1.8 × 4.1 m', opts: { body: colours('Body', ['#2f2b28', '#e8b830', '#2f7a68']), roof: colours('Roof', ['#e8b830', '#2f2b28', '#f6f0e2']) },
+  def({ key: 'carTaxi', name: 'Taxi', cat: 'Cars', part: 1, budget: 450, size: '1.8 \u00d7 4.1 m', opts: { body: colours('Body', ['#2f2b28', '#e8b830', '#2f7a68']), roof: colours('Roof', ['#e8b830', '#2f2b28', '#f6f0e2']) },
     make(o) { const g = new THREE.Group(), b = slot('body', o.body || '#2f2b28'), r = slot('roof', o.roof || '#e8b830');
       TAPER(g, 1.8, 0.66, 4.1, b, 0, 0.32, 0, { tw: 0.95, td: 0.96 });
       TAPER(g, 1.66, 0.6, 2.4, PAL.glass, 0, 0.98, -0.15, { tw: 0.84, td: 0.66 }, NE);
@@ -499,7 +543,7 @@
       carEnds(g, 1.8, 2.05, -2.05, 0.72); wheels4(g, 0.36, 0.26, 0.86, 1.3, -1.3); return g; } });
 
   // Scooter: step-through scooter, no brand. Slot: body.
-  def({ key: 'scooter', name: 'Scooter', cat: 'Cars', part: 1, budget: 250, size: '0.7 × 1.8 m', opts: { body: colours('Paint', SETS.cars) },
+  def({ key: 'scooter', name: 'Scooter', cat: 'Cars', part: 1, budget: 250, size: '0.7 \u00d7 1.8 m', opts: { body: colours('Paint', SETS.cars) },
     make(o) { const g = new THREE.Group(), b = slot('body', pick(o, 'body', SETS.cars));
       WHEEL(g, 0.27, 0.14, 0, 0.62, 8); WHEEL(g, 0.27, 0.16, 0, -0.6, 8);
       B(g, 0.38, 0.1, 0.72, PAL.iron, 0, 0.28, 0.02, NE);                                         // floor board
@@ -513,7 +557,7 @@
       P(g, 0.16, 0.1, PAL.lampOn, 0, 1.34, 0.51); P(g, 0.2, 0.08, PAL.tail, 0, 0.62, -0.91, { ry: Math.PI }); return g; } });
 
   // Auto-rickshaw: three wheels, open sides, canvas roof. Slots: body, roof.
-  def({ key: 'autoRickshaw', name: 'Auto-rickshaw', cat: 'Cars', part: 1, budget: 450, size: '1.3 × 2.7 m', opts: { body: colours('Body', ['#2f7a68', '#2f2b28', '#e8b830', '#3f7fbf']), roof: colours('Roof', ['#e8b830', '#2f2b28', '#2f7a68']) },
+  def({ key: 'autoRickshaw', name: 'Auto-rickshaw', cat: 'Cars', part: 1, budget: 450, size: '1.3 \u00d7 2.7 m', opts: { body: colours('Body', ['#2f7a68', '#2f2b28', '#e8b830', '#3f7fbf']), roof: colours('Roof', ['#e8b830', '#2f2b28', '#2f7a68']) },
     make(o) { const g = new THREE.Group(), b = slot('body', o.body || '#2f7a68'), r = slot('roof', o.roof || '#e8b830'), SEAT = '#3a2a20';
       WHEEL(g, 0.27, 0.16, 0, 0.98, 8); WHEEL(g, 0.27, 0.16, -0.6, -0.8, 8); WHEEL(g, 0.27, 0.16, 0.6, -0.8, 8);
       B(g, 1.24, 0.14, 2.1, PAL.iron, 0, 0.34, -0.08, NE);                                        // floor
@@ -587,7 +631,7 @@
     make(o) { const g = new THREE.Group(), b = slot('body', o.body || '#47684a');
       CYL(g, 0.32, 0.27, 0.85, 8, b, 0, 0, 0, { open: true }); CYL(g, 0.36, 0.36, 0.1, 8, PAL.iron, 0, 0.85, 0, NE); return g; } });
 
-  def({ key: 'busStop', name: 'Bus stop', cat: 'Street', part: 2, budget: 260, size: '4 × 1.6 m', night: true, opts: {},
+  def({ key: 'busStop', name: 'Bus stop', cat: 'Street', part: 2, budget: 260, size: '4 \u00d7 1.6 m', night: true, opts: {},
     make() { const g = new THREE.Group();
       B(g, 4.4, 0.12, 1.8, '#d8d2c6', 0, 0, 0, { shadow: false });
       [-1.9, 1.9].forEach(x => B(g, 0.12, 2.6, 0.12, PAL.iron, x, 0.12, -0.6, NE));
@@ -624,11 +668,11 @@
     make() { const g = new THREE.Group(); CYL(g, 0.16, 0.18, 0.6, 8, '#d8231f', 0, 0, 0, { open: true }); CAP(g, 0.17, '#d8231f', 0, 0.6, 0, NE);
       CYL(g, 0.07, 0.07, 0.46, 6, '#d8231f', 0, 0.28, 0, { rz: Math.PI / 2, edge: false }); return g; } });
 
-  def({ key: 'zebraCrossing', name: 'Zebra crossing', cat: 'Street', part: 2, budget: 40, size: '8 × 3 m', opts: {},
+  def({ key: 'zebraCrossing', name: 'Zebra crossing', cat: 'Street', part: 2, budget: 40, size: '8 \u00d7 3 m', opts: {},
     make() { const g = new THREE.Group(); for (let i = 0; i < 7; i++) put(g, geo('pane', () => new THREE.PlaneGeometry(1, 1)), '#f6f0e2', -3.6 + i * 1.2, 0.03, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [0.6, 3, 1] })); return g; } });
 
   // Chai stall: a small tea cart with a canopy, a kettle on the stove and two stools.
-  def({ key: 'chaiStall', name: 'Chai stall', cat: 'Street', part: 2, budget: 400, size: '2.4 × 1.4 m', night: true, opts: { canopy: colours('Canopy', [PAL.terra, '#2f7a68', '#e8b830', '#3f7fbf']) },
+  def({ key: 'chaiStall', name: 'Chai stall', cat: 'Street', part: 2, budget: 400, size: '2.4 \u00d7 1.4 m', night: true, opts: { canopy: colours('Canopy', [PAL.terra, '#2f7a68', '#e8b830', '#3f7fbf']) },
     make(o) { const g = new THREE.Group(), c = slot('canopy', o.canopy || PAL.terra);
       B(g, 2.2, 0.9, 1.1, PAL.wood, 0, 0.3, 0); B(g, 2.3, 0.08, 1.2, PAL.sand, 0, 1.2, 0);
       WHEEL(g, 0.3, 0.1, -1.15, 0, 8); WHEEL(g, 0.3, 0.1, 1.15, 0, 8);
@@ -714,7 +758,7 @@
       const t = grp(g, 0, 7.2, -0.6); B(t, 1.4, 1.5, 0.3, '#3f7fbf', 0, -0.2, 0);                  // giant T-shirt
       [-1, 1].forEach(s => B(t, 0.8, 0.5, 0.3, '#3f7fbf', s * 0.85, 0.8, 0, { rz: -s * 0.5 })); } },
   ];
-  SHOPS.forEach(k => def({ key: k.key, name: k.name, cat: 'Shops', part: 2, budget: 1200, size: '1 shop spot · 10 × 10 m', night: true,
+  SHOPS.forEach(k => def({ key: k.key, name: k.name, cat: 'Shops', part: 2, budget: 1200, size: '1 shop spot \u00b7 10 \u00d7 10 m', night: true,
     opts: { awning: colours('Awning', [k.awning, PAL.terra, '#2f7a68', '#3f5866', '#c9922e', '#d88fb0', '#6a4a8c']), wall: colours('Wall', ['#f2e6cc', '#f2cfb3', '#c9d8b6', '#c8dbe6']) },
     make: o => shopFront(o, k) }));
 
@@ -741,7 +785,7 @@
     make() { const g = new THREE.Group(); B(g, 0.8, 1.5, 0.7, PAL.iron, 0, 0, 0);
       [[1.05, 0.26], [0.45, 0.2]].forEach(([y, r]) => { put(g, geo('dot', () => new THREE.CircleGeometry(1, 5)), '#55504a', 0, y, 0.36, { edge: false, shadow: false, s: [r, r, 1] });
         CYL(g, r + 0.04, r + 0.04, 0.03, 10, NEON('#a084c8'), 0, y, 0.355, { rx: Math.PI / 2, open: true, edge: false, shadow: false }); }); return g; } });
-  def({ key: 'danceFloor', name: 'Dance floor', cat: 'Party', part: 2, budget: 150, size: '4 × 4 m', night: true, opts: {},
+  def({ key: 'danceFloor', name: 'Dance floor', cat: 'Party', part: 2, budget: 150, size: '4 \u00d7 4 m', night: true, opts: {},
     make() { const g = new THREE.Group(); B(g, 4.4, 0.2, 4.4, PAL.iron, 0, 0, 0, { shadow: false }); const C4 = ['#e8473a', '#f2c14e', '#3f7fbf', '#d88fb0', '#5fbf6a', '#a084c8'];
       for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) put(g, geo('pane', () => new THREE.PlaneGeometry(1, 1)), NEON(C4[(i * 3 + j * 2) % C4.length]), -1.5 + i, 0.21, -1.5 + j, { rx: -Math.PI / 2, s: [0.94, 0.94, 1], edge: false, shadow: false });
       return g; } });
@@ -761,7 +805,7 @@
     make(o) { const s = SETS.homeSets.find(x => x[0] === o.set) || SETS.homeSets[0]; return KIT.houseStarter({ wall: s[1], roof: s[2] }); } });
 
   // garden: the front strip of a home plot (10 x 4 m)
-  def({ key: 'garden', name: 'Garden', cat: 'Coin Shop', part: 2, budget: 400, size: 'front garden · 10 × 4 m', opts: { style: choices('Style', ['flowers', 'vegetables', 'rock', 'fountain', 'swing']) },
+  def({ key: 'garden', name: 'Garden', cat: 'Coin Shop', part: 2, budget: 400, size: 'front garden \u00b7 10 \u00d7 4 m', opts: { style: choices('Style', ['flowers', 'vegetables', 'rock', 'fountain', 'swing']) },
     make(o) { const g = new THREE.Group(), s = o.style || 'flowers'; B(g, 10, 0.2, 4, PAL.grass, 0, 0, 0, { shadow: false });
       if (s === 'flowers') [-3.4, 3.4].forEach(x => { B(g, 2.8, 0.25, 2.6, '#6b4f3a', x, 0.2, 0, NE); ['#d88fb0', '#f2c14e', '#a084c8', '#e8473a', '#f6f0e2', '#d88fb0'].forEach((c, i) => ICO(g, 0.3, 0, c, x - 0.9 + (i % 3) * 0.9, 0.7, -0.6 + Math.floor(i / 3) * 1.2, NE)); });
       if (s === 'vegetables') [-3.4, 3.4].forEach(x => { B(g, 2.8, 0.3, 2.6, '#6b4f3a', x, 0.2, 0, NE); for (let i = 0; i < 8; i++) ICO(g, 0.22, 0, i % 4 === 3 ? '#e8473a' : PAL.leaf2, x - 1.05 + (i % 4) * 0.7, 0.65, -0.5 + Math.floor(i / 4) * 1.0, NE); });
@@ -825,7 +869,7 @@
     const step = len / n, m = WIN_GLOW();
     for (let i = 0; i < n; i++) { const z = zc - len / 2 + step * (i + 0.5); [-1, 1].forEach(s => P(g, step - (gap || 0.25), h, m, s * (w / 2 + 0.01), y, z, { ry: s * Math.PI / 2 })); }
   }
-  def({ key: 'bus', name: 'City bus', cat: 'Transport', part: 2, budget: 600, size: '2.5 × 11 m', night: true,
+  def({ key: 'bus', name: 'City bus', cat: 'Transport', part: 2, budget: 600, size: '2.5 \u00d7 11 m', night: true,
     opts: { body: colours('Paint', ['#2f7a68', PAL.terra, '#3f7fbf', '#e8b830']) },
     make(o) { const g = new THREE.Group(), b = slot('body', o.body || '#2f7a68');
       B(g, 2.5, 2.7, 11, b, 0, 0.45, 0);                                                          // body
@@ -839,7 +883,7 @@
       return g; } });
 
   function bogie(g, z, gauge) { B(g, gauge + 0.2, 0.4, 2.6, PAL.iron, 0, 0.35, z, NE); [-0.85, 0.85].forEach(dz => [-1, 1].forEach(s => WHEEL(g, 0.45, 0.16, s * gauge / 2, z + dz, 8))); }
-  def({ key: 'trainEngine', name: 'Train engine', cat: 'Transport', part: 2, budget: 800, size: '3 × 15 m', night: true,
+  def({ key: 'trainEngine', name: 'Train engine', cat: 'Transport', part: 2, budget: 800, size: '3 \u00d7 15 m', night: true,
     opts: { body: colours('Paint', [PAL.terra, '#2f7a68', '#3f5866', '#e8b830']) },
     make(o) { const g = new THREE.Group(), b = slot('body', o.body || PAL.terra);
       B(g, 2.9, 0.5, 14.2, PAL.iron, 0, 0.75, -0.3);                                               // frame
@@ -852,7 +896,7 @@
       [-0.9, 0.9].forEach(x => P(g, 0.36, 0.3, HEAD(), x, 1.2, 6.81)); P(g, 0.5, 0.3, HEAD(), 0, 3.6, 5.7);
       B(g, 1.4, 0.4, 4, '#55504a', 0, 3.85, -3.5, NE); B(g, 0.12, 0.8, 0.12, PAL.iron, 0, 3.85, 2, NE); B(g, 1.6, 0.06, 0.1, PAL.iron, 0, 4.65, 2, NE);   // roof box, pantograph
       bogie(g, 3.8, 2.2); bogie(g, -5.2, 2.2); return g; } });
-  def({ key: 'trainCoach', name: 'Train coach', cat: 'Transport', part: 2, budget: 800, size: '3 × 18 m', night: true,
+  def({ key: 'trainCoach', name: 'Train coach', cat: 'Transport', part: 2, budget: 800, size: '3 \u00d7 18 m', night: true,
     opts: { body: colours('Paint', ['#f6f0e2', PAL.terra, '#2f7a68', '#3f5866']) },
     make(o) { const g = new THREE.Group(), b = slot('body', o.body || '#f6f0e2');
       B(g, 2.9, 0.4, 17.6, PAL.iron, 0, 0.75, 0);
@@ -864,7 +908,7 @@
       [-8.85, 8.85].forEach(z => B(g, 1.6, 2.2, 0.3, PAL.iron, 0, 1.2, z, NE));                    // gangways
       bogie(g, 5.8, 2.2); bogie(g, -5.8, 2.2); return g; } });
 
-  def({ key: 'tram', name: 'Tram', cat: 'Transport', part: 2, budget: 600, size: '2.4 × 14 m', night: true,
+  def({ key: 'tram', name: 'Tram', cat: 'Transport', part: 2, budget: 600, size: '2.4 \u00d7 14 m', night: true,
     opts: { body: colours('Paint', [PAL.terra, '#2f7a68', '#3f7fbf', '#e8b830']) },
     make(o) { const g = new THREE.Group(), b = slot('body', o.body || PAL.terra);
       B(g, 2.4, 1.2, 13.4, b, 0, 0.45, 0);                                                        // lower body (colour)
@@ -877,7 +921,7 @@
       [-4.4, 4.4].forEach(z => { B(g, 2.2, 0.4, 2.2, PAL.iron, 0, 0.3, z, NE); [-0.7, 0.7].forEach(dz => [-1, 1].forEach(s => WHEEL(g, 0.35, 0.14, s * 0.9, z + dz, 8))); });
       return g; } });
 
-  def({ key: 'boat', name: 'Boat', cat: 'Transport', part: 2, budget: 400, size: '2.6 × 8 m',
+  def({ key: 'boat', name: 'Boat', cat: 'Transport', part: 2, budget: 400, size: '2.6 \u00d7 8 m',
     opts: { body: colours('Hull', ['#f6f0e2', PAL.terra, '#3f7fbf', '#2f7a68']) },
     make(o) { const g = new THREE.Group(), b = slot('body', o.body || '#f6f0e2');
       TAPER(g, 1.6, 1.2, 7.4, b, 0, 0, 0, { tw: 1.6, td: 1.08, tz: 0.02 });                        // hull, wider at the top
@@ -889,7 +933,7 @@
       put(g, geo('boatT', () => new THREE.TorusGeometry(1, 0.32, 4, 8)), '#e8473a', 1.0, 1.75, -0.8, { ry: Math.PI / 2, s: [0.3, 0.3, 0.3], edge: false });
       return g; } });
 
-  def({ key: 'ferry', name: 'Ferry', cat: 'Transport', part: 2, budget: 800, size: '8 × 24 m', night: true,
+  def({ key: 'ferry', name: 'Ferry', cat: 'Transport', part: 2, budget: 800, size: '8 \u00d7 24 m', night: true,
     opts: { body: colours('Stripe', ['#2f7a68', PAL.terra, '#3f7fbf', '#e8b830']) },
     make(o) { const g = new THREE.Group(), b = slot('body', o.body || '#2f7a68');
       TAPER(g, 6.4, 2.6, 22, '#f6f0e2', 0, 0, 0, { tw: 1.25, td: 1.05 });                          // hull
@@ -906,7 +950,7 @@
       B(g, 0.1, 2.2, 0.1, PAL.iron, 0, 7.6, 1.6, NE); B(g, 1.0, 0.6, 0.03, PAL.terra, 0.52, 9.2, 1.6, FLAT);   // Vinland flag
       return g; } });
 
-  def({ key: 'plane', name: 'Plane', cat: 'Transport', part: 2, budget: 1200, size: '28 m long · 26 m wingspan', night: true,
+  def({ key: 'plane', name: 'Plane', cat: 'Transport', part: 2, budget: 1200, size: '28 m long \u00b7 26 m wingspan', night: true,
     opts: { body: colours('Livery', ['#2f7a68', PAL.terra, '#3f7fbf', '#d4af37']) },
     make(o) { const g = new THREE.Group(), b = slot('body', o.body || '#2f7a68'), WH = '#f4f2ee';
       const f = grp(g, 0, 3.2, 0); f.rotation.x = Math.PI / 2;                                     // fuselage along z
@@ -938,7 +982,7 @@
     [-len / 2 + 0.3, len / 2 - 0.3].forEach(px => B(s, 0.25, 0.6 * rows + 2.4, 0.25, PAL.iron, px, 0, -(rows - 1) * 1.2, NE));
     TAPER(s, len + 0.6, 0.3, rows * 1.2 + 1, '#f6f0e2', 0, 0.6 * rows + 2.4, -(rows - 1) * 0.6 + 0.3, { tw: 1, td: 1 });
   }
-  def({ key: 'footballGround', name: 'Football ground', cat: 'Sports', part: 2, budget: 1500, size: '76 × 110 m', night: true, opts: { seat: colours('Seats', [PAL.terra, '#2f7a68', '#3f7fbf', '#e8b830']) },
+  def({ key: 'footballGround', name: 'Football ground', cat: 'Sports', part: 2, budget: 1500, size: '76 \u00d7 110 m', night: true, opts: { seat: colours('Seats', [PAL.terra, '#2f7a68', '#3f7fbf', '#e8b830']) },
     make(o) { const g = new THREE.Group(), seat = slot('seat', o.seat || PAL.terra), W = 60, L = 95;
       B(g, 76, 0.2, 110, '#d8d2c6', 0, 0, 0, { shadow: false });
       for (let i = 0; i < 10; i++) flat2(g, W + 4, (L + 4) / 10, i % 2 ? '#6fa04a' : '#7fb156', 0, 0.26, -(L + 4) / 2 + (L + 4) / 10 * (i + 0.5));   // mown stripes
@@ -952,7 +996,7 @@
       [[-36, -52], [36, -52], [-36, 52], [36, 52]].forEach(([x, z]) => floodlight(g, x, z, 22, Math.atan2(-x, -z)));
       return g; } });
 
-  def({ key: 'cricketGround', name: 'Cricket ground', cat: 'Sports', part: 2, budget: 2000, size: '110 × 120 m oval', night: true, opts: { seat: colours('Seats', ['#2f7a68', PAL.terra, '#3f7fbf', '#e8b830']) },
+  def({ key: 'cricketGround', name: 'Cricket ground', cat: 'Sports', part: 2, budget: 2000, size: '110 \u00d7 120 m oval', night: true, opts: { seat: colours('Seats', ['#2f7a68', PAL.terra, '#3f7fbf', '#e8b830']) },
     make(o) { const g = new THREE.Group(), seat = slot('seat', o.seat || '#2f7a68');
       B(g, 110, 0.2, 120, '#d8d2c6', 0, 0, 0, { shadow: false });
       put(g, geo('oval', () => new THREE.CircleGeometry(1, 32)), '#7fb156', 0, 0.26, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [46, 52, 1] }));
@@ -973,7 +1017,7 @@
       [[-44, -48], [44, -48], [-44, 48], [44, 48]].forEach(([x, z]) => floodlight(g, x, z, 26, Math.atan2(-x, -z)));
       return g; } });
 
-  def({ key: 'court', name: 'Sports court', cat: 'Sports', part: 2, budget: 600, size: '20 × 32 m', night: true, opts: { sport: choices('Sport', ['basketball', 'tennis']), floor: colours('Court', ['#3f7fbf', '#2f7a68', PAL.terra]) },
+  def({ key: 'court', name: 'Sports court', cat: 'Sports', part: 2, budget: 700, size: '20 \u00d7 32 m', night: true, opts: { sport: choices('Sport', ['basketball', 'tennis']), floor: colours('Court', ['#3f7fbf', '#2f7a68', PAL.terra]) },
     make(o) { const g = new THREE.Group(), f = slot('floor', o.floor || '#3f7fbf'), sp = o.sport || 'basketball', W = sp === 'tennis' ? 11 : 15, L = sp === 'tennis' ? 24 : 28;
       B(g, 20, 0.2, 32, '#5a6b5e', 0, 0, 0, { shadow: false }); flat2(g, W + 2, L + 2, f, 0, 0.26, 0);
       [[W, 0.1, 0, L / 2], [W, 0.1, 0, -L / 2], [0.1, L, W / 2, 0], [0.1, L, -W / 2, 0], [W, 0.1, 0, 0]].forEach(([w, d, x, z]) => flat2(g, w, d, LINE, x, 0.3, z));
@@ -982,7 +1026,7 @@
           put(g, geo('boatT', () => new THREE.TorusGeometry(1, 0.32, 4, 8)), '#e8473a', 0, 3.05, z - s * 0.3, { rx: Math.PI / 2, s: [0.23, 0.23, 0.23], edge: false }); }); }
       else { [-1, 1].forEach(x => B(g, 0.1, 1.07, 0.1, PAL.iron, x * (W / 2 + 0.9), 0.2, 0, NE)); P(g, W + 1.8, 0.85, '#e9eef0', 0, 0.3, 0, { edge: true }); B(g, W + 1.8, 0.06, 0.06, '#ffffff', 0, 1.18, 0, FLAT); }
       [[20, 0, 16, 0], [20, 0, -16, 0], [32, -10, 0, Math.PI / 2], [32, 10, 0, Math.PI / 2]].forEach(([w, x, z, ry]) => { const r = grp(g, x, 0.2, z, ry);   // fence
-        const n = Math.round(w / 4); for (let i = 0; i <= n; i++) B(r, 0.1, 3, 0.1, PAL.iron, -w / 2 + i * w / n, 0, 0, FLAT);
+        const n = Math.round(w / 6); for (let i = 0; i <= n; i++) B(r, 0.1, 3, 0.1, PAL.iron, -w / 2 + i * w / n, 0, 0, FLAT);
         B(r, w, 0.08, 0.08, PAL.iron, 0, 3, 0, FLAT); B(r, w, 0.06, 0.06, PAL.iron, 0, 1.5, 0, FLAT); });
       [[-10, -16], [10, 16]].forEach(([x, z]) => { B(g, 0.2, 7, 0.2, '#9aa3a8', x, 0, z, NE); B(g, 1.4, 0.3, 0.8, glowMat('#f4f1e8', '#ffffff'), x, 7, z, NE); });
       return g; } });
@@ -997,7 +1041,7 @@
     HIP(s, w + 1.4, 3, d + 1.4, R, 0, 0.2 + floors * h, 0);
     return s;
   }
-  def({ key: 'school', name: 'School', cat: 'Education', part: 2, budget: 2500, size: '50 × 44 m', night: true, opts: { wall: colours('Wall', ['#f2e2c4', '#f6f0e2', '#f2cfb3']), roof: colours('Roof', SETS.roofs) },
+  def({ key: 'school', name: 'School', cat: 'Education', part: 2, budget: 2500, size: '50 \u00d7 44 m', night: true, opts: { wall: colours('Wall', ['#f2e2c4', '#f6f0e2', '#f2cfb3']), roof: colours('Roof', SETS.roofs) },
     make(o) { const g = new THREE.Group(), W = slot('wall', o.wall || '#f2e2c4'), R = slot('roof', pick(o, 'roof', SETS.roofs));
       B(g, 50, 0.2, 44, '#d8d2c6', 0, 0, 0, { shadow: false });
       classBlock(g, 34, 2, 0, -12, 0, W, R); classBlock(g, 20, 2, -19, 2, Math.PI / 2, W, R);    // main block + side wing (an L)
@@ -1017,7 +1061,7 @@
       B(g, 4.6, 0.06, 28, PAL.sand, 0.5, 0.2, 7.6, FLAT);                                          // path to the door
       return g; } });
 
-  def({ key: 'university', name: 'University', cat: 'Education', part: 2, budget: 4000, size: '90 × 80 m campus', night: true, opts: { wall: colours('Wall', ['#efe3c8', '#f6f0e2', '#e8d5b0']) },
+  def({ key: 'university', name: 'University', cat: 'Education', part: 2, budget: 4000, size: '90 \u00d7 80 m campus', night: true, opts: { wall: colours('Wall', ['#efe3c8', '#f6f0e2', '#e8d5b0']) },
     make(o) { const g = new THREE.Group(), W = slot('wall', o.wall || '#efe3c8'), R = PAL.terra, TR = PAL.sand2;
       B(g, 90, 0.2, 80, '#d8d2c6', 0, 0, 0, { shadow: false });
       flat2(g, 40, 34, PAL.grass, 0, 0.21, 12);                                                      // the quad
@@ -1048,7 +1092,7 @@
       B(g, 4, 0.06, 12, '#e6dccb', 0, 0.2, 34, FLAT);
       return g; } });
 
-  def({ key: 'library', name: 'Library', cat: 'Education', part: 2, budget: 2000, size: '40 × 36 m', night: true, opts: { wall: colours('Wall', ['#f2e6cc', '#f6f0e2', '#e8d5b0']) },
+  def({ key: 'library', name: 'Library', cat: 'Education', part: 2, budget: 2000, size: '40 \u00d7 36 m', night: true, opts: { wall: colours('Wall', ['#f2e6cc', '#f6f0e2', '#e8d5b0']) },
     make(o) { const g = new THREE.Group(), W = slot('wall', o.wall || '#f2e6cc'), TR = PAL.sand2, COL = '#f6f3ea';
       B(g, 40, 0.2, 36, '#d8d2c6', 0, 0, 0, { shadow: false });
       B(g, 28, 1.2, 18, TR, 0, 0.2, -5);                                                             // plinth
@@ -1067,60 +1111,271 @@
       B(g, 4.6, 0.06, 6, PAL.sand, 0, 0.2, 15, FLAT);
       return g; } });
 
-  // ---- VINLAND STADIUM: one big multi-use bowl (American style). Oval field for football AND cricket, plus a concert mode.
-  // Two tiers of seats all round, a suite band, roof canopy ring, big screens at both ends, 4 floodlight towers,
-  // 'VINLAND STADIUM' on the outside (no brands). Modes: o.mode = 'football' | 'cricket' | 'concert'.
-  // Night (setNight): floodlights, roof-rim lights, screens, suite windows; in concert mode stage lights + light beams.
-  // About 250 x 270 m outside, field 116 x 144 m. Kit only: not on the map until the stadium is unlocked or voted. ----
+  // ---- VINLAND STADIUM (restyled 15 Nov to the Vinland look; Dev OK'd the plan). One big multi-use bowl.
+  // Outside: a cream arena wall with a ring of arches (old Italian arena feel), green-shuttered windows above (house style),
+  // a sloped terracotta tile roof round the top of the stands, 4 cream corner towers (terracotta hip roof, Vinland flag,
+  // floodlights on top), one big arched main gate at the front (+z) with a VINLAND STADIUM sign and a small plaza
+  // (pink trees, street lamps, benches). Inside: calm two-tone stands (seat colour + cream walkways), screens at both ends.
+  // Same key, footprint (about 250 x 270 m, field 116 x 144 m) and options as before: o.mode = 'football' | 'cricket' | 'concert', o.seat.
+  // Night (setNight): floodlights, the field, arcade arches, gate lamps, screens; concert stage lights + beams.
+  // Kit only: not on the map until the stadium is unlocked or voted. ----
+  // ---- park planting (15 Nov): cheap pieces made to be repeated hundreds of times (riverfront look) ----
+  def({ key: 'flowerBed', name: 'Flower bed', cat: 'Street', part: 2, budget: 60, size: '3.6 m round bed', opts: { colour: choices('Flowers', ['pink', 'purple', 'yellow', 'red', 'mix']) },
+    make(o) { const g = new THREE.Group(), C = { pink: ['#e0457b', '#f08fb0'], purple: ['#a084c8', '#7d5fb8'], yellow: ['#f6d65a', '#f39c1f'], red: ['#d8402f', '#f39c1f'], mix: ['#e0457b', '#f6d65a'] }[o.colour || 'pink'];
+      CYL(g, 1.8, 1.9, 0.4, 10, '#e2d3b2', 0, 0, 0, { edge: false }); CYL(g, 1.6, 1.6, 0.06, 10, '#6b4a30', 0, 0.4, 0, { edge: false });
+      [[0, 0, 0], [0.9, 0.3, 1], [-0.8, 0.5, 1], [0.2, -0.95, 0], [-0.5, -0.6, 1], [0.7, -0.5, 0]].forEach(([x, z, k]) => ICO(g, 0.55, 0, C[k], x, 0.75, z, { edge: false }));
+      return g; } });
+  def({ key: 'bushClump', name: 'Bushes', cat: 'Street', part: 2, budget: 40, size: '3 m clump', opts: { kind: choices('Bushes', ['green', 'dark', 'flowering']) },
+    make(o) { const g = new THREE.Group(), k = o.kind || 'green', A = k === 'dark' ? '#3f6e3a' : '#5e9a4e', Bc = k === 'flowering' ? '#e88fb4' : k === 'dark' ? '#4f7f45' : '#6fae5a';
+      ICO(g, 1.2, 0, A, 0, 0.8, 0, { edge: false }); ICO(g, 0.95, 0, Bc, 1.1, 0.6, 0.4, { edge: false }); ICO(g, 0.85, 0, A, -0.9, 0.55, -0.5, { edge: false }); return g; } });
+  def({ key: 'parkTree', name: 'Park tree', cat: 'Street', part: 2, budget: 50, size: '8 m round tree', opts: { kind: choices('Tree', ['green', 'dark', 'yellow']) },
+    make(o) { const g = new THREE.Group(), c = { green: PAL.leaf2, dark: PAL.leaf, yellow: '#9cba52' }[o.kind || 'green'];
+      CYL(g, 0.25, 0.35, 2.6, 6, PAL.wood, 0, 0, 0, { edge: false, open: true }); ICO(g, 2.6, 0, c, 0, 4.2, 0, { edge: false }); ICO(g, 1.7, 0, c, 1.2, 5.4, 0.6, { edge: false }); return g; } });
+  def({ key: 'hedgeRow', name: 'Hedge', cat: 'Street', part: 2, budget: 30, size: '10 m long, 1.2 m tall', opts: {},
+    make() { const g = new THREE.Group(); B(g, 10, 1.2, 1.2, '#4f7f45', 0, 0, 0, NE); return g; } });
+  // ===== Vinland National Stadium complex (Dev's reference, 15 Nov): cream stone arena with a white roof on steel ribs, grand entrance with
+  // pediment + navy/gold banners, and the pieces round it (sports hall, pool, courts, training pitch, café pavilions, compass plaza, roundabout).
+  const NAVY = '#1f2f5a', GOLD = '#e2b04a', ROAD_C = '#55575d';
+  const starMat = (bg, fg) => { if (typeof document === 'undefined') return mat(bg); const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'); x.fillStyle = bg; x.fillRect(0, 0, 256, 256);
+    x.translate(128, 128); x.fillStyle = fg; for (let k = 0; k < 8; k++) { const r = k % 2 ? 46 : 110; x.beginPath(); x.moveTo(0, 0); x.lineTo(Math.cos((k - 0.25) * Math.PI / 4) * 14, Math.sin((k - 0.25) * Math.PI / 4) * 14);
+      x.lineTo(Math.cos(k * Math.PI / 4) * r, Math.sin(k * Math.PI / 4) * r); x.lineTo(Math.cos((k + 0.25) * Math.PI / 4) * 14, Math.sin((k + 0.25) * Math.PI / 4) * 14); x.closePath(); x.fill(); }
+    x.strokeStyle = fg; x.lineWidth = 6; x.beginPath(); x.arc(0, 0, 70, 0, Math.PI * 2); x.stroke();
+    const t = new THREE.CanvasTexture(c), m = toon('#ffffff'); m.map = t; m.emissiveMap = t; m.userData.glow = '#c8c8c8'; return m; };
+  const STAR_NAVY = starMat(NAVY, GOLD), STAR_DISC = starMat('#d9c9a8', NAVY);
+  def({ key: 'nationalStadium', name: 'Vinland National Stadium', cat: 'Landmarks', part: 2, budget: 9000, size: 'about 180 × 144 m · ring road · 34 m tall', night: true,
+    opts: {},
+    make() {
+      const g = new THREE.Group(), RX = 60, RZ = 42, SQ = 3.4;
+      const sgn = v => (v < 0 ? -1 : 1), E = (t, off) => { const s = Math.sin(t), c = Math.cos(t); return { x: sgn(s) * Math.pow(Math.abs(s), 2 / SQ) * (RX + off), z: sgn(c) * Math.pow(Math.abs(c), 2 / SQ) * (RZ + off) }; };
+      const two = c => { const m = toon(c); m.side = THREE.DoubleSide; return m; };
+      const STONE = two('#efe3c8'), STONE2 = two('#e2d3b2'), SEATS = two('#2c3f6e'), SEATS2 = two('#3a5288'), ROOF = two('#f7f4ec'), ROOFU = two('#d9d6cf'), ASPH = two('#55575d');
+      const LIT = (c, n) => glowMat(c, n), GRASS = LIT('#7fb156', '#4f7a34'), GRASS2 = LIT('#6fa04a', '#456c2c'), WL = LIT(LINE, '#d8d8d0');
+      const buckets = new Map(), N = 72, ring = (m, o1, y1, o2, y2) => { if (!buckets.has(m)) buckets.set(m, []); const pos = buckets.get(m);
+        for (let i = 0; i < N; i++) { const t1 = i / N * Math.PI * 2, t2 = (i + 1) / N * Math.PI * 2, a1 = E(t1, o1), a2 = E(t2, o1), b1 = E(t1, o2), b2 = E(t2, o2);
+          pos.push(a1.x, y1, a1.z, a2.x, y1, a2.z, b2.x, y2, b2.z, a1.x, y1, a1.z, b2.x, y2, b2.z, b1.x, y2, b1.z); } };
+      ring(ASPH, 42, 0.08, 52, 0.08); ring(STONE2, 30, 0.07, 42, 0.07); ring(STONE2, 52, 0.07, 55, 0.07);    // ring road round the stadium + pavements
+      ring(STONE2, 0, 0.3, 0, 2.2); ring(STONE2, 0, 2.2, 1.4, 2.2);
+      ring(SEATS, 1.4, 2.2, 15, 10.8); ring(STONE2, 15, 10.8, 17, 11.4); ring(STONE2, 17, 11.4, 17, 13.6); ring(SEATS2, 17, 13.6, 27, 22.6); ring(STONE2, 27, 22.6, 29, 23.2);
+      ring(STONE, 29, 0, 29, 24); ring(STONE2, 29, 11.6, 30, 11.6); ring(STONE, 29, 24, 30.2, 24.6); ring(STONE, 30.2, 24.6, 30.2, 26);      // cream stone wall, cornice, parapet
+      ring(ROOF, 6, 31.5, 30, 26.5); ring(ROOFU, 6, 31.4, 30, 26.4);                                   // white roof over the stands (open in the middle)
+      buckets.forEach((pos, m) => { const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); ge.computeVertexNormals();
+        const me = new THREE.Mesh(ge, m); me.castShadow = m === ROOF || m === STONE; me.receiveShadow = true; g.add(me); });
+      // steel ribs over the roof (radial trusses), each a thin raised beam
+      for (let i = 0; i < 36; i++) { const t = (i + 0.5) / 36 * Math.PI * 2, a = E(t, 6), b = E(t, 30), L = Math.hypot(b.x - a.x, b.z - a.z), s = grp(g, (a.x + b.x) / 2, 29.6, (a.z + b.z) / 2, Math.atan2(b.x - a.x, b.z - a.z));
+        const bm = B(s, 0.5, 0.6, L + 1, '#c9ced2', 0, 0, 0, NE); bm.rotation.x = Math.atan2(5, L) ; B(s, 0.3, 4.2, 0.3, '#c9ced2', 0, -0.6, -L / 2 + 1, NE); }
+      // two tiers of tall arches all round the wall (the front gets the grand entrance instead)
+      const ARCHM = glowMat('#6a5644', '#f0c070'), NF = 56;
+      for (let i = 0; i < NF; i++) { const t1 = i / NF * Math.PI * 2, t2 = (i + 1) / NF * Math.PI * 2, tm = (t1 + t2) / 2;
+        if (Math.abs(Math.atan2(Math.sin(tm), Math.cos(tm))) < 0.3) continue;
+        const a = E(t1, 29), b = E(t2, 29), mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2; let nx = b.z - a.z, nz = -(b.x - a.x); if (nx * mx + nz * mz < 0) { nx = -nx; nz = -nz; }
+        const L = Math.hypot(nx, nz), w = Math.min(5.2, Math.hypot(b.x - a.x, b.z - a.z) * 0.62), f = grp(g, mx + nx / L * 0.08, 0, mz + nz / L * 0.08, Math.atan2(nx, nz));
+        P(f, w, 7.8, ARCHM, 0, 0.3, 0); ARCH(f, w, ARCHM, 0, 8.1, 0); P(f, w * 0.8, 6.2, ARCHM, 0, 13.2, 0); ARCH(f, w * 0.8, ARCHM, 0, 19.4, 0); }
+      // grand entrance (front, +z): portico block, pediment, the name, navy banners with the gold star
+      { const p = E(0, 29), s = grp(g, 0, 0, p.z, 0);
+        B(s, 44, 26, 8, '#efe3c8', 0, 0, 1); B(s, 47, 1.4, 9, '#e2d3b2', 0, 26, 1, NE); GABLE(s, 30, 6, 9.4, '#efe3c8', 0, 27.4, 1);
+        put(s, geo('pane', () => new THREE.PlaneGeometry(1, 1)), STAR_NAVY, 0, 30, 5.75, Object.assign({}, FLAT, { s: [3.6, 3.6, 1] }));
+        B(s, 30, 3.4, 0.4, '#efe3c8', 0, 20.2, 5.05); P(s, 29, 3, textMat('VINLAND NATIONAL STADIUM', '#efe3c8', '#2a2a2a'), 0, 20.4, 5.3);
+        for (let k = -2; k <= 2; k++) { P(s, 5.2, 14, ARCHM, k * 6.4, 0.3, 5.06); ARCH(s, 5.2, ARCHM, k * 6.4, 14.3, 5.06); }
+        [-1, 1].forEach(sd => { B(s, 1.4, 26, 1.4, '#e2d3b2', sd * 22.6, 0, 5.2, NE);
+          const bn = grp(s, sd * 27, 4, 5.4, 0); B(bn, 6.4, 19, 0.3, NAVY, 0, 0, 0, NE); put(bn, geo('pane', () => new THREE.PlaneGeometry(1, 1)), STAR_NAVY, 0, 12, 0.18, Object.assign({}, FLAT, { s: [5, 5, 1] })); B(bn, 6.4, 0.5, 0.35, GOLD, 0, 19, 0, NE); });
+        // steps down to the plaza
+        for (let k = 0; k < 2; k++) B(s, 40, 0.45 * (2 - k), 2, '#e2d3b2', 0, 0, 6 + k * 2, { shadow: false }); }
+      // floodlights on the roof edge (glow at night)
+      const FL = glowMat('#f4f1e8', '#ffffff');
+      for (let i = 0; i < 12; i++) { const t = (i + 0.5) / 12 * Math.PI * 2, p = E(t, 8); const s = grp(g, p.x, 31.2, p.z, Math.atan2(-p.x, -p.z)); B(s, 6, 1.6, 0.6, '#c9ced2', 0, 0, 0, NE); P(s, 5.6, 1.3, FL, 0, 0.15, 0.32, { rx: -0.5 }); }
+      // field
+      flat2(g, 2 * RX, 2 * RZ, GRASS, 0, 0.3, 0);
+      const W = 68, Lp = 105; for (let i = 0; i < 10; i++) flat2(g, Lp / 10, W, i % 2 ? GRASS2 : GRASS, -Lp / 2 + Lp / 10 * (i + 0.5), 0.34, 0);
+      [[Lp, 0.15, 0, W / 2], [Lp, 0.15, 0, -W / 2], [0.15, W, Lp / 2, 0], [0.15, W, -Lp / 2, 0], [0.15, W, 0, 0]].forEach(([w, d, x, z]) => flat2(g, w, d, WL, x, 0.38, z));
+      put(g, geo('ring', () => new THREE.RingGeometry(0.96, 1, 24)), WL, 0, 0.38, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [9.15, 9.15, 1] }));
+      [-1, 1].forEach(sd => { const x = sd * Lp / 2; [[0.15, 40.3, x - sd * 16.5, 0], [16.5, 0.15, x - sd * 8.25, 20.15], [16.5, 0.15, x - sd * 8.25, -20.15]].forEach(([w, d, xx, z]) => flat2(g, w, d, WL, xx, 0.38, z));
+        [-3.66, 3.66].forEach(z => B(g, 0.15, 2.44, 0.15, '#ffffff', x, 0.3, z, NE)); B(g, 0.15, 0.15, 7.47, '#ffffff', x, 2.74, 0, NE); });
+      return g; } });
+  def({ key: 'sportsHall', name: 'Sports hall', cat: 'Landmarks', part: 2, budget: 900, size: '60 × 40 m · curved metal roof', night: true, opts: {},
+    make() { const g = new THREE.Group(), GL = glowMat('#7fa7bd', '#f2d28a');
+      B(g, 60, 9, 40, '#e9e3d6', 0, 0, 0); P(g, 56, 6.5, GL, 0, 1, 20.06); B(g, 60, 0.6, 1.2, '#c9ced2', 0, 7.8, 20.4, NE);
+      for (let k = 0; k < 8; k++) { const a0 = k / 8 * Math.PI, a1 = (k + 1) / 8 * Math.PI, y0 = 9 + Math.sin(a0) * 7, y1 = 9 + Math.sin(a1) * 7, z0 = -Math.cos(a0) * 21, z1 = -Math.cos(a1) * 21;
+        const s = grp(g, 0, (y0 + y1) / 2, (z0 + z1) / 2, 0); const m = B(s, 62, 0.5, Math.hypot(z1 - z0, y1 - y0) + 0.2, k % 2 ? '#aeb6bf' : '#bcc4cc', 0, -0.25, 0, NE); m.rotation.x = -Math.atan2(y1 - y0, z1 - z0); }
+      B(g, 22, 2.6, 0.4, NAVY, 0, 10.2, 20.5, NE); P(g, 21, 2.2, textMat('SPORTS HALL', NAVY, '#ffffff'), 0, 10.4, 20.75);
+      return g; } });
+  def({ key: 'poolDeck', name: 'Swimming pool', cat: 'Landmarks', part: 2, budget: 500, size: '34 × 70 m deck · 25 × 50 m pool', night: true, opts: {},
+    make() { const g = new THREE.Group(), WAT = glowMat('#4fb4d8', '#2f8fc0');
+      flat2(g, 34, 70, '#ece4d2', 0, 0.06, 0); flat2(g, 25, 50, WAT, 0, 0.1, -3);
+      for (let k = 1; k < 8; k++) flat2(g, 0.25, 50, '#e8f6fb', -12.5 + k * 25 / 8, 0.12, -3);
+      for (let k = 0; k < 6; k++) { B(g, 1, 0.35, 2.2, '#f6f0e2', -14, 0.06, -20 + k * 7, NE); CYL(g, 0.08, 0.08, 2.6, 6, '#c9ced2', -15.6, 0.06, -20 + k * 7, { edge: false }); put(g, geo('umb', () => new THREE.ConeGeometry(1.4, 0.7, 8, 1, true)), k % 2 ? PAL.terra : NAVY, -15.6, 2.9, -20 + k * 7, { edge: false }); }
+      B(g, 30, 4, 7, '#e9e3d6', 0, 0, 29); B(g, 31, 0.5, 8, NAVY, 0, 4, 29, NE);
+      return g; } });
+  def({ key: 'sportsCourts', name: 'Basketball + tennis courts', cat: 'Landmarks', part: 2, budget: 400, size: '32 × 64 m', opts: {},
+    make() { const g = new THREE.Group(), L = '#ffffff';
+      flat2(g, 32, 64, '#5a7a5a', 0, 0.06, 0);
+      flat2(g, 15, 28, '#c4553f', -7.6, 0.08, -15.5); flat2(g, 15, 28, '#3f62a8', 7.6, 0.08, -15.5);
+      [-7.6, 7.6].forEach(x => { flat2(g, 15, 0.15, L, x, 0.1, -15.5); put(g, geo('ring', () => new THREE.RingGeometry(0.96, 1, 24)), L, x, 0.1, -15.5, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [1.8, 1.8, 1] }));
+        [-29.3, -1.7].forEach(z => { B(g, 0.2, 3.4, 0.2, '#c9ced2', x, 0.06, z, NE); B(g, 1.8, 1.1, 0.1, '#ffffff', x, 3.2, z + (z < -15 ? 0.4 : -0.4), NE); }); });
+      flat2(g, 30, 30, '#3f7fbf', 0, 0.08, 16); flat2(g, 11, 24, '#4f9a5a', 0, 0.09, 16); [[11, 0.12, 0, 4], [11, 0.12, 0, 28], [0.12, 24, 5.5, 16], [0.12, 24, -5.5, 16], [11, 0.12, 0, 16]].forEach(([w, d, x, z]) => flat2(g, w, d, L, x, 0.1, z));
+      B(g, 12, 1, 0.08, '#2f2b28', 0, 0.06, 16, NE);
+      [[32, 0, 32], [32, 0, -32]].forEach(([w, x, z]) => B(g, w, 3, 0.08, '#4a5a4a', x, 0.06, z, { shadow: false, edge: false }));
+      [-16, 16].forEach(x => B(g, 0.08, 3, 64, '#4a5a4a', x, 0.06, 0, { shadow: false, edge: false }));
+      return g; } });
+  def({ key: 'trainingPitch', name: 'Training pitch', cat: 'Landmarks', part: 2, budget: 600, size: '64 × 96 m with floodlights', night: true, opts: {},
+    make() { const g = new THREE.Group(), LIT = (c, n) => glowMat(c, n), G1 = LIT('#7fb156', '#4f7a34'), G2 = LIT('#6fa04a', '#456c2c'), WL = LIT(LINE, '#d8d8d0'), FL = glowMat('#f4f1e8', '#ffffff');
+      flat2(g, 64, 96, '#5f8f48', 0, 0.05, 0); const W = 52, Lp = 84; for (let i = 0; i < 8; i++) flat2(g, W, Lp / 8, i % 2 ? G2 : G1, 0, 0.08, -Lp / 2 + Lp / 8 * (i + 0.5));
+      [[W, 0.15, 0, Lp / 2], [W, 0.15, 0, -Lp / 2], [0.15, Lp, W / 2, 0], [0.15, Lp, -W / 2, 0], [W, 0.15, 0, 0]].forEach(([w, d, x, z]) => flat2(g, w, d, WL, x, 0.11, z));
+      put(g, geo('ring', () => new THREE.RingGeometry(0.96, 1, 24)), WL, 0, 0.11, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [7, 7, 1] }));
+      [-1, 1].forEach(sd => { const z = sd * Lp / 2; [-3, 3].forEach(x => B(g, 0.15, 2.2, 0.15, '#ffffff', x, 0.08, z, NE)); B(g, 6.15, 0.15, 0.15, '#ffffff', 0, 2.3, z, NE); });
+      [[-30, -40], [30, -40], [-30, 40], [30, 40], [-30, 0], [30, 0]].forEach(([x, z]) => { const s = grp(g, x, 0, z, Math.atan2(-x, -z * 0.2)); B(s, 0.6, 18, 0.6, '#c9ced2', 0, 0, 0, NE); B(s, 4, 2, 0.5, '#c9ced2', 0, 18, 0.3, NE); P(s, 3.6, 1.7, FL, 0, 18.15, 0.58, { rx: -0.4 }); });
+      [[64, 0, 48], [64, 0, -48]].forEach(([w, x, z]) => B(g, w, 2.6, 0.08, '#4a5a4a', x, 0.05, z, { shadow: false, edge: false })); [-32, 32].forEach(x => B(g, 0.08, 2.6, 96, '#4a5a4a', x, 0.05, 0, { shadow: false, edge: false }));
+      return g; } });
+  def({ key: 'cafePavilion', name: 'Café pavilion (curved)', cat: 'Landmarks', part: 2, budget: 500, size: '34 × 14 m', night: true, opts: {},
+    make() { const g = new THREE.Group(), GL = glowMat('#8fb8cc', '#f2d28a'), R0 = 40;
+      for (let k = 0; k < 7; k++) { const a = (k - 3) * 0.12, s = grp(g, Math.sin(a) * R0, 0, Math.cos(a) * R0 - R0, a);
+        B(s, 5, 5.2, 10, '#efe3c8', 0, 0, 0); P(s, 4.4, 3.6, GL, 0, 0.8, 5.03); B(s, 5.4, 0.6, 11.4, '#9aa3ad', 0, 5.2, 0.4, NE); }
+      for (let k = 0; k < 5; k++) { const x = (k - 2) * 6.4; CYL(g, 0.08, 0.08, 2.6, 6, '#c9ced2', x, 0.06, 7.5, { edge: false }); put(g, geo('umb', () => new THREE.ConeGeometry(1.4, 0.7, 8, 1, true)), '#f6f0e2', x, 2.9, 7.5, { edge: false });
+        CYL(g, 0.7, 0.7, 0.1, 10, '#ffffff', x, 0.95, 7.5, { edge: false }); }
+      return g; } });
+  def({ key: 'compassPlaza', name: 'Compass plaza', cat: 'Landmarks', part: 2, budget: 200, size: '40 m paved circle with a navy and gold star', opts: {},
+    make() { const g = new THREE.Group(); put(g, geo('disc32', () => new THREE.CircleGeometry(1, 40)), '#e2d3b2', 0, 0.07, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [20, 20, 1] }));
+      put(g, geo('pane', () => new THREE.PlaneGeometry(1, 1)), STAR_DISC, 0, 0.09, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [18, 18, 1] })); return g; } });
+  def({ key: 'roundabout', name: 'Roundabout', cat: 'Street', part: 2, budget: 260, size: '44 m across · green island with the gold star', opts: {},
+    make() { const g = new THREE.Group(), D = (r, c, y) => put(g, geo('disc32', () => new THREE.CircleGeometry(1, 40)), c, 0, y, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [r, r, 1] }));
+      D(22, ROAD_C, 0.075); put(g, geo('ring', () => new THREE.RingGeometry(0.96, 1, 32)), LINE, 0, 0.085, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [16.2, 16.2, 1] }));
+      CYL(g, 10.6, 10.6, 0.3, 28, '#d8d2c6', 0, 0, 0, { edge: false }); D(10, '#7fae5c', 0.32);
+      put(g, geo('pane', () => new THREE.PlaneGeometry(1, 1)), STAR_NAVY, 0, 0.34, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [8, 8, 1] }));
+      for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; ICO(g, 0.7, 0, k % 2 ? '#e0457b' : '#f6d65a', Math.cos(a) * 8.6, 0.8, Math.sin(a) * 8.6, { edge: false }); }
+      return g; } });
+  def({ key: 'trainingCentre', name: 'Training centre', cat: 'Landmarks', part: 2, budget: 400, size: '26 × 40 m · 2 floors', night: true, opts: {},
+    make() { const g = new THREE.Group(), GL = glowMat('#7fa7bd', '#f2d28a'); B(g, 40, 8, 26, '#e9e3d6', 0, 0, 0); B(g, 41, 0.8, 27, '#9aa3ad', 0, 8, 0, NE);
+      [1, 4.6].forEach(y => P(g, 36, 2.6, GL, 0, y, 13.03)); B(g, 18, 1.6, 0.3, NAVY, 0, 8.9, 13.2, NE); P(g, 17, 1.3, textMat('TRAINING CENTRE', NAVY, '#ffffff'), 0, 9.05, 13.36); return g; } });
+  def({ key: 'cypressTree', name: 'Cypress tree', cat: 'Street', part: 2, budget: 40, size: '7 m tall', opts: {},
+    make() { const g = new THREE.Group(); CYL(g, 0.18, 0.22, 1, 5, PAL.wood, 0, 0, 0, { edge: false, open: true }); put(g, geo('cyp', () => new THREE.ConeGeometry(1, 1, 6)), PAL.cypress, 0, 4, 0, { edge: false, s: [1.1, 6, 1.1] }); return g; } });
+  // Vinland Field (Dev, 15 Nov): an American retro ballpark in Vinland colours. Rectangular bowl with rounded corners, terracotta-brick walls
+  // with cream stone arches, dark-green steel light towers, a giant scoreboard showing the live citizen count, a brick entrance rotunda.
+  def({ key: 'vinlandField', name: 'Vinland Field', cat: 'Landmarks', part: 2, budget: 9000, size: 'about 150 × 190 m · football pitch · 40 m tall', night: true,
+    opts: { seat: colours('Seats', ['#3f8a5f', PAL.terra, '#3f7fbf']), screen: { label: 'Screen', choices: ['WELCOME TO VINLAND', 'VINLAND 2 - 1'] } },
+    make(o) {
+      const g = new THREE.Group(), RX = 42, RZ = 60, SQ = 4;                                    // inner edge of the stands; SQ: how square the corners are
+      const sgn = v => (v < 0 ? -1 : 1), E = (t, off) => { const s = Math.sin(t), c = Math.cos(t); return { x: sgn(s) * Math.pow(Math.abs(s), 2 / SQ) * (RX + off), z: sgn(c) * Math.pow(Math.abs(c), 2 / SQ) * (RZ + off) }; };
+      const two = c => { const m = toon(c); m.side = THREE.DoubleSide; return m; };
+      const SEAT = slot('seat', o.seat || '#3f8a5f'), SEATM = (() => { const m = SEAT.clone(); m.side = THREE.DoubleSide; m.userData.slot = 'seat'; return m; })();
+      const BRICK = two('#a9513a'), BRICK2 = two('#94452f'), CREAM2 = two(PAL.cream), STONE2 = two('#e6dac2'), CANOPY = two('#efe6d4');
+      const LIT = (c, n) => glowMat(c, n), GRASS = LIT('#7fb156', '#4f7a34'), GRASS2 = LIT('#6fa04a', '#456c2c'), WL = LIT(LINE, '#d8d8d0');
+      const buckets = new Map(), N = 64, ring = (m, o1, y1, o2, y2) => { if (!buckets.has(m)) buckets.set(m, []); const pos = buckets.get(m);
+        for (let i = 0; i < N; i++) { const t1 = i / N * Math.PI * 2, t2 = (i + 1) / N * Math.PI * 2, a1 = E(t1, o1), a2 = E(t2, o1), b1 = E(t1, o2), b2 = E(t2, o2);
+          pos.push(a1.x, y1, a1.z, a2.x, y1, a2.z, b2.x, y2, b2.z, a1.x, y1, a1.z, b2.x, y2, b2.z, b1.x, y2, b1.z); } };
+      ring(STONE2, 0, 0.3, 0, 2.4); ring(STONE2, 0, 2.4, 1.5, 2.4);
+      ring(SEATM, 1.5, 2.4, 17, 11.5); ring(STONE2, 17, 11.5, 19, 12.2);                       // lower bowl + aisle
+      ring(STONE2, 19, 12.2, 19, 15); ring(two(PAL.terra), 19, 15, 31, 25.5); ring(STONE2, 31, 25.5, 34, 26.5);   // upper deck
+      ring(BRICK, 34, 0, 34, 26.5); ring(STONE2, 34, 9.8, 35, 9.8); ring(STONE2, 34, 19.6, 35, 19.6); ring(CREAM2, 34, 26.5, 35.2, 26.5); ring(CREAM2, 35.2, 26.5, 35.2, 28.2);   // brick wall, cream cornices + parapet
+      ring(CANOPY, 22, 33, 34, 29.5); ring(CANOPY, 22, 33, 22, 32.4);                          // green steel shade canopy over the upper deck (classic ballpark)
+      buckets.forEach((pos, m) => { const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); ge.computeVertexNormals();
+        const me = new THREE.Mesh(ge, m); me.castShadow = m === BRICK || m === CANOPY; me.receiveShadow = true; g.add(me); });
+      // cream stone arches on the brick wall (ground floor) and tall arched windows above
+      const ARCHM = glowMat('#5e3f2c', '#e0a050'), NF = 44;
+      for (let i = 0; i < NF; i++) { const t1 = i / NF * Math.PI * 2, t2 = (i + 1) / NF * Math.PI * 2, a = E(t1, 34), b = E(t2, 34), mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2;
+        const tm = (t1 + t2) / 2; if (Math.abs(Math.atan2(Math.sin(tm), Math.cos(tm))) < 0.16) continue;   // the rotunda sits on the front
+        let nx = b.z - a.z, nz = -(b.x - a.x); if (nx * mx + nz * mz < 0) { nx = -nx; nz = -nz; } const L = Math.hypot(nx, nz), ry = Math.atan2(nx, nz), w = Math.hypot(b.x - a.x, b.z - a.z);
+        const f = grp(g, mx + nx / L * 0.08, 0, mz + nz / L * 0.08, ry);
+        P(f, Math.min(6.4, w * 0.62) + 1.2, 7.4, '#efe3c8', 0, 0, -0.02, { edge: true }); ARCH(f, Math.min(6.4, w * 0.62) + 1.2, '#efe3c8', 0, 7.4, -0.02);
+        P(f, Math.min(6.4, w * 0.62), 6.8, ARCHM, 0, 0.2, 0); ARCH(f, Math.min(6.4, w * 0.62), ARCHM, 0, 7, 0);
+        if (i % 2 === 0) win(f, 0, 14.2, 0, 0, 2.6, 4.4, { shutters: false });
+      }
+      // light towers: dark-green steel masts with big light banks (4 corners + 2 on the long sides), they blaze at night
+      const FL = glowMat('#f4f1e8', '#ffffff'), STEEL = '#2f4a3c';
+      [[Math.PI / 4, 46], [3 * Math.PI / 4, 46], [-Math.PI / 4, 46], [-3 * Math.PI / 4, 46], [Math.PI / 2, 38], [-Math.PI / 2, 38]].forEach(([t, off]) => { const p = E(t, off), s = grp(g, p.x, 0, p.z, Math.atan2(-p.x, -p.z));   // +z faces the field
+        B(s, 2.2, 52, 2.2, STEEL, 0, 0, 0, NE); [-1.4, 1.4].forEach(x => B(s, 0.4, 52, 0.4, STEEL, x, 0, -1.2, NE));
+        B(s, 14, 7, 1.2, STEEL, 0, 52, 0.6); P(s, 13, 6.2, FL, 0, 52.4, 1.25, { rx: -0.25 });
+        B(s, 0.2, 7, 0.2, '#c9ced2', 0, 59, 0, NE); B(s, 3.6, 2.2, 0.06, PAL.terra, 1.9, 63.6, 0, FLAT); });   // Vinland flag on top
+      // flags round the top of the wall
+      for (let i = 0; i < 24; i++) { const t = (i + 0.5) / 24 * Math.PI * 2; if (Math.abs(Math.atan2(Math.sin(t), Math.cos(t))) < 0.3) continue; const p = E(t, 34.6);
+        B(g, 0.15, 4.5, 0.15, '#c9ced2', p.x, 28.2, p.z, NE); B(g, 1.8, 1.1, 0.05, i % 2 ? PAL.terra : '#e2b04a', p.x + 0.9, 31.4, p.z, FLAT); }
+      // the giant scoreboard behind the far end (live citizen count is drawn on the map side; here a welcome)
+      { const p = E(Math.PI, 30), s = grp(g, 0, 26, p.z - 2, 0);
+        B(s, 4, 22, 4, STEEL, -20, -26, -2, NE); B(s, 4, 22, 4, STEEL, 20, -26, -2, NE);
+        B(s, 48, 20, 3, '#1f2a24', 0, 0, -2); P(s, 45, 15, textMat(o.screen || 'WELCOME TO VINLAND', '#14233f', '#ffcf6a'), 0, 3.6, -0.45);
+        B(s, 48, 3, 3, PAL.cream, 0, -3, -2); P(s, 30, 2.2, textMat('VINLAND FIELD', '#2f2b28', '#f6d27a'), 0, -2.6, -0.45); }
+      // entrance rotunda (front, +z): a round brick hall with cream arches, a green dome, the big sign
+      { const p = E(0, 34), s = grp(g, 0, 0, p.z + 4, 0);
+        CYL(s, 15, 15, 24, 20, '#a9513a', 0, 0, 0); CYL(s, 15.6, 15.6, 1.2, 20, PAL.cream, 0, 24, 0); CYL(s, 15.6, 15.6, 0.8, 20, '#e6dac2', 0, 10, 0);
+        put(s, geo('dome', () => new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2)), '#4f9a86', 0, 25, 0, { s: [13.5, 7, 13.5] });
+        for (let k = -3; k <= 3; k++) { const a = k * 0.36, f = grp(s, Math.sin(a) * 15.1, 0, Math.cos(a) * 15.1, a);
+          P(f, 4.4, 8.2, '#efe3c8', 0, 0, -0.02, { edge: true }); ARCH(f, 4.4, '#efe3c8', 0, 8.2, -0.02); P(f, 3.6, 7.6, ARCHM, 0, 0.2, 0); ARCH(f, 3.6, ARCHM, 0, 7.8, 0); win(f, 0, 14.5, 0, 0, 2.2, 4, { shutters: false }); }
+        B(s, 30, 4.4, 0.6, '#2f2b28', 0, 18.2, 15.2); P(s, 29, 3.6, textMat('VINLAND FIELD', '#2f2b28', '#f6d27a'), 0, 18.6, 15.55);
+        B(s, 40, 0.12, 14, '#e6dccb', 0, 0, 20, { shadow: false }); }
+      // seats spell VINLAND on the long side opposite the scoreboard view
+      [1, -1].forEach(sd => { const a = E(sd * Math.PI / 2, 1.5), b = E(sd * Math.PI / 2, 17), ang = Math.atan2(11.5 - 2.4, Math.abs(b.x - a.x)), s = grp(g, (a.x + b.x) / 2 - sd * 0.4, (2.4 + 11.5) / 2 + 0.3, 0, -sd * Math.PI / 2);
+        P(s, 84, 12, textMat('VINLAND', '#3f8a5f', '#f6f0e2'), 0, -6, 0, { rx: -(Math.PI / 2 - ang) }); });
+      // ground + field
+      put(g, geo('pad', () => new THREE.PlaneGeometry(1, 1)), '#d8d2c6', 0, 0.02, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [2 * (RX + 44), 2 * (RZ + 40), 1] }));
+      flat2(g, 2 * RX, 2 * RZ, GRASS, 0, 0.3, 0);
+      const W = 68, Lp = 105; for (let i = 0; i < 10; i++) flat2(g, W, Lp / 10, i % 2 ? GRASS2 : GRASS, 0, 0.34, -Lp / 2 + Lp / 10 * (i + 0.5));
+      [[W, 0.15, 0, Lp / 2], [W, 0.15, 0, -Lp / 2], [0.15, Lp, W / 2, 0], [0.15, Lp, -W / 2, 0], [W, 0.15, 0, 0]].forEach(([w, d, x, z]) => flat2(g, w, d, WL, x, 0.38, z));
+      put(g, geo('ring', () => new THREE.RingGeometry(0.96, 1, 24)), WL, 0, 0.38, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [9.15, 9.15, 1] }));
+      [-1, 1].forEach(sd => { const z = sd * Lp / 2; [[40.3, 0.15, 0, z - sd * 16.5], [0.15, 16.5, 20.15, z - sd * 8.25], [0.15, 16.5, -20.15, z - sd * 8.25]].forEach(([w, d, x, zz]) => flat2(g, w, d, WL, x, 0.38, zz));
+        [-3.66, 3.66].forEach(x => B(g, 0.15, 2.44, 0.15, '#ffffff', x, 0.3, z, NE)); B(g, 7.47, 0.15, 0.15, '#ffffff', 0, 2.74, z, NE); });
+      return g; } });
   def({ key: 'stadium', name: 'Vinland Stadium', cat: 'Landmarks', part: 2, budget: 12000, size: 'about 250 × 270 m · field 116 × 144 m · 48 m tall', night: true,
     opts: { mode: choices('Mode', ['football', 'cricket', 'concert']), seat: colours('Seats', [PAL.terra, '#2f7a68', '#3f7fbf', '#c9922e']) },
     make(o) {
       const g = new THREE.Group(), mode = o.mode || 'football', SEAT = slot('seat', o.seat || PAL.terra);
+      const RX = 58, RZ = 72, E = (t, off) => ({ x: Math.sin(t) * (RX + off), z: Math.cos(t) * (RZ + off) });
       const LIT = (c, n) => glowMat(c, n), GRASS = LIT('#7fb156', '#4f7a34'), GRASS2 = LIT('#6fa04a', '#456c2c'), WL = LIT(LINE, '#d8d8d0');   // under the floodlights the field glows at night
-      const RX = 58, RZ = 72, N = 48, E = (t, off) => ({ x: Math.sin(t) * (RX + off), z: Math.cos(t) * (RZ + off) });
       const two = c => { const m = toon(c); m.side = THREE.DoubleSide; return m; };
       const SEATM = (() => { const m = SEAT.clone(); m.side = THREE.DoubleSide; m.userData.slot = 'seat'; return m; })();
-      const AISLE = two('#d9d2c4'), CONC = two('#cfc6b4'), WALLM = two('#e9e3d6'), ROOF = two('#f4f2ee');
-      const SUITE = (() => { const m = glowMat('#3f5866', '#ffd98a'); m.side = THREE.DoubleSide; return m; })();
-      // the bowl: a cross-section (offset from the field edge, height) swept all round the oval
-      const prof = [[0, 0.3, WALLM], [0, 3, CONC], [1.5, 3, null]];
-      const band = (o1, y1, o2, y2, n) => { for (let i = 0; i < n; i++) prof.push([o1 + (o2 - o1) * (i + 1) / n, y1 + (y2 - y1) * (i + 1) / n, i % 2 ? AISLE : SEATM]); };
-      prof[prof.length - 1][2] = WALLM;
-      band(1.5, 3, 22, 15, 6);                                                                       // lower tier
-      prof.push([25, 15, CONC]); prof.push([25, 20, SUITE]); prof.push([26, 20, WALLM]);           // concourse + suite band
-      band(26, 20, 43, 37, 6);                                                                       // upper tier
-      prof.push([45, 38.5, WALLM]); prof.push([46, 38.5, WALLM]);
-      const buckets = new Map();
-      for (let k = 1; k < prof.length; k++) { const [o1, y1] = prof[k - 1], [o2, y2, m] = prof[k]; if (!m) continue; if (!buckets.has(m)) buckets.set(m, []); const pos = buckets.get(m);
+      const CREAM2 = two(PAL.cream), STONE2 = two('#e6dac2'), ROOF1 = two(PAL.terra), ROOF2 = two(PAL.terra2);
+      // swept rings round the oval (stands, roof, cornices): one merged mesh per colour
+      const buckets = new Map(), ring = (m, o1, y1, o2, y2, N) => { if (!buckets.has(m)) buckets.set(m, []); const pos = buckets.get(m);
         for (let i = 0; i < N; i++) { const t1 = i / N * Math.PI * 2, t2 = (i + 1) / N * Math.PI * 2, a1 = E(t1, o1), a2 = E(t2, o1), b1 = E(t1, o2), b2 = E(t2, o2);
-          pos.push(a1.x, y1, a1.z, a2.x, y1, a2.z, b2.x, y2, b2.z, a1.x, y1, a1.z, b2.x, y2, b2.z, b1.x, y2, b1.z); } }
-      // outer wall (facade) down to the ground
-      { const pos = []; for (let i = 0; i < N; i++) { const t1 = i / N * Math.PI * 2, t2 = (i + 1) / N * Math.PI * 2, a1 = E(t1, 46), a2 = E(t2, 46);
-          pos.push(a1.x, 0, a1.z, a2.x, 0, a2.z, a2.x, 38.5, a2.z, a1.x, 0, a1.z, a2.x, 38.5, a2.z, a1.x, 38.5, a1.z); } buckets.set(two('#e2dccd'), pos); }
-      // roof canopy ring over the upper tier
-      { const pos = []; for (let i = 0; i < N; i++) { const t1 = i / N * Math.PI * 2, t2 = (i + 1) / N * Math.PI * 2, a1 = E(t1, 26), a2 = E(t2, 26), b1 = E(t1, 47), b2 = E(t2, 47);
-          pos.push(a1.x, 46, a1.z, a2.x, 46, a2.z, b2.x, 48, b2.z, a1.x, 46, a1.z, b2.x, 48, b2.z, b1.x, 48, b1.z); } buckets.set(ROOF, pos); }
+          pos.push(a1.x, y1, a1.z, a2.x, y1, a2.z, b2.x, y2, b2.z, a1.x, y1, a1.z, b2.x, y2, b2.z, b1.x, y2, b1.z); } };
+      const NB = 32;                                                                                 // stands: calm two-tone, seat colour + cream walkways
+      ring(CREAM2, 0, 0.3, 0, 3, NB); ring(CREAM2, 0, 3, 1.5, 3, NB);
+      ring(SEATM, 1.5, 3, 20, 13.8, NB); ring(CREAM2, 20, 13.8, 22, 15, NB);                         // lower tier + walkway
+      ring(STONE2, 22, 15, 25, 15, NB); ring(CREAM2, 25, 15, 25, 20, NB); ring(CREAM2, 25, 20, 26.5, 20, NB);   // concourse + front wall of the upper tier
+      ring(SEATM, 26.5, 20, 41, 35.6, NB); ring(CREAM2, 41, 35.6, 46, 38.5, NB);                     // upper tier + top walkway
+      // the arena wall outside, with two cornice bands
+      const NF = 40; ring(CREAM2, 46, 0, 46, 38.5, NF); ring(STONE2, 46, 13.5, 47, 13.5, NF); ring(STONE2, 46, 27, 47, 27, NF);
+      // the roof: sloped terracotta tiles round the top, high over the stands, low at the outer wall (two-tone rows)
+      ring(ROOF1, 27, 45, 34, 43.4, NB); ring(ROOF2, 34, 43.4, 40, 41.9, NB); ring(ROOF1, 40, 41.9, 48, 39.6, NB);
+      ring(CREAM2, 27, 45, 27, 43.8, NB);                                                             // cream fascia under the roof edge
       buckets.forEach((pos, m) => { const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); ge.computeVertexNormals();
-        const me = new THREE.Mesh(ge, m); me.castShadow = m !== ROOF ? false : true; me.receiveShadow = true; g.add(me); });
-      // facade fins that hold the roof, and lights along the roof's inner edge
-      const FIN = '#f4f2ee', RIM = glowMat('#f4f1e8', '#ffffff');
-      for (let i = 0; i < 32; i++) { const t = (i + 0.5) / 32 * Math.PI * 2, p = E(t, 46.6); B(g, 1.4, 48, 2.2, FIN, p.x, 0, p.z, { ry: t, edge: false }); }
-      for (let i = 0; i < 24; i++) { const t = (i + 0.5) / 24 * Math.PI * 2, p = E(t, 26.5); B(g, 3, 0.6, 1, RIM, p.x, 45.2, p.z, { ry: t, edge: false, shadow: false }); }
-      // 'VINLAND STADIUM' on the outside (both long sides) + 4 entrance gates
-      [Math.PI / 2, -Math.PI / 2].forEach(t => { const p = E(t, 47.9), s = grp(g, p.x, 0, p.z, t); P(s, 46, 5.5, textMat('VINLAND STADIUM', '#2f2b28', '#f6d27a'), 0, 28, 0.05); });
-      [0, Math.PI / 2, Math.PI, -Math.PI / 2].forEach(t => { const p = E(t, 47.9), s = grp(g, p.x, 0, p.z, t);
-        [-1, 1].forEach(k => P(s, 8, 9, glowMat('#3f5866', '#ffd98a'), k * 9, 0.2, 0.06)); B(s, 30, 1.2, 4, SEAT, 0, 10, 1.6, { edge: false }); });
-      // plaza round the outside
-      put(g, geo('oval', () => new THREE.CircleGeometry(1, 32)), '#d8d2c6', 0, 0.02, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [RX + 62, RZ + 62, 1] }));
-      // big screens at both ends (on top of the upper tier, facing the field)
-      const screenText = { football: 'VINLAND  2 - 1', cricket: 'VINLAND  186 / 4', concert: 'LIVE IN VINLAND' }[mode];
-      [0, Math.PI].forEach(t => { const p = E(t, 40), s = grp(g, p.x, 37, p.z, t + Math.PI);
-        [-12, 12].forEach(x => B(s, 1, 8, 1, PAL.iron, x, 0, -1, NE)); B(s, 34, 13, 2, PAL.iron, 0, 7, -1);
-        P(s, 32, 11, textMat(screenText, '#14233f', '#ffcf6a'), 0, 8, 0.02); });
-      // 4 floodlight towers at the corners
+        const me = new THREE.Mesh(ge, m); me.castShadow = m === ROOF1 || m === ROOF2; me.receiveShadow = true; g.add(me); });
+      // ring of arches (ground floor) and shuttered windows above, on each of the 40 wall faces (the front one is the main gate)
+      const ARCHM = glowMat('#8a6a4c', '#e0a050');                                                    // arch openings glow warm at night
+      for (let i = 0; i < NF; i++) { const t1 = i / NF * Math.PI * 2, t2 = (i + 1) / NF * Math.PI * 2, a = E(t1, 46), b = E(t2, 46), mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2;
+        let nx = b.z - a.z, nz = -(b.x - a.x); if (nx * mx + nz * mz < 0) { nx = -nx; nz = -nz; } const ry = Math.atan2(nx, nz), L = Math.hypot(nx, nz), ox = nx / L * 0.06, oz = nz / L * 0.06;
+        const tm = (t1 + t2) / 2; if (Math.abs(Math.atan2(Math.sin(tm), Math.cos(tm))) < 0.12) continue;   // the main gate sits on the front face
+        const f = grp(g, mx + ox, 0, mz + oz, ry);
+        P(f, 7, 8.2, ARCHM, 0, 0.2, 0); ARCH(f, 7, ARCHM, 0, 8.4, 0);                                // arch
+        win(f, 0, 17.4, 0, 0, 2.6, 4.2);                                                              // shuttered window (same as the houses)
+        if (i % 2) win(f, 0, 30.2, 0, 0, 2, 3.2, { shutters: false });                                 // small top windows on every other face
+      }
+      // 4 corner towers: cream, terracotta hip roof, floodlights on top, a Vinland flag
       const FL = glowMat('#f4f1e8', '#ffffff');
-      [Math.PI / 4, 3 * Math.PI / 4, -Math.PI / 4, -3 * Math.PI / 4].forEach(t => { const p = E(t, 52), s = grp(g, p.x, 0, p.z, t + Math.PI);
-        TAPER(s, 3.2, 70, 3.2, '#9aa3a8', 0, 0, 0, { tw: 0.45, td: 0.45 }); B(s, 14, 8, 1.2, PAL.iron, 0, 68, 0.6, NE); P(s, 13, 7, FL, 0, 68.5, 1.25, { rx: -0.35 }); });
+      [Math.PI / 4, 3 * Math.PI / 4, -Math.PI / 4, -3 * Math.PI / 4].forEach(t => { const p = E(t, 50), s = grp(g, p.x, 0, p.z, t + Math.PI);   // local +z faces the field
+        B(s, 10, 60, 10, PAL.cream, 0, 0, 0); B(s, 11, 1, 11, '#e6dac2', 0, 60, 0, NE);
+        win(s, 0, 44, -5.02, Math.PI, 2.4, 3.6); win(s, 0, 20, -5.02, Math.PI, 2.4, 3.6, { shutters: false });                                                    // a shuttered window on the outside
+        HIP(s, 12.4, 5, 12.4, PAL.terra, 0, 61, 0);
+        [-4.5, 4.5].forEach(x => B(s, 0.5, 6, 0.5, PAL.iron, x, 63, 3, NE)); B(s, 13, 5, 1, PAL.iron, 0, 68, 3.4, NE); P(s, 12, 4.2, FL, 0, 68.4, 3.95, { rx: -0.3 });   // floodlights
+        B(s, 0.25, 12, 0.25, '#c9ced2', 0, 66, -3, NE); B(s, 4.4, 2.6, 0.06, PAL.terra, 2.3, 74.6, -3, FLAT); oct(s, 0.35, '#e2b04a', 0, 78.3, -3); });   // Vinland flag
+      // main gate (front, +z): one big arch with the sign, and a small plaza in front
+      { const p = E(0, 46), s = grp(g, 0, 0, p.z, 0);
+        B(s, 34, 31, 7, PAL.cream, 0, 0, 1.5); B(s, 36, 1.2, 8, '#e6dac2', 0, 31, 1.5, NE);
+        GABLE(s, 22, 6, 8.4, PAL.terra, 0, 32.2, 1.5);                                                // terracotta pediment roof
+        P(s, 14, 12, ARCHM, 0, 0.2, 5.06); ARCH(s, 14, ARCHM, 0, 12.2, 5.06);                          // the big arch
+        P(s, 15.4, 13, '#e6dac2', 0, 0, 5.03, { edge: true }); ARCH(s, 16, '#e6dac2', 0, 12.6, 5.03);   // arch surround
+        [-12, 12].forEach(x => win(s, x, 15, 5.06, 0, 3, 4.6));                                     // shuttered windows either side
+        B(s, 26, 4, 0.5, '#2f2b28', 0, 23.4, 5.1); P(s, 25, 3.2, textMat('VINLAND STADIUM', '#2f2b28', '#f6d27a'), 0, 23.8, 5.37);   // the sign (Vinland sign style)
+        // plaza: paving, pink trees, street lamps, benches
+        B(s, 46, 0.12, 10, '#e6dccb', 0, 0, 10, { shadow: false });
+        const LAMP = glowMat(PAL.lampOn, '#ffd98a');
+        [-19, 19].forEach(x => { CYL(s, 0.28, 0.36, 2.6, 6, PAL.wood, x, 0.1, 11, { edge: false, open: true }); ICO(s, 2.6, 0, PAL.pink, x, 4.4, 11); });   // pink trees
+        [-9, 9].forEach(x => { B(s, 0.2, 4.4, 0.2, PAL.iron, x, 0.1, 15.5, NE); B(s, 0.9, 0.12, 0.12, PAL.iron, x, 4.4, 15.5, NE); oct(s, 0.32, LAMP, x, 4.15, 15.5, { s: [0.3, 0.32, 0.3] }); });   // street lamps
+        [-13.5, 13.5].forEach(x => { B(s, 3, 0.45, 0.8, PAL.wood, x, 0.1, 14.4, NE); B(s, 3, 0.6, 0.12, PAL.wood, x, 0.55, 14.8, NE); });   // benches
+      }
+      // ground round the outside (same oval as before, so the footprint does not change)
+      put(g, geo('oval', () => new THREE.CircleGeometry(1, 32)), '#d8d2c6', 0, 0.02, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [RX + 62, RZ + 62, 1] }));
+      // big screens at both ends (cream frames, on top of the upper tier, facing the field). One sign material for both.
+      const screenText = { football: 'VINLAND  2 - 1', cricket: 'VINLAND  186 / 4', concert: 'LIVE IN VINLAND' }[mode], SCR = textMat(screenText, '#14233f', '#ffcf6a');
+      [0, Math.PI].forEach(t => { const p = E(t, 39), s = grp(g, p.x, 36.5, p.z, t + Math.PI);
+        B(s, 34, 13, 2, PAL.cream, 0, 0, -1); P(s, 32, 11, SCR, 0, 1, 0.02); HIP(s, 35, 2.4, 3, PAL.terra, 0, 13, -1); });
       // the field: one oval of grass
       put(g, geo('oval', () => new THREE.CircleGeometry(1, 32)), GRASS, 0, 0.3, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [RX, RZ, 1] }));
       if (mode === 'football') {
@@ -1142,7 +1397,9 @@
           B(g, 14, 7, 0.5, '#f6f3ea', 0, 0.3, s * (RZ - 2)); });                                    // sight screens
       }
       if (mode === 'concert') {
-        const zs = RZ - 14, BEAM = (c) => { const m = new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }); m.userData.beam = true; return m; };
+        const zs = RZ - 14;
+        const BEAM = c => { const k = 'beam' + c; if (!mats[k]) { const m = new THREE.MeshToonMaterial({ color: '#000000', gradientMap: grad, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+          m.userData.glow = c; mats[k] = m; } return mats[k]; };                                       // black by day (adds nothing), glows its colour at night
         B(g, 46, 2.6, 16, '#2f2b28', 0, 0.3, zs);                                                    // stage
         B(g, 12, 1.4, 22, '#2f2b28', 0, 0.3, zs - 18);                                               // catwalk into the crowd
         [-22, 22].forEach(x => { B(g, 1.2, 22, 1.2, '#55504a', x, 2.9, zs + 6, NE); B(g, 5, 9, 4, PAL.iron, x + Math.sign(x) * 5, 0.3, zs - 2); });   // truss legs + speaker stacks
@@ -1151,20 +1408,665 @@
         const STG = ['#e8473a', '#3f7fbf', '#a084c8', '#f2c14e', '#5fbf6a', '#d88fb0'];
         for (let i = 0; i < 12; i++) { const x = -19 + i * 3.45, c = STG[i % STG.length];
           B(g, 1.2, 0.8, 1.2, glowMat(c, c), x, 21.2, zs - 4, NE);                                   // stage lights on the front truss
-          const beam = put(g, geo('beam', () => { const ge = new THREE.ConeGeometry(1, 1, 8, 1, true); ge.translate(0, -0.5, 0); return ge; }), BEAM(c), x, 21.2, zs - 4, { edge: false, shadow: false, s: [5, 26, 5], rx: -0.5 + (i % 3) * 0.15, rz: (i - 5.5) * 0.06 });
-          beam.visible = false; beam.userData.beam = true; }
-        // the crowd on the field: one InstancedMesh, 600 people, random shirt colours
-        const COLS = ['#c8603f', '#3f7fbf', '#2f7a68', '#f2c14e', '#f6f0e2', '#6a4a8c', '#d88fb0', '#2f2b28'];
-        const pg = new THREE.OctahedronGeometry(1, 0); pg.scale(0.35, 0.9, 0.3); pg.translate(0, 0.9 + 0.3, 0);
-        const crowd = new THREE.InstancedMesh(pg, toon('#ffffff'), 600), M = new THREE.Matrix4(), cc = new THREE.Color();
+          put(g, geo('beam', () => { const ge = new THREE.ConeGeometry(1, 1, 8, 1, true); ge.translate(0, -0.5, 0); return ge; }), BEAM(c), x, 21.2, zs - 4, { edge: false, shadow: false, s: [5, 26, 5], rx: -0.5 + (i % 3) * 0.15, rz: (i - 5.5) * 0.06 }); }
+        // the crowd on the field: 560 people, merged into one mesh per shirt colour (no instancing, so the map can squash the whole stadium)
+        const COLS = ['#c8603f', '#3f7fbf', '#2f7a68', '#f2c14e', '#f6f0e2', '#6a4a8c', '#d88fb0', '#2f2b28'], per = COLS.map(() => []);
+        const pg = new THREE.OctahedronGeometry(1, 0); pg.scale(0.35, 0.9, 0.3); pg.translate(0, 1.2, 0); const base = pg.attributes.position.array;
         let seed = 11, n = 0; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-        for (let tries = 0; n < 600 && tries < 5000; tries++) { const x = (rnd() * 2 - 1) * (RX - 6), z = -RZ + 10 + rnd() * (zs - 8 + RZ - 10);
+        for (let tries = 0; n < 560 && tries < 5000; tries++) { const x = (rnd() * 2 - 1) * (RX - 6), z = -RZ + 10 + rnd() * (zs - 8 + RZ - 10);
           if ((x * x) / ((RX - 6) * (RX - 6)) + (z * z) / ((RZ - 6) * (RZ - 6)) > 1 || (Math.abs(x) < 8 && z > zs - 30)) continue;
-          M.makeTranslation(x, 0, z); crowd.setMatrixAt(n, M); crowd.setColorAt(n, cc.set(COLS[n % COLS.length])); n++; }
-        crowd.count = n; crowd.instanceMatrix.needsUpdate = true; crowd.frustumCulled = false; g.add(crowd);
+          const arr = per[n % COLS.length]; for (let k = 0; k < base.length; k += 3) arr.push(base[k] + x, base[k + 1], base[k + 2] + z); n++; }
+        per.forEach((arr, i) => { const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); ge.computeVertexNormals();
+          const me = new THREE.Mesh(ge, mat(COLS[i])); me.receiveShadow = true; g.add(me); });
       }
       return g;
     } });
+
+  // ================= DOWNTOWN (Dev, 13 Nov) =================
+  // Office towers, glass HQ, business lot sign, construction site kit, city centre pieces, transport hub.
+  // Kit only: nothing goes on the map until it is placed in a build step. No brand names anywhere.
+
+  // window grid for glass walls: day = pale grid (tinted by the glass colour), night = random lit windows.
+  // cols x rows windows on one face. Textures are drawn once per size and reused.
+  const winTex = {};
+  function officeTex(cols, rows) {
+    const key = cols + 'x' + rows; if (winTex[key] || typeof document === 'undefined') return winTex[key] || null;
+    let seed = 13 + cols * 7 + rows; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const mk = draw => { const c = document.createElement('canvas'); c.width = c.height = 256; draw(c.getContext('2d'));
+      const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(cols / 8, rows / 8); return t; };
+    const day = mk(x => { x.fillStyle = '#ffffff'; x.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) { x.fillStyle = (i + j * 3) % 5 ? '#dfe8ee' : '#eef4f8'; x.fillRect(i * 32 + 3, j * 32 + 5, 26, 24); } });
+    const night = mk(x => { x.fillStyle = '#000000'; x.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) { const r = rnd(); if (r < 0.55) { x.fillStyle = r < 0.1 ? '#ffffff' : r < 0.38 ? '#ffe2a8' : '#cfe0ff'; x.fillRect(i * 32 + 4, j * 32 + 6, 24, 22); } } });
+    return (winTex[key] = { day, night });
+  }
+  function glassWall(colour, cols, rows) {                              // a glass curtain wall material (slot 'glass')
+    const m = slot('glass', colour), t = officeTex(Math.max(1, Math.round(cols)), Math.max(1, Math.round(rows)));
+    if (t) { m.map = t.day; m.emissiveMap = t.night; } m.userData.glow = '#ffffff'; return m;
+  }
+  const STONES = ['#e9e3d6', '#f6f0e2', '#d9cfbd', '#c9ced2'], GLASSES = ['#8fb8cc', '#9cc7b8', '#b8c2cc', '#c9b08a'];
+  const PAVE = '#ddd6c8', PAVE2 = '#cfc6b4';
+  const strut = (g, a, b, t, m) => { const d = new THREE.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]), me = put(g, geo('box', () => new THREE.BoxGeometry(1, 1, 1)), m, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2, { s: [t, d.length(), t], edge: false, shadow: false });
+    me.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); return me; };   // a thin bar from point a to point b
+  // live text: a sign whose words can change later. Returns { mat, set(text) }.
+  function liveText(wpx, hpx, draw) {
+    if (typeof document === 'undefined') { const m = mat('#14233f'); return { mat: m, set() {} }; }
+    const c = document.createElement('canvas'); c.width = wpx; c.height = hpx; const x = c.getContext('2d'), t = new THREE.CanvasTexture(c);
+    const m = toon('#ffffff'); m.map = t; m.emissiveMap = t; m.userData.glow = '#c8c8c8';
+    return { mat: m, set(...a) { x.clearRect(0, 0, wpx, hpx); draw(x, wpx, hpx, ...a); t.needsUpdate = true; } };
+  }
+  const fitFont = (x, text, maxW, size, weight) => { const f = s => `${weight || 700} ${s}px Poppins, 'Segoe UI', sans-serif`; x.font = f(size); while (x.measureText(text).width > maxW && size > 10) x.font = f(size -= 2); return size; };
+
+  // ---- 1. office towers (3 heights) ----
+  function officeTower(o, floors, W, D, top, setback) {
+    const g = new THREE.Group(), S = slot('wall', o.wall || STONES[0]), gc = o.glass || GLASSES[0], FH = 3.6, H = floors * FH, base = 0.2;
+    const WARM = glowMat(PAL.glassWarm, '#ffcf6a');
+    B(g, W + 12, 0.2, D + 12, PAVE, 0, 0, 0, { shadow: false });                                 // plaza pad
+    const body = (w, d, y0, fl) => {                                                               // a block of floors: stone core, glass on 4 sides, corner piers, bands
+      const h = fl * FH; B(g, w - 0.8, h, d - 0.8, S, 0, y0, 0, { edge: false });
+      [[w, d, 0], [d, w, Math.PI / 2], [w, d, Math.PI], [d, w, -Math.PI / 2]].forEach(([fw, fd, ry]) => { const s = grp(g, 0, 0, 0, ry);
+        P(s, fw - 1.4, h - 0.2, glassWall(gc, (fw - 1.4) / 3.2, fl), 0, y0 + 0.1, fd / 2 + 0.02);
+        const n = Math.max(1, Math.round(fw / 8)); for (let i = 1; i < n; i++) B(s, 0.45, h, 0.5, S, -fw / 2 + i * fw / n, y0, fd / 2 - 0.1, { edge: false }); });
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => B(g, 1.2, h, 1.2, S, sx * (w / 2 - 0.5), y0, sz * (d / 2 - 0.5)));
+      for (let f = 4; f < fl; f += 4) B(g, w + 0.3, 0.45, d + 0.3, S, 0, y0 + f * FH - 0.22, 0, NE);
+      B(g, w + 0.5, 0.7, d + 0.5, S, 0, y0 + h, 0);
+    };
+    // lobby: 2 tall floors of warm glass with a stone canopy over the door
+    B(g, W - 1, 2 * FH, D - 1, S, 0, base, 0, { edge: false });
+    [[W, D, 0], [D, W, Math.PI / 2], [W, D, Math.PI], [D, W, -Math.PI / 2]].forEach(([fw, fd, ry]) => { const s = grp(g, 0, 0, 0, ry); P(s, fw - 2.4, 2 * FH - 0.6, WARM, 0, base + 0.2, fd / 2 - 0.48); });
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => B(g, 1.2, 2 * FH, 1.2, S, sx * (W / 2 - 0.5), base, sz * (D / 2 - 0.5)));
+    B(g, 10, 0.5, 4, S, 0, base + 4.2, D / 2 + 1.6); P(g, 3, 3, PAL.iron, 0, base, D / 2 - 0.46);
+    const upper = setback ? floors - 2 - setback : floors - 2;
+    body(W, D, base + 2 * FH, upper);
+    let yTop = base + 2 * FH + upper * FH + 0.7, tw = W, td = D;
+    if (setback) { tw = W * 0.72; td = D * 0.72; body(tw, td, yTop, setback); yTop += setback * FH + 0.7; }
+    // roof
+    if (top === 'plant') { B(g, tw * 0.4, 2.6, td * 0.35, '#b9b2a4', -tw * 0.15, yTop, -td * 0.1); CYL(g, 1.6, 1.6, 3, 8, '#9aa3a8', tw * 0.25, yTop, td * 0.2); B(g, 3, 1.2, 3, '#9aa3a8', tw * 0.25, yTop, -td * 0.25, NE); }
+    if (top === 'helipad') { CYL(g, tw * 0.38, tw * 0.38, 0.3, 16, '#3a3f45', 0, yTop, 0); put(g, geo('ring', () => new THREE.RingGeometry(0.96, 1, 24)), '#f2c53d', 0, yTop + 0.32, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [tw * 0.3, tw * 0.3, 1] }));
+      [[-1.2, 0, 0.5, 5], [1.2, 0, 0.5, 5], [0, 0, 2.4, 0.5]].forEach(([x, z, w, d]) => flat2(g, w, d, '#f6f3ea', x, yTop + 0.33, z));
+      [0, 1, 2, 3].forEach(i => BALL(g, 0.25, glowMat('#e8473a', '#ff3a20'), Math.cos(i * Math.PI / 2) * tw * 0.38, yTop + 0.5, Math.sin(i * Math.PI / 2) * tw * 0.38, NE)); }
+    if (top === 'crown') { B(g, tw * 0.6, 3, td * 0.6, S, 0, yTop, 0); B(g, tw * 0.35, 3, td * 0.35, S, 0, yTop + 3, 0);
+      CYL(g, 0.15, 0.4, 14, 6, '#c9ced2', 0, yTop + 6, 0, NE); BALL(g, 0.45, glowMat('#e8473a', '#ff3a20'), 0, yTop + 20.2, 0, NE); }
+    return g;
+  }
+  const officeOpts = { wall: colours('Stone', STONES), glass: colours('Glass', GLASSES) };
+  def({ key: 'officeMid', name: 'Office (mid-rise)', cat: 'Downtown', part: 2, budget: 600, size: '26 \u00d7 22 m \u00b7 8 floors \u00b7 30 m', night: true, opts: officeOpts, make: o => officeTower(o, 8, 26, 22, 'plant') });
+  def({ key: 'officeTall', name: 'Office (tall)', cat: 'Downtown', part: 2, budget: 1000, size: '26 \u00d7 26 m \u00b7 14 floors \u00b7 52 m', night: true, opts: officeOpts, make: o => officeTower(o, 14, 26, 26, 'helipad', 4) });
+  def({ key: 'officeSlim', name: 'Office (slim tower)', cat: 'Downtown', part: 2, budget: 800, size: '18 \u00d7 18 m \u00b7 20 floors \u00b7 92 m', night: true, opts: officeOpts, make: o => officeTower(o, 20, 18, 18, 'crown', 5) });
+
+  // ---- 2. glass HQ: wide low-rise headquarters, plaza entrance, blank sign slot (o.sign) ----
+  def({ key: 'glassHQ', name: 'Glass HQ', cat: 'Downtown', part: 2, budget: 1400, size: '70 \u00d7 60 m lot \u00b7 4 floors \u00b7 18 m', night: true, opts: officeOpts,
+    make(o) {
+      const g = new THREE.Group(), S = slot('wall', o.wall || STONES[1]), gc = o.glass || GLASSES[0], W = 64, D = 30, FH = 4, fl = 4, H = fl * FH, z0 = -12;
+      B(g, 70, 0.2, 60, PAVE, 0, 0, 0, { shadow: false });
+      for (let i = 0; i < 6; i++) flat2(g, 10.5, 24, i % 2 ? PAVE2 : PAVE, -26.25 + i * 10.5, 0.22, 16);                  // plaza paving
+      B(g, W, H, D, S, 0, 0.2, z0, { edge: false });
+      [[W, D, 0], [D, W, Math.PI / 2], [W, D, Math.PI], [D, W, -Math.PI / 2]].forEach(([fw, fd, ry], k) => { const s = grp(g, 0, 0, z0, ry);
+        P(s, fw - 1, H - 0.4, glassWall(gc, (fw - 1) / 3.2, fl), 0, 0.4, fd / 2 + 0.02);
+        for (let i = 1; i < Math.round(fw / 8); i++) B(s, 0.35, H, 0.4, S, -fw / 2 + i * fw / Math.round(fw / 8), 0.2, fd / 2 - 0.1, { edge: false }); });
+      for (let f = 1; f < fl; f++) B(g, W + 0.6, 0.35, D + 0.6, S, 0, 0.2 + f * FH - 0.17, z0, NE);
+      B(g, W + 3, 1, D + 3, S, 0, 0.2 + H, z0);                                                       // roof slab with an overhang
+      B(g, 20, 2.2, 8, '#b9b2a4', -14, 1.2 + H, z0 - 4); B(g, 10, 1.6, 6, '#b9b2a4', 16, 1.2 + H, z0 + 3, NE);
+      B(g, 26, 0.8, 9, S, 0, 6.4, z0 + D / 2 + 4.5); [-11, 11].forEach(x => B(g, 0.6, 6.2, 0.6, S, x, 0.2, z0 + D / 2 + 8.4, NE));   // entrance canopy
+      B(g, 24, 3, 0.5, '#2f2b28', 0, 7.2, z0 + D / 2 + 8.9);                                          // the sign board (text later)
+      if (o.sign) P(g, 23, 2.4, textMat(o.sign.toUpperCase(), '#2f2b28', '#f6d27a'), 0, 7.5, z0 + D / 2 + 9.16);
+      P(g, 10, 4.6, glowMat(PAL.glassWarm, '#ffcf6a'), 0, 0.2, z0 + D / 2 + 0.06);                   // doors
+      [-22, -14, 14, 22].forEach(x => { B(g, 3.6, 0.8, 3.6, PAVE2, x, 0.2, 10); tree(g, x, 1.0, 10, 'canopy', 0.7); });   // planters
+      [-4, 0, 4].forEach(x => { CYL(g, 0.08, 0.1, 10, 6, '#c9ced2', x, 0.2, 26, { edge: false, open: true }); B(g, 2.2, 1.4, 0.04, x ? '#2f7a68' : PAL.terra, x + 1.15, 8.6, 26, FLAT); });   // flags
+      CYL(g, 4.2, 4.4, 0.6, 16, PAVE2, 0, 0.2, 18, { open: true }); CYL(g, 4.1, 4.1, 0.4, 16, glowMat(PAL.water, '#3f8fb0'), 0, 0.2, 18, NE);   // low pool
+      return g;
+    } });
+
+  // a sign that wraps its words onto up to 3 lines (lot sign)
+  function drawSign(x, w, h, text) {
+    x.fillStyle = '#14233f'; x.fillRect(0, 0, w, h); x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#f6d27a';
+    const words = String(text || '').split(/\s+/), lines = []; let cur = ''; x.font = `700 84px Poppins, 'Segoe UI', sans-serif`;
+    words.forEach(wd => { const t = cur ? cur + ' ' + wd : wd; if (x.measureText(t).width > w - 60 && cur) { lines.push(cur); cur = wd; } else cur = t; }); if (cur) lines.push(cur);
+    const L = lines.slice(0, 3), size = Math.min(84, Math.floor((h - 40) / L.length * 0.8)); L.forEach((ln, i) => { fitFont(x, ln, w - 60, size); x.fillText(ln, w / 2, h / 2 + (i - (L.length - 1) / 2) * size * 1.15); });
+  }
+  // ---- 3. business lot sign: board on posts with a text slot (o.text; change later with g.userData.setText) ----
+  def({ key: 'lotSign', name: 'Business lot sign', cat: 'Downtown', part: 2, budget: 100, size: '4.4 m wide', night: true, opts: {},
+    make(o) { const g = new THREE.Group(), lt = liveText(820, 340, drawSign); lt.set(o.text || 'RESERVED FOR \u2026');
+      [-1.8, 1.8].forEach(x => B(g, 0.2, 3.4, 0.2, PAL.wood, x, 0, -0.18, NE));
+      B(g, 4.4, 2, 0.16, '#f6f0e2', 0, 1.5, 0); P(g, 4.1, 1.7, lt.mat, 0, 1.65, 0.09); g.userData.setText = t => lt.set(t);
+      B(g, 4.4, 0.2, 0.4, PAL.wood, 0, 3.5, 0.05, NE); [-1.2, 1.2].forEach(x => B(g, 0.4, 0.12, 0.3, glowMat(PAL.lampOn, '#ffd98a'), x, 3.42, 0.35, NE));
+      return g; } });
+
+  // ---- 4. construction site kit ----
+  const HOARD = '#2f7a68';
+  def({ key: 'sitePanel', name: 'Site fence panel', cat: 'Construction', part: 2, budget: 50, size: '4 m panel', opts: { text: { label: 'Banner', choices: ['VINLAND', 'COMING SOON', 'BUILDING VINLAND'] } },
+    make(o) { const g = new THREE.Group(); B(g, 4, 2.4, 0.08, HOARD, 0, 0, 0); P(g, 3.6, 0.7, textMat(o.text || 'VINLAND', '#f6f0e2', HOARD), 0, 1.1, 0.05);
+      [-2, 2].forEach(x => B(g, 0.12, 2.5, 0.12, '#9aa3a8', x, 0, 0, FLAT)); return g; } });
+  def({ key: 'siteCorner', name: 'Site fence corner', cat: 'Construction', part: 2, budget: 80, size: '2 + 2 m corner', opts: { text: { label: 'Banner', choices: ['VINLAND', 'COMING SOON'] } },
+    make(o) { const g = new THREE.Group(); B(g, 2, 2.4, 0.08, HOARD, -1, 0, 0); B(g, 0.08, 2.4, 2, HOARD, 0, 0, 1);
+      P(g, 1.8, 0.55, textMat(o.text || 'VINLAND', '#f6f0e2', HOARD), -1, 1.15, 0.05); P(g, 1.8, 0.55, textMat(o.text || 'VINLAND', '#f6f0e2', HOARD), 0.05, 1.15, 1, { ry: Math.PI / 2 });
+      [[-2, 0], [0, 0], [0, 2]].forEach(([x, z]) => B(g, 0.12, 2.5, 0.12, '#9aa3a8', x, 0, z, FLAT)); return g; } });
+  def({ key: 'towerCrane', name: 'Tower crane', cat: 'Construction', part: 2, budget: 600, size: '48 m tall \u00b7 46 m jib', night: true, opts: {},
+    make() { const g = new THREE.Group(), Y = '#e8b830', H = 44;
+      B(g, 5, 1.2, 5, '#9aa3a8', 0, 0, 0);
+      for (let i = 0; i < 11; i++) B(g, 2, 4, 2, Y, 0, 1.2 + i * 4, 0);                               // lattice mast (sections show as lines)
+      B(g, 3, 2.6, 3, '#f6f0e2', 0, H, 1.6); P(g, 2.6, 1.4, PAL.glass, 0, H + 0.9, 3.12);              // cab
+      TAPER(g, 2, 6, 2, Y, 0, H + 2.6, 0, { tw: 0.15, td: 0.15 });                                     // apex
+      B(g, 1.6, 1.6, 34, Y, 0, H + 2.6, 18); B(g, 1.6, 1.4, 12, Y, 0, H + 2.6, -7);                   // jib + counter jib
+      B(g, 2.4, 2.6, 3, '#9aa3a8', 0, H + 0.8, -11.5);                                                 // counterweight
+      strut(g, [0, H + 8.6, 0], [0, H + 4.2, 30], 0.12, '#55504a'); strut(g, [0, H + 8.6, 0], [0, H + 4, -12], 0.12, '#55504a');   // tie lines
+      B(g, 1.4, 0.8, 2, '#55504a', 0, H + 1.8, 24); B(g, 0.06, 18, 0.06, PAL.iron, 0, H - 16.2, 24, FLAT); B(g, 0.8, 0.9, 0.8, '#d8231f', 0, H - 17, 24, NE);   // trolley, cable, hook
+      BALL(g, 0.35, glowMat('#e8473a', '#ff3a20'), 0, H + 8.9, 0, NE); BALL(g, 0.3, glowMat('#e8473a', '#ff3a20'), 0, H + 4.4, 34.8, NE);
+      return g; } });
+  def({ key: 'cementMixer', name: 'Cement mixer', cat: 'Construction', part: 2, budget: 450, size: '2.5 \u00d7 8 m', opts: { body: colours('Cab', ['#e8b830', PAL.terra, '#3f7fbf', '#f6f0e2']) },
+    make(o) { const g = new THREE.Group(), b = slot('body', o.body || '#e8b830');
+      B(g, 2.3, 0.5, 7.6, PAL.iron, 0, 0.7, 0);
+      B(g, 2.4, 2.2, 2, b, 0, 1.2, 2.9); P(g, 2.0, 0.9, PAL.glass, 0, 2.3, 3.91); [-0.8, 0.8].forEach(x => P(g, 0.36, 0.2, HEAD(), x, 1.5, 3.91));
+      const d = grp(g, 0, 2.5, -1); d.rotation.x = -(Math.PI / 2 - 0.25);                                 // drum axis: back and a little up
+      CYL(d, 1.25, 0.7, 2.4, 10, '#f4f2ee', 0, -2.4, 0); CYL(d, 0.75, 1.25, 2.4, 10, '#f4f2ee', 0, 0, 0);
+      [-0.9, 0.7].forEach(y => CYL(d, 1.17, 1.2, 0.3, 10, b, 0, y, 0, { edge: false, open: true }));
+      TAPER(g, 0.8, 0.6, 1, '#9aa3a8', 0, 1.6, -3.8, { tw: 1.4, td: 1.4 });                            // chute
+      [[-1.05, 2.9], [1.05, 2.9], [-1.05, -1.4], [1.05, -1.4], [-1.05, -2.8], [1.05, -2.8]].forEach(([x, z]) => WHEEL(g, 0.5, 0.36, x, z, 8));
+      return g; } });
+  def({ key: 'materials', name: 'Materials stack', cat: 'Construction', part: 2, budget: 400, size: '8 \u00d7 5 m', opts: {},
+    make() { const g = new THREE.Group();
+      [[-2.6, -1.2], [-1.2, -1.2]].forEach(([x, z]) => { B(g, 1.2, 0.15, 1.2, PAL.wood, x, 0, z, NE); B(g, 1.1, 0.9, 1.1, PAL.terra, x, 0.15, z); });   // brick pallets
+      for (let i = 0; i < 6; i++) CYL(g, 0.2, 0.2, 4.5, 8, '#9aa3a8', 0.6 + (i % 3) * 0.42, 0.2 + Math.floor(i / 3) * 0.36, -1.2, { rx: Math.PI / 2, edge: false });   // pipes
+      for (let i = 0; i < 4; i++) B(g, 4, 0.18, 0.5, '#c9a26a', 0.5, i * 0.18, 1.2 + (i % 2) * 0.1, NE);                // planks
+      put(g, geo('cap', () => new THREE.SphereGeometry(1, 8, 3, 0, Math.PI * 2, 0, Math.PI / 2.2)), '#d9c49a', -2.2, 0, 1.3, { s: [1.5, 1, 1.5] });   // sand pile
+      B(g, 0.9, 0.9, 0.9, '#55504a', 3.3, 0, 1.2, NE);                                                  // cement bags
+      return g; } });
+  // milestone board: big board with LIVE text. o.text, e.g. 'Vinland Stadium \u00b7 opens at 2,000 citizens \u00b7 1,890 / 2,000'.
+  // The last 'a / b' sets the progress bar. Change it later with g.userData.setText('\u2026').
+  function drawMilestone(x, w, h, text) {
+    x.fillStyle = '#14233f'; x.fillRect(0, 0, w, h); x.strokeStyle = '#f6d27a'; x.lineWidth = 8; x.strokeRect(10, 10, w - 20, h - 20);
+    const parts = String(text || '').split('\u00b7').map(s => s.trim()).filter(Boolean), m = /([\d,]+)\s*\/\s*([\d,]+)/.exec(parts[parts.length - 1] || '');
+    const num = s => +s.replace(/,/g, ''), have = m ? num(m[1]) : 0, need = m ? num(m[2]) : 0, title = parts[0] || '', mid = (m ? parts.slice(1, -1) : parts.slice(1)).join(' \u00b7 ');
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillStyle = '#f6d27a'; fitFont(x, title.toUpperCase(), w - 80, 84); x.fillText(title.toUpperCase(), w / 2, h * 0.24);
+    x.fillStyle = '#f6f3ea'; fitFont(x, mid, w - 80, 50, 500); x.fillText(mid, w / 2, h * 0.47);
+    if (m && need > 0) { const bx = 60, by = h * 0.64, bw = w - 120, bh = 56, p = Math.max(0, Math.min(1, have / need));
+      x.fillStyle = '#2b3a5a'; x.fillRect(bx, by, bw, bh); x.fillStyle = '#5fbf6a'; x.fillRect(bx, by, bw * p, bh);
+      x.fillStyle = '#f6f3ea'; fitFont(x, m[0], w - 80, 46); x.fillText(`${m[1]} / ${m[2]}  \u00b7  ${Math.round(p * 100)}%`, w / 2, by + bh + 52); }
+  }
+  def({ key: 'milestoneBoard', name: 'Milestone board', cat: 'Construction', part: 2, budget: 150, size: '12 \u00d7 6 m board', night: true, opts: { text: { label: 'Text', choices: ['Vinland Stadium \u00b7 opens at 2,000 citizens \u00b7 1,890 / 2,000', 'Vinland Tower \u00b7 opens at 10,000 citizens \u00b7 4,210 / 10,000'] } },
+    make(o) { const g = new THREE.Group(), lt = liveText(1024, 512, drawMilestone); lt.set(o.text || 'Vinland Stadium \u00b7 opens at 2,000 citizens \u00b7 1,890 / 2,000');
+      [-5, 5].forEach(x => B(g, 0.4, 9.5, 0.4, '#9aa3a8', x, 0, -0.1, NE));
+      B(g, 12.4, 6.4, 0.4, PAL.iron, 0, 3.2, -0.1); P(g, 12, 6, lt.mat, 0, 3.4, 0.12);
+      [-4, 0, 4].forEach(x => { B(g, 0.1, 0.6, 0.6, PAL.iron, x, 9.6, 0.2, NE); B(g, 0.6, 0.3, 0.4, glowMat(PAL.lampOn, '#fff3c4'), x, 9.9, 0.55, NE); });
+      g.userData.setText = t => lt.set(t); return g; } });
+
+  // ---- 5. city centre pieces ----
+  def({ key: 'plazaFountain', name: 'Plaza fountain', cat: 'City centre', part: 2, budget: 700, size: '20 m across', night: true, opts: {},
+    make() { const g = new THREE.Group(), ST = '#e2dccd', WATER = glowMat(PAL.water, '#3f8fb0'), SPRAY = glowMat('#cdeaf3', '#6ec3dc');
+      CYL(g, 10, 10.4, 0.9, 24, ST, 0, 0, 0, { open: true }); CYL(g, 10.6, 10.6, 0.25, 24, ST, 0, 0.9, 0, { open: true, edge: false });   // basin + seat rim
+      CYL(g, 9.9, 9.9, 0.7, 24, WATER, 0, 0.05, 0, NE);
+      CYL(g, 2, 2.6, 3, 12, ST, 0, 0.6, 0); CYL(g, 5, 2, 1, 16, ST, 0, 3.6, 0); CYL(g, 4.8, 4.8, 0.3, 16, WATER, 0, 4.35, 0, NE);   // tier 2
+      CYL(g, 0.9, 1.2, 2.2, 8, ST, 0, 4.6, 0); CYL(g, 2.4, 0.9, 0.7, 12, ST, 0, 6.8, 0); CYL(g, 2.3, 2.3, 0.2, 12, WATER, 0, 7.35, 0, NE);   // tier 3
+      CYL(g, 0.3, 0.5, 1.4, 8, ST, 0, 7.5, 0); CYL(g, 0.08, 1.6, 2.6, 8, SPRAY, 0, 8.9, 0, { open: true, edge: false });     // top spout + spray
+      return g; } });
+  def({ key: 'plazaTile', name: 'Plaza paving tile', cat: 'City centre', part: 2, budget: 40, size: '10 \u00d7 10 m', opts: { pattern: choices('Pattern', ['grid', 'stripes', 'border']) },
+    make(o) { const g = new THREE.Group(), p = o.pattern || 'grid'; B(g, 10, 0.2, 10, PAVE, 0, 0, 0, { shadow: false });
+      if (p === 'grid') for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) if ((i + j) % 2) flat2(g, 2.5, 2.5, PAVE2, -3.75 + i * 2.5, 0.21, -3.75 + j * 2.5);
+      if (p === 'stripes') for (let i = 0; i < 5; i++) if (i % 2) flat2(g, 2, 10, PAVE2, -4 + i * 2, 0.21, 0);
+      if (p === 'border') { flat2(g, 10, 0.8, PAVE2, 0, 0.21, 4.6); flat2(g, 10, 0.8, PAVE2, 0, 0.21, -4.6); flat2(g, 0.8, 8.4, PAVE2, 4.6, 0.21, 0); flat2(g, 0.8, 8.4, PAVE2, -4.6, 0.21, 0); }
+      return g; } });
+  def({ key: 'raisedPlanter', name: 'Raised planter', cat: 'City centre', part: 2, budget: 300, size: '4 \u00d7 4 m', opts: { kind: choices('Tree', ['canopy', 'pink', 'purple', 'cypress']) },
+    make(o) { const g = new THREE.Group(); B(g, 4, 0.9, 4, '#e2dccd', 0, 0, 0); B(g, 3.5, 0.05, 3.5, '#6b4f3a', 0, 0.9, 0, FLAT);
+      [[0, 2.05, 0], [0, -2.05, 0], [2.05, 0, Math.PI / 2], [-2.05, 0, Math.PI / 2]].forEach(([x, z, ry]) => B(g, 4.2, 0.1, 0.5, PAL.wood, x, 0.9, z, { ry, edge: false }));   // wooden seat edge
+      tree(g, 0, 0.9, 0, o.kind || 'canopy', 0.9); [[-1.2, 1.2], [1.2, -1.2], [1.2, 1.2]].forEach(([x, z]) => ICO(g, 0.4, 0, PAL.leaf2, x, 1.25, z, NE));
+      return g; } });
+  def({ key: 'publicClock', name: 'Public clock', cat: 'City centre', part: 2, budget: 350, size: '7.5 m tall', night: true, opts: {},
+    make() { const g = new THREE.Group(), IR = '#2f3e3a', FACE = glowMat('#f6f3ea', '#fff3c4');
+      B(g, 1.6, 0.6, 1.6, '#e2dccd', 0, 0, 0); CYL(g, 0.18, 0.26, 5.2, 8, IR, 0, 0.6, 0, NE);
+      B(g, 1.5, 1.5, 1.5, IR, 0, 5.8, 0); TAPER(g, 1.6, 0.9, 1.6, IR, 0, 7.3, 0, { tw: 0.2, td: 0.2 }); BALL(g, 0.18, '#e2b04a', 0, 8.3, 0, NE);
+      [0, 1, 2, 3].forEach(k => { const s = grp(g, 0, 0, 0, k * Math.PI / 2);
+        put(s, geo('clockface', () => new THREE.CircleGeometry(1, 12)), FACE, 0, 6.55, 0.77, { edge: true, s: [0.62, 0.62, 1], shadow: false });
+        B(s, 0.06, 0.42, 0.02, PAL.iron, 0, 6.55, 0.79, FLAT); B(s, 0.34, 0.06, 0.02, PAL.iron, 0.17, 6.55, 0.79, FLAT); });    // 10:10-ish hands
+      [['STADIUM', 0.3], ['BEACH', 2.2], ['CENTRAL', 4.1]].forEach(([t, a], i) => { const s = grp(g, 0, 3.0 + i * 0.6, 0, a);
+        TAPER(s, 1.8, 0.4, 0.06, '#2f7a68', 1.0, 0, 0, { tw: 1, td: 1 }, NE); P(s, 1.6, 0.32, textMat(t, '#2f7a68', '#f6f3ea'), 1.0, 0.04, 0.04); });
+      return g; } });
+
+  // ---- 6. transport hub: metro / train station + covered bus bay ----
+  def({ key: 'metroStation', name: 'Metro station', cat: 'Transport', part: 2, budget: 1200, size: '90 \u00d7 40 m', night: true, opts: { name: { label: 'Name', choices: ['VINLAND CENTRAL', 'DOWNTOWN', 'STADIUM'] } },
+    make(o) { const g = new THREE.Group(), ST = '#e9e3d6', W = 34, D = 20, zH = 8;
+      B(g, 90, 0.2, 40, PAVE, 0, 0, 0, { shadow: false });
+      B(g, W, 9, D, ST, 0, 0.2, zH, { edge: false });                                                      // the hall
+      [[W, D, 0], [W, D, Math.PI]].forEach(([fw, fd, ry]) => { const s = grp(g, 0, 0, zH, ry); P(s, fw - 4, 7.6, glassWall('#9cc7b8', (fw - 4) / 3, 3), 0, 0.6, fd / 2 + 0.02); });
+      const roof = grp(g, 0, 9.2, zH); put(roof, geo('barrel', () => { const ge = new THREE.CylinderGeometry(1, 1, 1, 12, 1, true, -Math.PI / 2, Math.PI); ge.rotateZ(Math.PI / 2); return ge; }), glowMat('#9fc9dc', '#ffe2a8'), 0, 0, 0, { s: [W + 2, D / 2 + 1, D / 2 + 1], edge: true });   // glass barrel roof
+      [-1, 1].forEach(s => B(g, 1.4, 10.4, D + 1, ST, s * (W / 2 + 0.2), 0.2, zH));
+      B(g, 22, 2.2, 0.5, '#2f2b28', 0, 9.4 - 2.4, zH + D / 2 + 0.6); P(g, 21, 1.8, textMat(o.name || 'VINLAND CENTRAL', '#2f2b28', '#f6d27a'), 0, 7.2, zH + D / 2 + 0.87);
+      P(g, 8, 4.6, glowMat(PAL.glassWarm, '#ffcf6a'), 0, 0.6, zH + D / 2 + 0.05);                       // doors
+      CYL(g, 1.4, 1.4, 0.2, 10, '#2f7a68', 13, 4.4, zH + D / 2 + 1.2, { rx: Math.PI / 2 }); P(g, 1.6, 1.6, textMat('M', '#2f7a68', '#f6f3ea'), 13, 3.6, zH + D / 2 + 1.32);   // metro roundel
+      // platform with a long canopy, two tracks
+      const zp = -8; B(g, 86, 1.1, 7, '#d9d2c4', 0, 0.2, zp); flat2(g, 86, 0.4, '#f2c53d', 0, 1.31, zp + 3.2); flat2(g, 86, 0.4, '#f2c53d', 0, 1.31, zp - 3.2);
+      for (let i = 0; i < 10; i++) { const x = -40 + i * 8.9; B(g, 0.35, 5, 0.35, '#55504a', x, 1.3, zp, NE); }
+      TAPER(g, 86, 0.5, 9, '#f4f2ee', 0, 6.3, zp, { tw: 1, td: 0.85 });                                  // canopy
+      for (let i = 0; i < 8; i++) B(g, 2.4, 0.15, 0.6, glowMat('#f4f1e8', '#ffffff'), -36 + i * 10.3, 6.15, zp, { edge: false, shadow: false });   // canopy lights
+      [zp + 6, zp - 6].forEach(z => { [-0.75, 0.75].forEach(dz => B(g, 88, 0.16, 0.12, '#9aa3a8', 0, 0.3, z + dz, FLAT));
+        for (let i = 0; i < 30; i++) flat2(g, 0.5, 2.4, '#7a5a3a', -43 + i * 2.95, 0.23, z); });             // rails + sleepers
+      [-30, -10, 10, 30].forEach(x => B(g, 2.4, 0.45, 0.6, PAL.wood, x, 1.3, zp, NE));                      // benches
+      [-20, 20].forEach(x => { B(g, 0.12, 3.2, 0.12, PAL.iron, x, 1.3, zp + 2, NE); B(g, 3, 0.7, 0.12, PAL.iron, x, 4.5, zp + 2, NE); P(g, 2.8, 0.5, textMat('PLATFORM ' + (x < 0 ? 1 : 2), '#14233f', '#f6d27a'), x, 4.6, zp + 2.07); });
+      return g; } });
+  def({ key: 'busBay', name: 'Covered bus bay', cat: 'Transport', part: 2, budget: 500, size: '44 \u00d7 20 m', night: true, opts: {},
+    make() { const g = new THREE.Group();
+      B(g, 44, 0.2, 20, '#45474d', 0, 0, 0, { shadow: false });                                            // bus lanes
+      B(g, 40, 0.35, 5, '#d9d2c4', 0, 0.2, 0);                                                             // island platform
+      [-1, 1].forEach(s => { flat2(g, 40, 0.25, '#f2c53d', 0, 0.21, s * 5.5); for (let i = 0; i < 3; i++) flat2(g, 0.25, 4, '#f6f3ea', -13 + i * 13, 0.21, s * 7.5); });
+      for (let i = 0; i < 6; i++) B(g, 0.35, 4.2, 0.35, '#55504a', -17 + i * 6.8, 0.55, 0, NE);
+      TAPER(g, 42, 0.5, 9, '#2f7a68', 0, 4.75, 0, { tw: 1, td: 0.88 });                                    // long canopy over both sides
+      for (let i = 0; i < 6; i++) B(g, 2.4, 0.15, 0.6, glowMat('#f4f1e8', '#ffffff'), -17 + i * 6.8, 4.6, 0, { edge: false, shadow: false });
+      [1, 2, 3].forEach((n, i) => { const x = -13 + i * 13; B(g, 0.1, 2.6, 0.1, PAL.iron, x, 0.55, 2.2, NE); B(g, 0.9, 0.9, 0.08, '#3f7fbf', x, 3.1, 2.2, NE); P(g, 0.8, 0.8, textMat(String(n), '#3f7fbf', '#f6f3ea'), x, 3.15, 2.25);
+        B(g, 3, 0.45, 0.6, PAL.wood, x + 3, 0.55, -1.2, NE); P(g, 3.6, 2, '#bfe0ea', x + 3, 0.55, -1.7, { edge: true }); });
+      return g; } });
+
+  // ================= DOWNTOWN: "Brooklyn x Vinland" (Dev OK'd the direction, 15 Nov) =================
+  // Brick rows, brownstones, warehouses and art deco stone in OUR colours. No textures, no new glass towers.
+  // Everything uses shared cached materials, so 5+ copies batch into one draw in the layout.
+  // Night: windows glow warm (setNight).
+  const BK = {
+    WIN: glowMat(PAL.glass, '#ffcf6a'), WINOFF: glowMat(PAL.glass, '#4a3f2c'), SHOPGL: glowMat('#5f7f86', '#ffd98a'), DOOR: PAL.shutter, FRAME: PAL.cream, DARK: '#3a2a20', IRON: '#2b2b2e',
+    bricks: { brownstone: ['#8a5a3c', '#7a4a33', '#9a6848', '#6f4632'], red: ['#a8473a', '#96402f', '#b5583f', '#8c3b2e'], mixed: ['#8a5a3c', '#b5583f', '#7a4a33', '#a8473a'] },
+    awnings: { mix: [PAL.terra, '#c9922e', PAL.shutter, PAL.terra2], terracotta: [PAL.terra, PAL.terra2, PAL.terra, PAL.terra2], mustard: ['#c9922e', '#d4a23a', '#c9922e', '#d4a23a'], green: [PAL.shutter, '#3f5e42', PAL.shutter, '#3f5e42'] }
+  };
+  const winAt = (x, y, z) => (Math.abs(Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453) % 1) < 0.72 ? BK.WIN : BK.WINOFF;   // about 7 in 10 windows lit at night (fixed pattern, shared materials)
+  const awning = (p, w, c, x, y, z) => put(p, geo('box', () => new THREE.BoxGeometry(1, 1, 1)), c, x, y, z, { rx: 0.4, s: [w, 0.12, 1.7] });   // sloped shop awning, top edge at the wall
+
+  // 1. brownstoneRow: 4 attached brownstones, 4 floors, 24 x 12 m. Ground floor shop on/off.
+  //    o.bricks: 'brownstone' | 'red' | 'mixed'; o.awnings: 'mix' | 'terracotta' | 'mustard' | 'green'; o.shop: 'on' | 'off';
+  //    o.sign: one shop name (first house) or o.signs: ['A', 'B', 'C', 'D'] (one per house). Front = +z.
+  def({ key: 'brownstoneRow', name: 'Brownstone row', cat: 'Shelved', part: 2, budget: 700, size: '4 houses · 24 × 12 m · 4 floors', night: true,
+    opts: { bricks: choices('Bricks', ['brownstone', 'red', 'mixed']), awnings: choices('Awnings', ['mix', 'terracotta', 'mustard', 'green']), shop: choices('Shops', ['on', 'off']), sign: { label: 'Sign', choices: ['', 'CAFÉ', 'BAKERY', 'BOOKS'] } },
+    make(o) {
+      const g = new THREE.Group(), set = BK.bricks[o.bricks] || BK.bricks.brownstone, aw = BK.awnings[o.awnings] || BK.awnings.mix, shop = o.shop !== 'off';
+      const signs = o.signs || (o.sign ? [o.sign] : []), W = 6, D = 12, FH = 3.3, H = 4 * FH + 0.4, zf = D / 2;
+      for (let i = 0; i < 4; i++) { const x = -9 + i * W;
+        B(g, W, H, D, set[i], x, 0, 0);                                                              // the house
+        B(g, W + 0.2, 0.75, 0.7, BK.DARK, x, H - 0.1, zf - 0.15);                                    // dark cornice
+        for (let f = 1; f < 4; f++) { const y = f * FH + 0.55;                                       // upper windows: cream frame, glass, lintel band
+          [-1.4, 1.4].forEach(k => { P(g, 1.35, 2.0, BK.FRAME, x + k, y - 0.15, zf + 0.02); P(g, 1.0, 1.65, winAt(x + k, y, i), x + k, y, zf + 0.04); P(g, 1.0, 1.5, winAt(x - k, y, i + 9), x + k, y, -zf - 0.03, { ry: Math.PI }); });
+          B(g, W - 0.6, 0.18, 0.18, BK.FRAME, x, y + 1.95, zf + 0.06, NE); }
+        if (shop) {                                                                                  // shop: window, awning, sign board, door to the flats upstairs
+          P(g, 3.9, 2.5, BK.FRAME, x - 0.75, 0.15, zf + 0.02); P(g, 3.6, 2.2, BK.SHOPGL, x - 0.75, 0.3, zf + 0.04);
+          awning(g, 4.3, aw[i], x - 0.75, 3.0, zf + 0.75);
+          B(g, 4.2, 0.55, 0.12, BK.DARK, x - 0.75, 3.35, zf + 0.06, NE);
+          if (signs[i]) P(g, 4.0, 0.45, textMat(String(signs[i]).toUpperCase(), BK.DARK, '#f6d27a'), x - 0.75, 3.4, zf + 0.13);
+          P(g, 1.0, 2.3, BK.DOOR, x + 2.15, 0.2, zf + 0.03);
+        } else {                                                                                     // house: stoop up to a green front door
+          TAPER(g, 1.5, 1.1, 2.4, '#b9a68a', x + 1.55, 0, zf + 1.2, { tw: 1, td: 0.12, tz: -0.44 });
+          P(g, 1.4, 2.6, BK.FRAME, x + 1.55, 1.05, zf + 0.02); P(g, 1.05, 2.3, BK.DOOR, x + 1.55, 1.1, zf + 0.04);
+          P(g, 1.35, 1.6, BK.FRAME, x - 1.4, 1.05, zf + 0.02); P(g, 1.0, 1.3, BK.WIN, x - 1.4, 1.2, zf + 0.04);
+        }
+      }
+      return g;
+    } });
+
+  // 2. brickWarehouse: red-brick warehouse, 6 floors, arched window grid, café front + big doors, wooden water tower.
+  //    o.brick: colour; o.waterTower: 'on' | 'off'. 30 x 22 m. Front = +z, windows also on the +x side.
+  def({ key: 'brickWarehouse', name: 'Brick warehouse', cat: 'Shelved', part: 2, budget: 900, size: '30 × 22 m · 6 floors · water tower', night: true,
+    opts: { brick: colours('Brick', ['#a8473a', '#8c3b2e', '#9a6848', '#b5583f']), waterTower: choices('Water tower', ['on', 'off']) },
+    make(o) {
+      const g = new THREE.Group(), BR = slot('brick', o.brick || '#a8473a'), W = 30, D = 22, FH = 3.8, H = 6 * FH;
+      B(g, W, H, D, BR, 0, 0, 0);
+      B(g, W + 0.5, 1, D + 0.5, BK.DARK, 0, H, 0); B(g, W + 0.3, 0.35, D + 0.3, BK.FRAME, 0, FH - 0.2, 0, NE);   // cornice, stone band over the ground floor
+      const arched = (s, x, y) => { const m = winAt(x, y, s.parent.rotation.y); P(s, 2.0, 2.0, m, x, y, 0.03); ARCH(s, 2.0, m, x, y + 2.0, 0.03); };
+      [[W, D / 2, 0, 6], [D, W / 2, Math.PI / 2, 4]].forEach(([fw, fz, ry, n]) => { const s = grp(g, 0, 0, 0, ry); const s2 = grp(s, 0, 0, fz);
+        for (let f = 1; f < 6; f++) for (let i = 0; i < n; i++) arched(s2, -fw / 2 + (i + 0.5) * fw / n, f * FH + 0.5); });
+      // ground: café on the left, big loading doors on the right
+      P(g, 12, 2.8, BK.FRAME, -7, 0.15, D / 2 + 0.02); P(g, 11.4, 2.5, BK.SHOPGL, -7, 0.3, D / 2 + 0.04);
+      awning(g, 12.4, PAL.shutter, -7, 3.15, D / 2 + 0.75);
+      [-10, -4].forEach(x => { CYL(g, 0.5, 0.5, 0.05, 8, PAL.cream, x, 0.95, D / 2 + 2.2, NE); B(g, 0.1, 0.95, 0.1, BK.IRON, x, 0, D / 2 + 2.2, FLAT); });   // café tables
+      [5.5, 10.5].forEach(x => { P(g, 3.6, 2.6, '#5a3c28', x, 0.2, D / 2 + 0.03); ARCH(g, 3.6, '#5a3c28', x, 2.8, D / 2 + 0.03); });   // loading doors
+      B(g, 12, 0.9, 1.6, '#8a8076', 8, 0, D / 2 + 0.8, NE);                                        // loading dock
+      B(g, 4, 2.6, 4, BR, -9, H + 1, -5);                                                          // stair hut on the roof
+      if (o.waterTower !== 'off') { const t = grp(g, 6, H + 1, -3), WD = '#8a6a46';                 // the wooden water tower
+        [[-1.6, -1.6], [1.6, -1.6], [-1.6, 1.6], [1.6, 1.6]].forEach(([x, z]) => B(t, 0.2, 4, 0.2, BK.IRON, x, 0, z, FLAT));
+        B(t, 4.2, 0.25, 4.2, BK.IRON, 0, 4, 0, NE);
+        CYL(t, 2.1, 2.2, 4.4, 8, WD, 0, 4.25, 0, { open: true });
+        [5.3, 7.4].forEach(y => CYL(t, 2.25, 2.25, 0.18, 8, BK.IRON, 0, y, 0, { open: true, edge: false }));
+        CYL(t, 0.15, 2.5, 1.8, 8, BK.DARK, 0, 8.65, 0, { open: true }); }
+      return g;
+    } });
+
+  // 3. brickCorner: corner brick block, 6 floors, 24 x 24 m. Shops with awnings on the two street faces (+z and +x),
+  //    black zig-zag fire escapes on the +x side. o.brick, o.awning.
+  def({ key: 'brickCorner', name: 'Brick corner block', cat: 'Shelved', part: 2, budget: 900, size: '24 × 24 m · 6 floors · fire escapes', night: true,
+    opts: { brick: colours('Brick', ['#9a4a3a', '#8a5a3c', '#a8473a', '#7a4a33']), awning: colours('Awnings', [PAL.terra, '#c9922e', PAL.shutter, PAL.terra2]) },
+    make(o) {
+      const g = new THREE.Group(), BR = slot('brick', o.brick || '#9a4a3a'), AW = slot('awning', o.awning || PAL.terra), S = 24, FH = 3.4, H = 6 * FH;
+      B(g, S, H, S, BR, 0, 0, 0); B(g, S + 0.5, 0.9, S + 0.5, BK.DARK, 0, H, 0); B(g, S + 0.3, 0.3, S + 0.3, BK.FRAME, 0, FH - 0.2, 0, NE);
+      [0, Math.PI / 2].forEach(ry => { const s = grp(g, 0, 0, 0, ry), f2 = grp(s, 0, 0, S / 2);
+        for (let f = 1; f < 6; f++) for (let i = 0; i < 6; i++) { const x = -S / 2 + (i + 0.5) * S / 6; P(f2, 1.7, 2.1, BK.FRAME, x, f * FH + 0.45, 0.02); P(f2, 1.35, 1.8, winAt(x, f, ry), x, f * FH + 0.6, 0.04); }
+        for (let i = 0; i < 3; i++) { const x = -S / 2 + (i + 0.5) * S / 3; P(f2, 6.6, 2.5, BK.FRAME, x, 0.15, 0.02); P(f2, 6.2, 2.2, BK.SHOPGL, x, 0.3, 0.04); awning(f2, 7, AW, x, 3.0, 0.75); } });
+      // fire escapes on the +x face: a platform, railing and a stair on each floor, zig-zagging down
+      [-6, 6].forEach(zc => { const fe = grp(g, S / 2, 0, zc);
+        for (let f = 1; f < 6; f++) { const y = f * FH + 0.2;
+          B(fe, 1.4, 0.12, 4.6, BK.IRON, 0.7, y, 0, NE); P(fe, 4.6, 0.95, BK.IRON, 1.4, y + 0.12, 0, { ry: Math.PI / 2, edge: false });
+          if (f > 1) strut(fe, [0.75, y, (f % 2 ? -1.9 : 1.9)], [0.75, y - FH + 0.12, (f % 2 ? 1.9 : -1.9)], 0.18, BK.IRON); }
+        B(fe, 0.08, FH, 0.5, BK.IRON, 1.2, 0.2 + FH * 0.1, 1.6, FLAT); });                          // drop ladder
+      return g;
+    } });
+
+  // 4. decoMidrise: art deco stone mid-rise, 8 / 10 / 12 floors, 22 x 22 m. Stepped setbacks, copper dome, deco fins,
+  //    green shutters on the lower floors. o.floors, o.stone.
+  def({ key: 'decoMidrise', name: 'Art deco mid-rise', cat: 'Shelved', part: 2, budget: 1100, size: '22 × 22 m · 8–12 floors', night: true,
+    opts: { floors: choices('Floors', ['10', '8', '12']), stone: colours('Stone', [PAL.cream, PAL.sand, '#f0c9a8']) },
+    make(o) {
+      const g = new THREE.Group(), ST = slot('wall', o.stone || PAL.cream), n = Math.max(8, Math.min(12, +o.floors || 10)), FH = 3.5, W = 22, base = 5;
+      const T1 = n - 3, h1 = T1 * FH, COP = PAL.copper;
+      B(g, W, base, W, ST, 0, 0, 0); B(g, W + 0.6, 0.5, W + 0.6, COP, 0, base, 0, NE);             // tall ground floor + copper band
+      P(g, 4, 3.6, glowMat(PAL.glassWarm, '#ffcf6a'), 0, 0.2, W / 2 + 0.03); B(g, 7, 0.4, 2.4, COP, 0, 4.1, W / 2 + 1.2);   // door + canopy
+      [-7, 7].forEach(x => { P(g, 4, 3, BK.WIN, x, 1, W / 2 + 0.03); });
+      const tier = (w, y0, fl, cols, shut) => {                                                      // a block of floors with deco fins and windows on 4 faces
+        B(g, w, fl * FH, w, ST, 0, y0, 0);
+        [0, 1, 2, 3].forEach(k => { const s = grp(grp(g, 0, 0, 0, k * Math.PI / 2), 0, 0, w / 2);
+          for (let i = 1; i < cols; i++) B(s, 0.55, fl * FH, 0.5, ST, -w / 2 + i * w / cols, y0, 0.05, { edge: false });   // vertical fins between window columns
+          for (let f = 0; f < fl; f++) for (let i = 0; i < cols; i++) { const x = -w / 2 + (i + 0.5) * w / cols, y = y0 + f * FH + 0.7;
+            P(s, w / cols - 1.3, 2.2, winAt(x, y, k), x, y, 0.03);
+            if (shut && k === 0 && f < 3) [-1, 1].forEach(d => P(s, 0.55, 2.2, PAL.shutter, x + d * (w / cols - 1.3) / 2 + d * 0.32, y, 0.05)); } });
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => B(g, 1.1, fl * FH + 0.6, 1.1, ST, a * w / 2, y0, b * w / 2, NE));   // corner piers, a little proud
+        B(g, w + 0.5, 0.45, w + 0.5, COP, 0, y0 + fl * FH, 0, NE);                                    // copper band at the setback
+      };
+      tier(W - 1, base + 0.5, T1, 4, true); let y = base + 0.95 + h1;
+      tier(15, y, 2, 3, false); y += 2 * FH + 0.45;
+      tier(9, y, 1, 2, false); y += FH + 0.45;
+      put(g, geo('dome', () => new THREE.SphereGeometry(1, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2)), COP, 0, y, 0, { s: [3.8, 3.4, 3.8] });   // copper dome
+      CYL(g, 0.08, 0.3, 4, 6, COP, 0, y + 3.2, 0, NE);
+      return g;
+    } });
+
+  // 6. streetTram: small two-part tram, teal body, mustard roof stripe, pole up to the overhead wire. Static prop. 2.4 x 19 m.
+  def({ key: 'streetTram', name: 'Street tram', cat: 'Shelved', part: 2, budget: 400, size: '2.4 × 19 m · 2 cars', night: true, opts: {},
+    make() { const g = new THREE.Group(), TEAL = PAL.teal, MUST = '#d4a23a', HL = glowMat(PAL.lampOn, '#fff3c4');
+      [-4.9, 4.9].forEach((z, k) => { const c = grp(g, 0, 0, z);
+        B(c, 2.4, 1.3, 8.6, TEAL, 0, 0.45, 0); B(c, 2.4, 1.2, 8.6, '#f3ead6', 0, 1.75, 0);              // teal lower body, cream window band
+        [-1, 1].forEach(s => P(c, 7.8, 0.95, BK.WIN, s * 1.21, 1.9, 0, { ry: s * Math.PI / 2 }));       // windows
+        B(c, 2.3, 0.3, 8.4, TEAL, 0, 2.95, 0); B(c, 2.0, 0.12, 8.2, MUST, 0, 3.25, 0, NE);            // roof + mustard stripe
+        B(c, 2.0, 0.5, 6.4, '#2f2b28', 0, 0, 0, NE);                                                   // bogies
+        const end = k ? 1 : -1; P(c, 2.0, 0.9, BK.WIN, 0, 1.95, end * 4.32, { ry: k ? 0 : Math.PI }); P(c, 0.35, 0.2, HL, end * 0, 0.95, end * 4.32, { ry: k ? 0 : Math.PI }); });
+      B(g, 2.0, 2.6, 1.2, '#55504a', 0, 0.45, 0, NE);                                                  // the joint between the two cars
+      B(g, 0.8, 0.4, 1.2, '#2f2b28', 0, 3.25, 3.5, NE); strut(g, [0, 3.6, 3.5], [0, 6.2, -1.2], 0.1, '#2f2b28');   // pole up to the overhead wire
+      B(g, 0.06, 0.06, 6, '#2f2b28', 0, 6.25, -1.2, FLAT);                                              // a short bit of the wire
+      return g; } });
+
+  // 7. streetTree: tree in a square pavement pit, very cheap, for 100+ copies. o.kind: 'green' | 'pink'.
+  def({ key: 'streetTree', name: 'Street tree', cat: 'Shelved', part: 2, budget: 80, size: '1.8 m pit · 6 m tall', opts: { kind: choices('Tree', ['green', 'pink']) },
+    make(o) { const g = new THREE.Group(), leaf = o.kind === 'pink' ? PAL.pink : PAL.leaf;
+      B(g, 1.8, 0.14, 1.8, '#bdb5a6', 0, 0, 0, { shadow: false }); put(g, geo('pane', () => new THREE.PlaneGeometry(1, 1)), '#6b4f3a', 0, 0.15, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [1.4, 1.4, 1] }));
+      CYL(g, 0.14, 0.2, 3, 5, PAL.wood, 0, 0.1, 0, { edge: false, open: true });
+      ICO(g, 2.1, 0, leaf, 0, 4.4, 0); return g; } });
+
+  // ================= DOWNTOWN: "Vinland Capital" (Dev OK'd, 15 Nov) =================
+  // Our own old town grown into a capital: cream / peach / ochre walls, terracotta roofs, arches, green shutters,
+  // blossom trees, canals. No glass towers. All materials are shared, so 5+ copies batch into one draw in the layout.
+  // Night: windows glow warm (about 7 in 10 lit), string lights, lanterns and stage lights glow (setNight). Front = +z.
+  const CP = {
+    STONE: '#e6dac2', PAVE: '#e6dccb', SHADE: '#9a7a5c', ROOF: PAL.terra, IRON: '#2f2b28',
+    BULB: glowMat('#fff0c0', '#ffd27a'), LAMP: glowMat(PAL.lampOn, '#ffd98a'),
+    GLASS_SEE: (() => { const m = new THREE.MeshToonMaterial({ color: '#a8d4e2', gradientMap: grad, transparent: true, opacity: 0.35, depthWrite: false }); m.userData.glow = '#6a5a3a'; return m; })(),
+    walls: { warm: [PAL.cream, '#f2cfb3', '#e8c27a', '#ecc3b0'], cream: [PAL.cream, '#f6f0e2', '#efe3c8', PAL.cream], peach: ['#f2cfb3', '#f0c4a4', '#f5d6bc', '#eebfa0'],
+      ochre: ['#e8c27a', '#ddb066', '#e9cb8a', '#d9a85a'], pastel: [PAL.cream, '#f6d3bd', '#f3e2a0', '#cfe3c8'] },
+    awnings: { mix: [PAL.terra, '#c9922e', PAL.shutter, '#d88fb0'], terracotta: [PAL.terra, PAL.terra2, PAL.terra, PAL.terra2], mustard: ['#c9922e', '#d4a23a', '#c9922e', '#d4a23a'],
+      green: [PAL.shutter, '#3f5e42', PAL.shutter, '#3f5e42'], rose: ['#d88fb0', '#c97a9a', '#d88fb0', '#c97a9a'] }
+  };
+  // an arch panel: the wall above an opening, with a true round hole (see-through). w = opening width, T = height above the springline.
+  const spGeo = (w, T) => geo('spand' + w + '_' + T, () => { const s = new THREE.Shape(), r = w / 2; s.moveTo(-r, 0); s.lineTo(-r, T); s.lineTo(r, T); s.lineTo(r, 0); s.absarc(0, 0, r, 0, Math.PI, false); return new THREE.ShapeGeometry(s, 6); });
+  const SPAN = (p, w, T, m, x, y, z, o) => put(p, spGeo(w, T), m, x, y, z, Object.assign({ edge: true }, o));   // y = springline
+  // window with a stone frame and green shutters (8 tris); glass from winAt so copies batch and about 7 in 10 glow at night
+  const sWin = (p, x, y, z, w, h, shut) => { P(p, w + 0.3, h + 0.3, CP.STONE, x, y - 0.15, z + 0.02); P(p, w, h, winAt(x, y, z), x, y, z + 0.04);
+    if (shut !== false) [-1, 1].forEach(s => P(p, w * 0.48, h, PAL.shutter, x + s * (w * 0.74 + 0.15), y, z + 0.05)); };
+  const bar = (p, w, x, y, z, ry) => B(p, w, 0.07, 0.07, CP.IRON, x, y, z, Object.assign({}, FLAT, { ry }));   // a thin railing bar
+  const plant = (p, x, y, z, c) => oct(p, 0.3, c || PAL.leaf2, x, y + 0.3, z, { s: [0.32, 0.3, 0.32] });
+  const stripes = (p, w, n, c1, c2, x, y, z, d) => { for (let i = 0; i < n; i++) put(p, geo('box', () => new THREE.BoxGeometry(1, 1, 1)), i % 2 ? c2 : c1, x - w / 2 + (i + 0.5) * w / n, y, z, { rx: 0.42, s: [w / n, 0.1, d || 1.6], edge: false }); };   // striped awning
+  const signBoard = (p, w, text, x, y, z) => { B(p, w, 0.55, 0.1, BK.DARK, x, y, z, FLAT); if (text) P(p, w - 0.2, 0.45, textMat(String(text).toUpperCase(), BK.DARK, '#f6d27a'), x, y + 0.05, z + 0.06); };
+  const signList = o => o.signs || [o.sign1, o.sign2, o.sign3, o.sign4].map(s => s || '');
+
+  // 1. arcadeRow: 4 shop-houses, 24 x 12 m, covered arcade with real arches along the front, one shop per bay,
+  //    homes above (floors 3 or 4 in total), balconies with plants, green shutters, string lights between the arches.
+  //    o.walls: 'warm' | 'cream' | 'peach' | 'ochre'; o.signs: [4 names] (or sign1..sign4); o.lights: 'on' | 'off'; o.floors: '3' | '4'.
+  def({ key: 'arcadeRow', name: 'Arcade row', cat: 'Downtown', part: 2, budget: 900, size: '4 shop-houses · 24 × 12 m · 3–4 floors', night: true,
+    opts: { walls: choices('Walls', ['warm', 'cream', 'peach', 'ochre']), floors: choices('Floors', ['3', '4']), lights: choices('String lights', ['on', 'off']), sign1: { label: 'Shop sign', choices: ['', 'CAFÉ', 'BAKERY', 'TAILOR'] } },
+    make(o) {
+      const g = new THREE.Group(), set = CP.walls[o.walls] || CP.walls.warm, signs = signList(o), nUp = (+o.floors || 3) - 1, GF = 4.6, FH = 3.2, H = GF + nUp * FH, D = 12, zf = 6, zs = 3.2;
+      B(g, 24, 0.12, zf - zs, CP.PAVE, 0, 0, (zf + zs) / 2, { shadow: false });                    // arcade floor
+      for (let i = 0; i < 4; i++) { const x = -9 + i * 6, c = set[i];
+        B(g, 6, nUp * FH, D, c, x, GF, 0);                                                           // homes above
+        B(g, 6, GF, zs + zf, c, x, 0, (zs - zf) / 2);             // shop behind the arcade (front at zs)
+        SPAN(g, 4.4, GF - 2.4, c, x, 2.4, zf);                                                       // the arch over this bay
+        P(g, 2.8, 2.3, BK.SHOPGL, x - 0.8, 0.35, zs + 0.03); P(g, 1.0, 2.4, PAL.shutter, x + 1.8, 0.12, zs + 0.03);
+        signBoard(g, 3.4, signs[i], x - 0.4, 2.85, zs + 0.04);
+        for (let f = 0; f < nUp; f++) { const y = GF + f * FH + 0.75; [-1.45, 1.45].forEach(k => sWin(g, x + k, y, zf, 1.0, 1.7)); P(g, 1.0, 1.5, winAt(x, y, -1), x, y, -zf - 0.03, { ry: Math.PI }); }
+        B(g, 4.2, 0.16, 0.9, CP.STONE, x, GF + 0.02, zf + 0.45, NE); bar(g, 4.2, x, GF + 0.95, zf + 0.86);   // balcony on the first floor
+        plant(g, x - 1.6, GF + 0.18, zf + 0.5, i % 2 ? PAL.pink : PAL.leaf2); plant(g, x + 1.6, GF + 0.18, zf + 0.5);
+        if (o.lights !== 'off') { for (let k = 0; k < 4; k++) { const t = (k + 0.5) / 4; oct(g, 0.09, CP.BULB, x - 2.1 + 4.2 * t, 2.45 - 0.35 * (1 - Math.pow(2 * t - 1, 2)), zf + 0.15); } }
+      }
+      for (let i = 0; i <= 4; i++) { const px = i === 0 ? -11.2 : i === 4 ? 11.2 : -12 + i * 6; B(g, 1.6, GF, 0.8, set[Math.min(3, i)], px, 0, zf - 0.4); }   // piers between the arches
+      B(g, 24.2, 0.3, 0.4, CP.STONE, 0, GF, zf + 0.05, NE);                                          // band over the arcade
+      B(g, 24.4, 0.45, D + 0.5, CP.STONE, 0, H, 0, NE);                                              // cornice
+      GABLE(g, D + 0.8, 2.4, 24.6, CP.ROOF, 0, H + 0.45, 0, { ry: Math.PI / 2 });                     // terracotta roof
+      return g;
+    } });
+
+  // 2. blossomShopHouse: 4 narrow terraced shop-houses for a walking street, 20 x 10 m, no arcade. Café / small shop with a
+  //    striped awning and an outdoor table, homes above, flower balconies, pastel walls, two heights so the row steps.
+  //    o.walls: 'pastel' | 'warm' | 'peach'; o.awnings: 'mix' | 'terracotta' | 'mustard' | 'green' | 'rose'; o.signs.
+  def({ key: 'blossomShopHouse', name: 'Shop-houses (walking street)', cat: 'Downtown', part: 2, budget: 900, size: '4 shop-houses · 20 × 10 m · 3–4 floors', night: true,
+    opts: { walls: choices('Walls', ['pastel', 'warm', 'peach']), awnings: choices('Awnings', ['mix', 'terracotta', 'mustard', 'green', 'rose']), sign1: { label: 'Shop sign', choices: ['', 'CAFÉ', 'FLOWERS', 'GELATO'] } },
+    make(o) {
+      const g = new THREE.Group(), set = CP.walls[o.walls] || CP.walls.pastel, aw = CP.awnings[o.awnings] || CP.awnings.mix, signs = signList(o), zf = 5, FH = 3.1, GF = 3.8;
+      for (let i = 0; i < 4; i++) { const x = -7.5 + i * 5, c = set[i], fl = i % 2 ? 4 : 3, H = GF + (fl - 1) * FH;
+        B(g, 5, H, 10, c, x, 0, 0);
+        P(g, 2.6, 2.3, BK.SHOPGL, x - 0.7, 0.35, zf + 0.03); P(g, 0.95, 2.4, PAL.shutter, x + 1.6, 0.1, zf + 0.03);
+        stripes(g, 4.4, 4, aw[i], PAL.cream, x, 2.95, zf + 0.72, 1.5);                              // striped awning
+        signBoard(g, 3.2, signs[i], x - 0.4, 3.25, zf + 0.04);
+        CYL(g, 0.45, 0.45, 0.05, 6, PAL.cream, x - 0.7, 0.8, zf + 2.3, { edge: false }); B(g, 0.08, 0.8, 0.08, CP.IRON, x - 0.7, 0, zf + 2.3, FLAT);   // outdoor table
+        for (let f = 0; f < fl - 1; f++) { const y = GF + f * FH + 0.65; [-1.2, 1.2].forEach(k => sWin(g, x + k, y, zf, 0.9, 1.5, f < 2)); P(g, 0.9, 1.4, winAt(x, y, -2), x, y, -zf - 0.03, { ry: Math.PI }); }
+        B(g, 3.6, 0.15, 0.7, CP.STONE, x, GF + 0.02, zf + 0.35, NE); bar(g, 3.6, x, GF + 0.9, zf + 0.68);   // flower balcony
+        plant(g, x - 1.3, GF + 0.17, zf + 0.4, PAL.pink); plant(g, x + 1.3, GF + 0.17, zf + 0.4, '#f2c14e');
+        B(g, 5.2, 0.35, 10.4, CP.STONE, x, H, 0, NE); GABLE(g, 10.6, 1.8, 5.2, CP.ROOF, x, H + 0.35, 0, { ry: Math.PI / 2 });
+      }
+      return g;
+    } });
+
+  // 3. palazzoBlock: courtyard apartment block, 50 x 50 m, 5-8 floors. A square ring of homes round an inner garden
+  //    (blossom trees, a small fountain), one big arched gate (front, +z), terracotta roofs, cornice, balconies, shutters.
+  def({ key: 'palazzoBlock', name: 'Palazzo block', cat: 'Downtown', part: 2, budget: 2500, size: '50 × 50 m · courtyard · 5–8 floors', night: true,
+    opts: { floors: choices('Floors', ['6', '5', '7', '8']), wall: colours('Walls', [PAL.cream, '#f2cfb3', '#e8c27a', '#ecc3b0']) },
+    make(o) {
+      const g = new THREE.Group(), n = Math.max(5, Math.min(8, +o.floors || 6)), W = o.wall || PAL.cream, GF = 4.2, FH = 3.3, H = GF + (n - 1) * FH, S = 25, Dw = 12, gw = 7;
+      const yOf = f => f === 0 ? 0.9 : GF + (f - 1) * FH + 0.75;
+      B(g, (S - gw / 2) - 0, H, Dw, W, -(S + gw / 2) / 2, 0, S - Dw / 2); B(g, S - gw / 2, H, Dw, W, (S + gw / 2) / 2, 0, S - Dw / 2);   // front wing either side of the gate
+      B(g, gw, H - 7.6, Dw, W, 0, 7.6, S - Dw / 2);                                                   // over the gate
+      SPAN(g, gw, 3.6, W, 0, 4, S); SPAN(g, gw, 3.6, W, 0, 4, S - Dw, { ry: Math.PI });             // the big arched gate, both faces
+      B(g, 2 * S, H, Dw, W, 0, 0, -S + Dw / 2); [-1, 1].forEach(s => B(g, Dw, H, 2 * S - 2 * Dw, W, s * (S - Dw / 2), 0, 0));   // back + side wings
+      // outer windows: shutters on the front, glass + frame on the other faces; balconies on the front
+      [[0, true], [Math.PI / 2, false], [Math.PI, false], [-Math.PI / 2, false]].forEach(([ry, front]) => { const s = grp(grp(g, 0, 0, 0, ry), 0, 0, S);
+        for (let i = 0; i < 10; i++) { const x = -22.5 + i * 5; if (front && Math.abs(x) < 5) continue;
+          for (let f = 0; f < n; f++) { const y = yOf(f);
+            if (front) { sWin(s, x, y, 0, 1.2, f ? 1.8 : 2.2, true); if (f >= 1 && f <= 3 && i % 3 === 1) { B(s, 2.6, 0.15, 0.8, CP.STONE, x, y - 0.75, 0.4, NE); bar(s, 2.6, x, y + 0.15, 0.78); plant(s, x + 0.9, y - 0.6, 0.45, PAL.pink); } }
+            else { P(s, 1.4, 2.0, CP.STONE, x, y - 0.12, 0.02); P(s, 1.1, f ? 1.75 : 2.1, winAt(x, y, ry), x, y, 0.04); } } } });
+      // courtyard windows (glass only)
+      [[0, S - Dw], [Math.PI / 2, S - Dw], [Math.PI, S - Dw], [-Math.PI / 2, S - Dw]].forEach(([ry, d]) => { const s = grp(grp(g, 0, 0, 0, ry), 0, 0, d);
+        for (let i = 0; i < 5; i++) { const x = -10 + i * 5; if (ry === 0 && i === 2) continue; for (let f = 0; f < n; f++) P(s, 1.1, 1.7, winAt(x, f, ry + 7), x, yOf(f), -0.03, { ry: Math.PI }); } });
+      // cornice + terracotta roofs
+      B(g, 2 * S + 1, 0.5, Dw + 1, CP.STONE, 0, H, S - Dw / 2, NE); B(g, 2 * S + 1, 0.5, Dw + 1, CP.STONE, 0, H, -S + Dw / 2, NE);
+      [-1, 1].forEach(s => B(g, Dw + 1, 0.5, 2 * S - 2 * Dw, CP.STONE, s * (S - Dw / 2), H, 0, NE));
+      [1, -1].forEach(s => GABLE(g, Dw + 1.2, 3.2, 2 * S + 1.2, CP.ROOF, 0, H + 0.5, s * (S - Dw / 2), { ry: Math.PI / 2 }));
+      [-1, 1].forEach(s => GABLE(g, Dw + 1.2, 3.2, 2 * S - 2 * Dw, CP.ROOF, s * (S - Dw / 2), H + 0.5, 0));
+      B(g, 2 * S + 0.4, 0.4, 0.4, CP.STONE, 0, GF, S + 0.05, NE);                                      // band over the ground floor (front)
+      // inner garden: grass, cross paths, fountain, blossom trees
+      const C = S - Dw; flat2(g, 2 * C, 2 * C, PAL.grass, 0, 0.06, 0); flat2(g, 3, 2 * C, CP.PAVE, 0, 0.08, 0); flat2(g, 2 * C, 3, CP.PAVE, 0, 0.08, 0);
+      CYL(g, 2.6, 2.8, 0.7, 12, CP.STONE, 0, 0, 0, { open: true }); CYL(g, 2.5, 2.5, 0.5, 12, glowMat(PAL.water, '#3f8fb0'), 0, 0.1, 0, NE); CYL(g, 0.3, 0.45, 1.8, 6, CP.STONE, 0, 0.6, 0, NE);
+      [[-7, -7], [7, -7], [-7, 7], [7, 7]].forEach(([x, z], i) => { CYL(g, 0.18, 0.25, 2.2, 5, PAL.wood, x, 0, z, { edge: false, open: true }); ICO(g, 2.2, 0, i % 2 ? PAL.leaf : PAL.pink, x, 3.6, z); });
+      return g;
+    } });
+
+  // 4. officePalazzo: a stone office building, 30 x 22 m, 6-10 floors. Rusticated base, tall windows between pilasters,
+  //    a strong cornice, terracotta or copper roof, grand arched entrance with steps, sign board, two flag poles. No balconies.
+  def({ key: 'officePalazzo', name: 'Office palazzo', cat: 'Downtown', part: 2, budget: 1100, size: '30 × 22 m · 6–10 floors', night: true,
+    opts: { floors: choices('Floors', ['8', '6', '10']), wall: colours('Stone', [PAL.cream, '#f2cfb3', '#e8c27a']), roof: choices('Roof', ['terracotta', 'copper']), sign: { label: 'Sign', choices: ['', 'VINLAND BANK', 'VINLAND POST'] } },
+    make(o) {
+      const g = new THREE.Group(), n = Math.max(6, Math.min(10, +o.floors || 8)), W = 30, D = 22, GF = 6, FH = 3.6, H = GF + (n - 1) * FH, ST = o.wall || PAL.cream;
+      B(g, W, GF, D, CP.STONE, 0, 0, 0); B(g, W, H - GF, D, ST, 0, GF, 0);
+      [[W, D, 0, 7], [D, W, Math.PI / 2, 5], [W, D, Math.PI, 7], [D, W, -Math.PI / 2, 5]].forEach(([fw, fd, ry, cols], k) => { const s = grp(grp(g, 0, 0, 0, ry), 0, 0, fd / 2);
+        for (let i = 1; i < cols; i++) B(s, 0.7, H - GF, 0.4, ST, -fw / 2 + i * fw / cols, GF, 0.1, { edge: false });   // pilasters
+        for (let f = 1; f < n; f++) for (let i = 0; i < cols; i++) { const x = -fw / 2 + (i + 0.5) * fw / cols; P(s, 1.8, 2.7, winAt(x, f, k), x, GF + (f - 1) * FH + 0.45, 0.04); }
+        for (let i = 0; i < cols; i++) { const x = -fw / 2 + (i + 0.5) * fw / cols; if (k === 0 && i === (cols - 1) / 2) continue; P(s, 2, 2.8, winAt(x, 0, k), x, 0.9, 0.04); ARCH(s, 2, winAt(x, 0, k), x, 3.7, 0.04); } });
+      B(g, W + 1.2, 0.5, D + 1.2, ST, 0, GF - 0.25, 0, NE);                                              // band over the base
+      B(g, W + 1.8, 1.1, D + 1.8, CP.STONE, 0, H, 0);                                                    // strong cornice
+      HIP(g, W + 1.2, 4.5, D + 1.2, o.roof === 'copper' ? PAL.copper : CP.ROOF, 0, H + 1.1, 0);
+      // grand entrance: arched doorway, steps, sign, flag poles
+      const DOORG = glowMat(PAL.glassWarm, '#ffcf6a');
+      P(g, 4.4, 5.2, CP.STONE, 0, 0.8, D / 2 + 0.05, { edge: true }); P(g, 3.4, 3.1, DOORG, 0, 0.8, D / 2 + 0.07); ARCH(g, 3.4, DOORG, 0, 3.9, D / 2 + 0.07);
+      for (let i = 0; i < 3; i++) B(g, 9 - i * 1.2, 0.27, 1, CP.STONE, 0, i * 0.27, D / 2 + 2.4 - i, NE);
+      B(g, 13, 0.85, 0.25, BK.DARK, 0, 5.75 - 0.1, D / 2 + 0.15, FLAT); if (o.sign) P(g, 12.6, 0.7, textMat(String(o.sign).toUpperCase(), BK.DARK, '#f6d27a'), 0, 5.72, D / 2 + 0.3);
+      [-5.5, 5.5].forEach((x, i) => { CYL(g, 0.08, 0.1, 9, 6, '#c9ced2', x, 0.8, D / 2 + 3, { edge: false, open: true }); B(g, 2, 1.25, 0.04, i ? PAL.copper : PAL.terra, x + 1.05, 8.3, D / 2 + 3, FLAT); });
+      return g;
+    } });
+
+  // 5. bigBusiness: one big-lot business, 40 x 30 m, 2-3 floors, warm stone + arches + terracotta. o.type: cinema | hotel |
+  //    supermarket | carShowroom | gym | garage. o.sign = the name on the big sign (default: the type).
+  const BIZ = { cinema: 'CINEMA', hotel: 'HOTEL', supermarket: 'MARKET', carShowroom: 'CAR SHOWROOM', gym: 'GYM', garage: 'GARAGE' };
+  def({ key: 'bigBusiness', name: 'Big business', cat: 'Downtown', part: 2, budget: 900, size: '40 × 30 m · 2–3 floors', night: true,
+    opts: { type: choices('Type', Object.keys(BIZ)), wall: colours('Stone', [PAL.cream, '#f2cfb3', '#e8c27a']), sign: { label: 'Sign', choices: ['', 'VINLAND'] } },
+    make(o) {
+      const g = new THREE.Group(), t = BIZ[o.type] ? o.type : 'cinema', ST = o.wall || PAL.cream, W = 40, D = 30, zf = 15, GF = 5.2, FH = 4, fl = t === 'hotel' ? 3 : 2, H = GF + (fl - 1) * FH;
+      const glassFront = t === 'supermarket' || t === 'carShowroom', deep = t === 'carShowroom' ? 10 : 0;
+      B(g, W, H, D - deep, ST, 0, 0, -deep / 2);                                                      // the building
+      if (deep) { B(g, W, 0.3, deep, CP.PAVE, 0, 0, zf - deep / 2, { shadow: false }); B(g, W + 0.4, 0.6, deep + 0.4, CP.STONE, 0, H - 0.6, zf - deep / 2);   // showroom hall: floor, roof
+        [-1, 1].forEach(s => B(g, 1, H - 0.6, deep, ST, s * (W / 2 - 0.5), 0, zf - deep / 2)); }
+      // upper floors: shuttered windows on the front, glass on the sides
+      for (let f = 1; f < fl; f++) for (let i = 0; i < 8; i++) { const x = -17.5 + i * 5; sWin(g, x, GF + (f - 1) * FH + 0.8, zf, 1.4, 2.2, t === 'hotel'); }
+      [-1, 1].forEach(s => { const sd = grp(g, s * W / 2, 0, 0, s * Math.PI / 2); for (let f = 0; f < fl; f++) for (let i = 0; i < 5; i++) P(sd, 1.6, 2.3, winAt(i, f, s), -12 + i * 6, (f ? GF + (f - 1) * FH : 0) + 1.2, 0.04); });
+      // ground floor front
+      if (glassFront) { P(g, W - 3, GF - 0.8, t === 'carShowroom' ? CP.GLASS_SEE : BK.SHOPGL, 0, 0.3, zf + 0.04, { edge: true }); for (let i = 1; i < 6; i++) B(g, 0.3, GF - 0.6, 0.3, CP.STONE, -W / 2 + i * W / 6, 0, zf, FLAT); }
+      else if (t === 'gym') { for (let i = 0; i < 6; i++) { const x = -16.5 + i * 6.6; P(g, 4, GF + FH - 2.6, BK.SHOPGL, x, 0.6, zf + 0.04); ARCH(g, 4, BK.SHOPGL, x, GF + FH - 2, zf + 0.04); } }
+      else if (t === 'garage') { [-12, 0, 12].forEach((x, i) => { P(g, 8, 4.4, i === 2 ? '#3a3a3a' : '#9aa3a8', x, 0.1, zf + 0.04, { edge: true }); if (i < 2) [1.4, 2.6, 3.8].forEach(y => B(g, 8, 0.06, 0.05, '#7d858a', x, y, zf + 0.07, FLAT)); }); }
+      else { for (let i = 0; i < 5; i++) { const x = -16 + i * 8; P(g, 4, 2.6, BK.SHOPGL, x, 0.5, zf + 0.04); ARCH(g, 4, BK.SHOPGL, x, 3.1, zf + 0.04); } }
+      B(g, W + 0.8, 0.5, 0.5, CP.STONE, 0, GF - 0.25, zf + 0.1, NE);
+      B(g, W + 1.4, 0.8, D + 1.4, CP.STONE, 0, H, 0, NE); HIP(g, W + 0.8, 2.6, D + 0.8, CP.ROOF, 0, H + 0.8, 0);   // cornice + roof
+      // the big sign on the roof front
+      const name = String(o.sign || BIZ[t]).toUpperCase(); B(g, 24, 3.2, 0.5, BK.DARK, 0, H + 0.6, zf - 0.6); P(g, 23, 2.6, textMat(name, BK.DARK, '#f6d27a'), 0, H + 0.9, zf - 0.33);
+      [-10, 10].forEach(x => B(g, 0.3, 3, 0.3, CP.IRON, x, H + 0.6, zf - 1.2, FLAT));
+      // type details
+      if (t === 'cinema') { B(g, 28, 1.6, 4, '#7a3a2e', 0, GF - 1.6, zf + 2); for (let i = 0; i < 14; i++) oct(g, 0.14, CP.BULB, -13.5 + i * (27 / 13), GF - 1.75, zf + 4.05);   // marquee with bulbs
+        [-14, 14].forEach(x => { B(g, 3, 4, 0.2, BK.DARK, x, 0.6, zf + 0.15, FLAT); P(g, 2.6, 3.6, glowMat('#d88fb0', '#a84a6a'), x, 0.8, zf + 0.27); }); }
+      if (t === 'hotel') { B(g, 10, 0.4, 6, CP.STONE, 0, 3.6, zf + 3); [-4.5, 4.5].forEach(x => B(g, 0.3, 3.6, 0.3, CP.IRON, x, 0, zf + 5.7, FLAT)); P(g, 3, 3, glowMat(PAL.glassWarm, '#ffcf6a'), 0, 0.2, zf + 0.06);
+        [-14, -10, 10, 14].forEach((x, i) => { CYL(g, 0.08, 0.1, 9, 6, '#c9ced2', x, 0, zf + 1.6, { edge: false, open: true }); B(g, 1.8, 1.1, 0.04, [PAL.terra, PAL.copper, '#c9922e', PAL.terra][i], x + 0.95, 7.6, zf + 1.6, FLAT); }); }
+      if (t === 'supermarket') for (let i = 0; i < 4; i++) { const x = -15 + i * 1.1; B(g, 0.6, 0.55, 0.95, '#9aa3a8', x, 0.35, zf + 2.4, FLAT); B(g, 0.6, 0.06, 0.06, CP.IRON, x, 1.0, zf + 2.85, FLAT); }   // trolleys
+      if (t === 'carShowroom') { const c1 = KIT.carSports({}), c2 = KIT.carSedan({}); c1.position.set(-8, 0.3, zf - 5); c1.rotation.y = 0.5; c2.position.set(8, 0.3, zf - 5); c2.rotation.y = -0.5; g.add(c1, c2); }
+      if (t === 'garage') { const lift = grp(g, 12, 0, zf + 6); [-1.6, 1.6].forEach(x => B(lift, 0.4, 3.6, 0.4, '#c9922e', x, 0, 0, NE)); B(lift, 3.6, 0.2, 4.6, '#55504a', 0, 1.8, 0, NE);
+        const car = KIT.carHatch({}); car.position.y = 2; lift.add(car); }
+      return g;
+    } });
+
+  // 7. canal set: water channels with stone edges (water sits a bit below the edge), a stone footbridge and a rowing boat.
+  const CANAL = { EDGE: '#e2d6bd', COPE: '#efe6d2', WATER: glowMat(PAL.water, '#2f6f8a') }, yW = 0.25, yE = 0.85;
+  const waterPlane = (p, w, d, x, z) => put(p, geo('pane', () => new THREE.PlaneGeometry(1, 1)), CANAL.WATER, x, yW, z, { rx: -Math.PI / 2, s: [w, d, 1], edge: false, shadow: false });
+  def({ key: 'canalStraight', name: 'Canal (straight)', cat: 'Downtown', part: 2, budget: 60, size: '10 × 24 m · 8 m of water', opts: {},
+    make() { const g = new THREE.Group(); waterPlane(g, 8, 24, 0, 0);
+      [-1, 1].forEach(s => { B(g, 1, yE, 24, CANAL.EDGE, s * 4.5, 0, 0); B(g, 1.3, 0.14, 24, CANAL.COPE, s * 4.6, yE, 0, NE); }); return g; } });
+  def({ key: 'canalCorner', name: 'Canal (corner)', cat: 'Downtown', part: 2, budget: 80, size: '10 × 10 m · turns from -z to +x', opts: {},
+    make() { const g = new THREE.Group(); waterPlane(g, 9, 9, 0.5, -0.5);
+      B(g, 1, yE, 10, CANAL.EDGE, -4.5, 0, 0); B(g, 9, yE, 1, CANAL.EDGE, 0.5, 0, 4.5); B(g, 1, yE, 1, CANAL.EDGE, 4.5, 0, -4.5);   // outer walls + inner corner post
+      B(g, 1.3, 0.14, 10, CANAL.COPE, -4.6, yE, 0, NE); B(g, 9.4, 0.14, 1.3, CANAL.COPE, 0.4, yE, 4.6, NE); B(g, 1.3, 0.14, 1.3, CANAL.COPE, 4.6, yE, -4.6, NE); return g; } });
+  def({ key: 'stoneBridge', name: 'Stone footbridge', cat: 'Downtown', part: 2, budget: 180, size: '13 × 3 m · spans the canal (along x)', opts: {},
+    make() { const g = new THREE.Group(), SB = '#e8dcc2', side = geo('bridgeSide', () => { const s = new THREE.Shape();
+        s.moveTo(-6.5, 0); s.lineTo(-6.5, 1.0); s.lineTo(-2, 2.2); s.lineTo(2, 2.2); s.lineTo(6.5, 1.0); s.lineTo(6.5, 0); s.lineTo(4, 0); s.lineTo(4, 0.5);
+        s.absellipse(0, 0.5, 4, 1.15, 0, Math.PI, false); s.lineTo(-4, 0); return new THREE.ShapeGeometry(s, 8); });
+      put(g, side, SB, 0, 0, 1.5, { edge: true }); put(g, side, SB, 0, 0, -1.5, { edge: true, ry: Math.PI });
+      const seg = (x1, y1, x2, y2, w, h, z, m) => put(g, geo('box', () => new THREE.BoxGeometry(1, 1, 1)), m, (x1 + x2) / 2, (y1 + y2) / 2 - h / 2, z, { rz: Math.atan2(y2 - y1, x2 - x1), s: [Math.hypot(x2 - x1, y2 - y1) + 0.05, h, w], edge: false });
+      [[-6.5, 1.0, -2, 2.2], [-2, 2.2, 2, 2.2], [2, 2.2, 6.5, 1.0]].forEach(([a, b, c, d]) => { seg(a, b, c, d, 3, 0.3, 0, '#ddd0b4'); [-1.35, 1.35].forEach(z => seg(a, b + 0.7, c, d + 0.7, 0.3, 0.7, z, SB)); });
+      return g; } });
+  def({ key: 'smallBoat', name: 'Small boat', cat: 'Downtown', part: 2, budget: 80, size: '1.4 × 3.8 m rowing boat', opts: { body: colours('Colour', [PAL.terra, '#3f7fbf', PAL.shutter, '#f6f0e2', '#e8b830']) },
+    make(o) { const g = new THREE.Group(), b = slot('body', o.body || PAL.terra);
+      TAPER(g, 1.0, 0.55, 3.4, b, 0, 0, 0, { tw: 1.35, td: 1.1 }); B(g, 1.25, 0.04, 3.4, '#8a6a46', 0, 0.42, 0, FLAT);
+      [-0.7, 0.6].forEach(z => B(g, 1.3, 0.08, 0.35, '#b98b5e', 0, 0.5, z, NE));
+      [-1, 1].forEach(s => strut(g, [s * 0.7, 0.62, 0.1], [s * 1.9, 0.18, -0.6], 0.06, '#b98b5e')); return g; } });
+
+  // 8. market: stall + food cart
+  const GOODS = { fruit: ['#e8473a', '#f2c14e', '#7fb069', '#e8873a', '#e8473a', '#7fb069'], flowers: [PAL.pink, '#f2c14e', '#f6f0e2', '#a084c8', PAL.pink, '#e8473a'],
+    spices: ['#c9922e', '#b5543a', '#8a5a2b', '#e8b830', '#6b8a3a', '#c8603f'], clothes: ['#3f7fbf', PAL.terra, '#2f7a68', '#d88fb0'] };
+  def({ key: 'marketStall', name: 'Market stall', cat: 'Downtown', part: 2, budget: 240, size: '3 × 1.8 m', opts: { canopy: colours('Canopy', [PAL.terra, '#2f7a68', '#c9922e', '#3f7fbf', '#d88fb0']), goods: choices('Goods', ['fruit', 'flowers', 'clothes', 'spices']) },
+    make(o) { const g = new THREE.Group(), cn = slot('canopy', o.canopy || PAL.terra), gd = GOODS[o.goods] ? o.goods : 'fruit', G = GOODS[gd];
+      B(g, 2.8, 0.9, 1.2, PAL.wood, 0, 0, 0); [[-1.35, -0.55], [1.35, -0.55], [-1.35, 0.55], [1.35, 0.55]].forEach(([x, z]) => B(g, 0.1, z < 0 ? 2.5 : 2.2, 0.1, '#5a3c28', x, 0, z, FLAT));
+      for (let i = 0; i < 4; i++) put(g, geo('box', () => new THREE.BoxGeometry(1, 1, 1)), i % 2 ? PAL.cream : cn, -1.2 + i * 0.8, 2.38, 0.05, { rx: 0.25, s: [0.8, 0.08, 1.9], edge: false });   // striped canopy
+      if (gd === 'fruit') { [-0.8, 0.8].forEach(x => B(g, 1.1, 0.25, 0.9, '#b98b5e', x, 0.9, 0, NE)); G.forEach((c, i) => oct(g, 0.17, c, -1.15 + i * 0.46, 1.25, (i % 2) * 0.3 - 0.15)); }
+      if (gd === 'flowers') G.forEach((c, i) => { const x = -1.1 + i * 0.44; CYL(g, 0.16, 0.13, 0.3, 6, '#9aa3a8', x, 0.9, 0.15, { edge: false, open: true }); oct(g, 0.2, c, x, 1.4, 0.15); });
+      if (gd === 'spices') G.forEach((c, i) => CYL(g, 0.02, 0.22, 0.3, 6, c, -1.1 + i * 0.44, 0.9, 0, { edge: false, open: true }));
+      if (gd === 'clothes') { B(g, 2.6, 0.05, 0.05, CP.IRON, 0, 2.0, 0.55, FLAT); G.forEach((c, i) => B(g, 0.5, 0.75, 0.06, c, -0.9 + i * 0.6, 1.2, 0.55, FLAT)); }
+      return g; } });
+  def({ key: 'foodCart', name: 'Food cart', cat: 'Downtown', part: 2, budget: 180, size: '1.8 × 1 m + umbrella', night: true, opts: { body: colours('Colour', ['#2f7a68', PAL.terra, '#e8b830', '#3f7fbf']) },
+    make(o) { const g = new THREE.Group(), b = slot('body', o.body || '#2f7a68');
+      B(g, 1.8, 0.85, 1, b, 0, 0.35, 0); B(g, 1.9, 0.08, 1.1, PAL.cream, 0, 1.2, 0, NE); WHEEL(g, 0.35, 0.1, -0.95, 0, 8); WHEEL(g, 0.35, 0.1, 0.95, 0, 8);
+      B(g, 0.06, 0.06, 0.8, CP.IRON, 0.6, 0.95, -0.85, FLAT); B(g, 0.05, 2.0, 0.05, CP.IRON, 0, 1.28, 0, FLAT);
+      CYL(g, 0.05, 1.3, 0.45, 8, PAL.cream, 0, 3.1, 0, { open: true }); oct(g, 0.1, CP.BULB, 0, 2.9, 0); B(g, 1.4, 0.3, 0.04, PAL.cream, 0, 0.75, 0.52, FLAT); return g; } });
+
+  // 9. piazza: grand fountain + event stage
+  def({ key: 'grandFountain', name: 'Grand fountain', cat: 'Downtown', part: 2, budget: 450, size: '14 m across', night: true, opts: {},
+    make() { const g = new THREE.Group(), ST = '#e8dcc2', WT = glowMat(PAL.water, '#3f8fb0'), SPR = glowMat('#cdeaf3', '#6ec3dc');
+      CYL(g, 7, 7.3, 0.9, 16, ST, 0, 0, 0, { open: true }); CYL(g, 7.4, 7.4, 0.2, 16, ST, 0, 0.9, 0, { open: true, edge: false }); CYL(g, 6.9, 6.9, 0.6, 16, WT, 0, 0.05, 0, NE);
+      CYL(g, 1.6, 2.1, 2.4, 8, ST, 0, 0.6, 0); CYL(g, 3.6, 1.6, 0.8, 12, ST, 0, 3.0, 0); CYL(g, 3.4, 3.4, 0.2, 12, WT, 0, 3.65, 0, NE);
+      CYL(g, 0.7, 1.0, 1.8, 8, ST, 0, 3.8, 0); CYL(g, 1.8, 0.7, 0.6, 10, ST, 0, 5.6, 0); CYL(g, 1.7, 1.7, 0.15, 10, WT, 0, 6.08, 0, NE);
+      CYL(g, 0.25, 0.4, 1.2, 6, ST, 0, 6.2, 0); oct(g, 0.35, '#e2b04a', 0, 7.6, 0); CYL(g, 0.06, 1.3, 2, 8, SPR, 0, 7.8, 0, { open: true, edge: false }); return g; } });
+  def({ key: 'eventStage', name: 'Event stage', cat: 'Downtown', part: 2, budget: 250, size: '12 × 7 m', night: true, opts: {},
+    make() { const g = new THREE.Group(), ST = '#e8dcc2';
+      B(g, 12, 1.2, 7, ST, 0, 0, 0); [0, 1, 2].forEach(i => B(g, 4, 0.4 * (3 - i), 0.5, ST, 0, 0, 3.75 + i * 0.5, NE));
+      [-5.25, 5.25].forEach(x => B(g, 1.5, 7, 0.8, ST, x, 1.2, -3.1));                             // back wall: two piers + an arch with a lit backdrop
+      SPAN(g, 9, 4.6, ST, 0, 3.6, -2.7); B(g, 12, 0.6, 1, PAL.terra, 0, 8.2, -3.1, NE);
+      P(g, 9, 7, glowMat('#6a4a8c', '#a84a8a'), 0, 1.2, -3.2);
+      [-5.6, 5.6].forEach(x => B(g, 0.25, 6, 0.25, CP.IRON, x, 1.2, 3.2, FLAT)); B(g, 11.6, 0.3, 0.3, CP.IRON, 0, 7.1, 3.2, FLAT);   // light truss
+      ['#e8473a', '#f2c14e', '#3f7fbf', '#5fbf6a'].forEach((c, i) => B(g, 0.6, 0.5, 0.6, glowMat(c, c), -3.6 + i * 2.4, 6.6, 3.2, NE));
+      [-5, 5].forEach(x => B(g, 1.1, 1.8, 0.9, CP.IRON, x, 1.2, 2.4)); return g; } });
+
+  // 10. blossomTree: street tree in a square stone pit, very cheap (repeat 200+ times). o.kind: pink | white | green.
+  def({ key: 'blossomTree', name: 'Blossom tree', cat: 'Downtown', part: 2, budget: 50, size: '1.8 m pit · 6 m tall', opts: { kind: choices('Tree', ['pink', 'white', 'green']) },
+    make(o) { const g = new THREE.Group(), c = { pink: PAL.pink, white: '#f6eef0', green: PAL.leaf }[o.kind] || PAL.pink;
+      B(g, 1.8, 0.14, 1.8, '#d2c7b2', 0, 0, 0, { shadow: false }); put(g, geo('pane', () => new THREE.PlaneGeometry(1, 1)), '#6b4f3a', 0, 0.15, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [1.4, 1.4, 1] }));
+      CYL(g, 0.14, 0.2, 3, 5, PAL.wood, 0, 0.1, 0, { edge: false, open: true }); ICO(g, 2.1, 0, c, 0, 4.4, 0); return g; } });
+
+  // 6. Vinland Tower, 'campanile' style (15 Nov, the new default): a tall square bell-and-clock tower in cream stone with
+  //    terracotta-brick bands, clock faces on all 4 sides, an open belfry with arches and a bell, then a glowing lantern and a
+  //    terracotta spire with a red beacon (about 262 m, still the tallest). o.state 'site' = the lower third built, scaffolding,
+  //    a big crane and a sign (it opens at 10,000 citizens). Same plaza and footprint as the other styles.
+  function campanile(o) {
+    const g = new THREE.Group(), site = o.state === 'site';
+    towerPlaza(g, '#f3ede1', PAL.sand2);
+    const ST = glowMat(PAL.cream, '#6a5a40'), BR = glowMat(PAL.terra2, '#4a2a1c'), DARK = '#6a5a48', LANT = glowMat('#f6e3a8', '#fff0b8'), FACE = glowMat('#f6f3ea', '#fff3c4'), DOORG = glowMat(PAL.glassWarm, '#ffcf6a');
+    const W = 24, y0 = 12, top = site ? 66 : 180;
+    B(g, 36, y0, 36, CP.STONE, 0, 0.3, 0); B(g, 37, 1, 37, BR, 0, y0, 0, NE);                       // base with an arched door on each side
+    [0, 1, 2, 3].forEach(k => { const s = grp(grp(g, 0, 0, 0, k * Math.PI / 2), 0, 0, 18.03); P(s, 6, 6, DOORG, 0, 0.3, 0); ARCH(s, 6, DOORG, 0, 6.3, 0); });
+    B(g, W, top - y0, W, ST, 0, y0 + 1, 0);                                                       // the shaft
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => B(g, 2.2, top - y0, 2.2, ST, a * (W / 2 - 0.6), y0 + 1, b * (W / 2 - 0.6), NE));   // corner strips
+    for (let y = y0 + 22; y < top - 4; y += 22) B(g, W + 1, 1.6, W + 1, BR, 0, y, 0, NE);         // terracotta-brick bands
+    [0, 1, 2, 3].forEach(k => { const s = grp(grp(g, 0, 0, 0, k * Math.PI / 2), 0, 0, W / 2 + 0.03);
+      for (let y = y0 + 6; y < top - 8; y += 22) [-4.5, 4.5].forEach(x => { P(s, 1.6, 9, winAt(x, y, k), x, y, 0); ARCH(s, 1.6, winAt(x, y, k), x, y + 9, 0); }); });
+    if (!site) {
+      let y = top; B(g, W + 2, 20, W + 2, ST, 0, y, 0);                                            // clock stage
+      [0, 1, 2, 3].forEach(k => { const s = grp(grp(g, 0, 0, 0, k * Math.PI / 2), 0, 0, W / 2 + 1.03);
+        put(s, geo('clockface', () => new THREE.CircleGeometry(1, 12)), FACE, 0, y + 10, 0, { edge: true, s: [7, 7, 1], shadow: false });
+        put(s, geo('ring', () => new THREE.RingGeometry(0.96, 1, 24)), BR, 0, y + 10, 0.02, { edge: false, shadow: false, s: [7.6, 7.6, 1] });
+        B(s, 0.4, 5, 0.1, BK.DARK, 0, y + 10, 0.05, FLAT); B(s, 3.6, 0.4, 0.1, BK.DARK, 1.8, y + 10, 0.05, FLAT); });
+      y += 20; B(g, W + 4, 1.6, W + 4, BR, 0, y, 0); y += 1.6;
+      // open belfry: 4 corner piers, an arch on each face, a bell inside
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => B(g, 5, 22, 5, ST, a * 10, y, b * 10));
+      B(g, W, 0.8, W, ST, 0, y, 0, NE);
+      [0, 1, 2, 3].forEach(k => SPAN(grp(g, 0, 0, 0, k * Math.PI / 2), 15, 12, ST, 0, y + 10, W / 2, {}));
+      CYL(g, 1.2, 3.6, 5, 10, '#a8864a', 0, y + 9, 0); CYL(g, 0.5, 0.5, 4, 6, DARK, 0, y + 14, 0, NE);
+      B(g, W - 2, 0.4, W - 2, glowMat(PAL.cream, '#ffd98a'), 0, y + 21.4, 0, NE);                       // belfry ceiling, lit warm at night
+      y += 22; B(g, W + 4, 1.4, W + 4, BR, 0, y, 0); y += 1.4;
+      CYL(g, 6, 6, 9, 8, LANT, 0, y, 0); for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + Math.PI / 8; B(g, 0.6, 8, 0.6, ST, Math.sin(a) * 6.1, y, Math.cos(a) * 6.1, FLAT); }   // lantern
+      y += 9; CYL(g, 7, 7, 0.8, 8, BR, 0, y, 0, NE); y += 0.8;
+      CYL(g, 0.25, 6.4, 26, 8, glowMat(CP.ROOF, '#6a2a14'), 0, y, 0); y += 26; oct(g, 0.7, '#e2b04a', 0, y + 0.4, 0); BALL(g, 0.9, glowMat('#ff4a30', '#ff3a20'), 0, y + 1.8, 0, NE);
+    } else {
+      // building site: ragged top, scaffolding on all 4 sides, a big tower crane, materials and a sign
+      [[-6, 4], [5, 6], [-2, 3]].forEach(([x, h], i) => B(g, 6, h, 6, ST, x, top + 1, i === 1 ? 6 : -5, NE));
+      const SC = '#8a8f94', NET = '#5f8a5a';
+      [0, 1, 2, 3].forEach(k => { const s = grp(grp(g, 0, 0, 0, k * Math.PI / 2), 0, 0, W / 2 + 1.6);
+        [-12, -6, 0, 6, 12].forEach(x => B(s, 0.25, top + 8, 0.25, SC, x, 0.3, 0, FLAT));
+        for (let y = y0 + 6; y <= top + 6; y += 8) B(s, 25, 0.25, 1.6, '#b98b5e', 0, y, -0.6, FLAT);
+        P(s, 25, 10, NET, 0, top - 4, 0.15, { edge: true }); });
+      const cr = KIT.towerCrane(); cr.scale.setScalar(2); cr.position.set(26, 0.3, -26); cr.rotation.y = -Math.PI * 0.75; g.add(cr);
+      const mt = KIT.materials(); mt.position.set(24, 0.3, 14); g.add(mt);
+      const bd = KIT.milestoneBoard({ text: o.boardText || 'Vinland Tower · opens at 10,000 citizens' }); bd.position.set(-14, 0.3, 30); g.add(bd); g.userData.setText = bd.userData.setText;
+    }
+    return g;
+  }
 
   // ---------- tools ----------
   // how many triangles an asset has (outline lines are not counted)
@@ -1196,19 +2098,29 @@
       if (!o.isMesh && !o.isLineSegments) return; M.multiplyMatrices(inv, o.matrixWorld);
       if (o.isLineSegments) { const ge = o.geometry.clone(); ge.applyMatrix4(M); lines.push(ge.attributes.position.array); return; }
       const key = o.material.uuid + (o.castShadow ? 's' : 'n');
-      if (!parts.has(key)) parts.set(key, { slot: o.material.userData.slot || null, color: o.material.color.clone(), shadow: o.castShadow, pos: [], nor: [] });
+      const mm = o.material;
+      if (!parts.has(key)) parts.set(key, { slot: mm.userData.slot || null, color: mm.color.clone(), shadow: o.castShadow, pos: [], nor: [], uv: [],
+        map: mm.map || null, emissiveMap: mm.emissiveMap || null, glow: mm.userData.glow || null, dayGlow: mm.userData.dayGlow || null, side: mm.side, basic: !!mm.isMeshBasicMaterial, transparent: mm.transparent, opacity: mm.opacity, blending: mm.blending });
       const ge = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); ge.applyMatrix4(M);
+      if (!ge.attributes.normal) ge.computeVertexNormals();
       const pt = parts.get(key); pt.pos.push(ge.attributes.position.array); pt.nor.push(ge.attributes.normal.array);
+      pt.uv.push(ge.attributes.uv ? ge.attributes.uv.array : new Float32Array(ge.attributes.position.count * 2));   // keep UVs so window textures survive
     });
     const list = [...parts.values()].map(pt => { const ge = new THREE.BufferGeometry();
-      ge.setAttribute('position', new THREE.BufferAttribute(cat(pt.pos), 3)); ge.setAttribute('normal', new THREE.BufferAttribute(cat(pt.nor), 3)); ge.computeBoundingSphere();
-      return { slot: pt.slot, color: pt.color, shadow: pt.shadow, geo: ge }; });
+      ge.setAttribute('position', new THREE.BufferAttribute(cat(pt.pos), 3)); ge.setAttribute('normal', new THREE.BufferAttribute(cat(pt.nor), 3));
+      if (pt.map || pt.emissiveMap) ge.setAttribute('uv', new THREE.BufferAttribute(cat(pt.uv), 2)); ge.computeBoundingSphere();
+      return Object.assign({}, pt, { geo: ge, pos: undefined, nor: undefined, uv: undefined }); });
     return { parts: list, lines: cat(lines) };
   };
   // instances: draw many copies. matrices = array of THREE.Matrix4; tints(i) = { slotName: '#hex' } for copy i (optional).
   KIT.instances = function (baked, matrices, tints) {
     const out = new THREE.Group(), n = matrices.length, c = new THREE.Color();
-    baked.parts.forEach(pt => { const im = new THREE.InstancedMesh(pt.geo, toon('#ffffff'), n);
+    baked.parts.forEach(pt => {
+      const m = pt.basic ? new THREE.MeshBasicMaterial({ color: '#ffffff' }) : toon('#ffffff');            // keeps textures, night glow, both-sided faces
+      if (pt.map) m.map = pt.map; if (pt.emissiveMap && !pt.basic) m.emissiveMap = pt.emissiveMap;
+      if (pt.glow) m.userData.glow = pt.glow; if (pt.dayGlow) { m.userData.dayGlow = pt.dayGlow; if (m.emissive) m.emissive.set(pt.dayGlow); }
+      m.side = pt.side; if (pt.transparent) { m.transparent = true; m.opacity = pt.opacity; m.blending = pt.blending; m.depthWrite = false; }
+      const im = new THREE.InstancedMesh(pt.geo, m, n);
       for (let i = 0; i < n; i++) { im.setMatrixAt(i, matrices[i]); const t = pt.slot && tints && tints(i); im.setColorAt(i, t && t[pt.slot] ? c.set(t[pt.slot]) : c.copy(pt.color)); }
       im.castShadow = pt.shadow; im.receiveShadow = true; im.frustumCulled = false; out.add(im); });
     const L = baked.lines, all = new Float32Array(L.length * n), v = new THREE.Vector3();
