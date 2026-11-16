@@ -713,7 +713,8 @@ controls.panSpeed = 1.1;
     camera.position.sub(P).multiplyScalar(f).add(P); controls.target.sub(P).multiplyScalar(f).add(P); controls.target.y = 0;
   }, { passive: false, capture: true });
 })();
-function clampView() { const t = controls.target, L = 340, cx = Math.max(-L, Math.min(1210, t.x)), cz = Math.max(-860, Math.min(600, t.z)), dx = cx - t.x, dz = cz - t.z;
+function clampView() { const t = controls.target, L = typeof GD !== 'undefined' ? -GD.XW + 20 : 340, cx = Math.max(-L, Math.min(1210, t.x)),   // west edge = the Garden District (16 Nov)
+  cz = Math.max(-860, Math.min(600, t.z)), dx = cx - t.x, dz = cz - t.z;
   if (dx || dz) { t.x = cx; t.z = cz; camera.position.x += dx; camera.position.z += dz; } }
 
 scene.add(new THREE.HemisphereLight('#fff3df', '#7a6a50', 0.55));
@@ -1666,7 +1667,18 @@ function drawGardenBuildings(hs, lineParts) {
   if (typeof GD === 'undefined' || !GD.blds.length) return;
   const K = window.VinlandKit, byB = new Map(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1), col = new THREE.Color(), v = new THREE.Vector3();
   hs.forEach(h => { if (h.fp && /^L/.test(h.kind || '') && !byB.has(h.fp.bid)) byB.set(h.fp.bid, h); });
-  const groups = {}; GD.blds.forEach(b => (groups[b.t] = groups[b.t] || []).push(b));
+  // (16 Nov evening, Dev) a home building stands only once someone lives in it; the high street shops stand from day one.
+  // An empty plot is a plain lawn with its front hedge and path (3 instanced batches for the whole district).
+  const lived = b => b.t === 'LP' || byB.has(b.i), groups = {}, empty = [];
+  GD.blds.forEach(b => { if (lived(b)) (groups[b.t] = groups[b.t] || []).push(b); else empty.push(b); });
+  if (empty.length) { const LOT = { LD: [10, 14], LS: [16, 14], LT: [36, 13] }, unit = new THREE.BoxGeometry(1, 1, 1), loc = new THREE.Matrix4(), bm = new THREE.Matrix4();
+    const parts = [['#9fc86e', 1, (w, d) => [[w - 0.6, 0.12, d - 0.6, 0, 0.06, 0]]],
+      ['#4f8a42', 2, (w, d) => [-1, 1].map(sx => [w / 2 - 1.1, 0.7, 0.5, sx * (w / 4 + 0.4), 0.35, d / 2 - 0.6])],
+      ['#e6dccb', 1, (w, d) => [[1.2, 0.14, d / 2 - 0.6, 0, 0.07, d / 4 - 0.3]]]];
+    parts.forEach(([c, per, f]) => { const im = new THREE.InstancedMesh(unit, mat(c), empty.length * per); let k = 0;
+      empty.forEach(b => { const [w, d] = LOT[b.t] || [34, 22]; bm.compose(new THREE.Vector3(b.x, 0, b.z), q.clone().setFromAxisAngle(up, b.ry), one);
+        f(w, d).forEach(([sx, sy, sz, x, y, z]) => { loc.compose(v.set(x, y, z), new THREE.Quaternion(), new THREE.Vector3(sx, sy, sz)); im.setMatrixAt(k++, bm.clone().multiply(loc)); }); });
+      im.receiveShadow = true; im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; scene.add(im); homeBatches.push(im); }); }
   Object.keys(groups).forEach(t => { const list = groups[t];
     const TPL = gdTemplates[t] || (gdTemplates[t] = makeTemplate(() => { const g = K.make(GD.TPL[t], GD.OPT[t] || {}); assets.push({ key: t, g, walls: [null] }); }));
     const M = list.map(b => new THREE.Matrix4().compose(new THREE.Vector3(b.x, 0, b.z), q.clone().setFromAxisAngle(up, b.ry), one));
@@ -1723,7 +1735,7 @@ function drawHomes(hs) {
   const L = TPL.lines, out = new Float32Array(L.length * idx.length), v = new THREE.Vector3();
   idx.forEach((i, j) => { const m = M ? M[j] : mats[i], o = j * L.length; for (let k = 0; k < L.length; k += 3) { v.set(L[k], L[k + 1], L[k + 2]).applyMatrix4(m); out[o + k] = v.x; out[o + k + 1] = v.y; out[o + k + 2] = v.z; } });
   lineParts.push(out); });
-  if (window.VinlandKit) drawGardenBuildings(hs, lineParts);   // Garden District: every building, lived in or not
+  if (window.VinlandKit) drawGardenBuildings(hs, lineParts);   // Garden District: a building once someone lives in it (shops always)
   // all outlines in one piece
   const out = new Float32Array(lineParts.reduce((t, a) => t + a.length, 0)); { let k = 0; lineParts.forEach(a => { out.set(a, k); k += a.length; }); }
   const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(out, 3)); lg.computeBoundingSphere();
@@ -3319,10 +3331,13 @@ PLOTS.push(...RS.flats);
 // apartment blocks of 4-6 floors in four clusters (gdApartment), a high street with flats over the shops (gdShopParade), two
 // schools, a community centre, a sports ground and pocket parks. Every building stands from day one (homes waiting for citizens);
 // the name tag goes up when someone moves in. Appended after every existing home: nobody's number or home changes. Area code 'L'.
-const GD = { XW: -897, XE: -386, SX: -641.5, RZ: 130, ZE: 477, BELT: -290, ST: 28, n: 9, blds: [], kit: [], parks: [], roads: [] };
+// 16 Nov (evening, Dev): stretched north-south so the perimeter roads continue the end lanes of the Central District next to it
+// (north edge = the beach road z -758, south edge = the last Central lane z 572). The boulevard stays on z 0, so the north half is deeper.
+const GD = { XW: -897, XE: -386, SX: -641.5, RZ: 130, ZN: 758, ZS: 572, BELT: -290, ST: 28, nN: 16, nS: 11, blds: [], kit: [], parks: [], roads: [], lots: [] };
+GD.ze = hs => (hs < 0 ? GD.ZN : GD.ZS); GD.nh = hs => (hs < 0 ? GD.nN : GD.nS);
 GD.cols = [[-893.5, -773.5], [-766.5, -646.5], [-636.5, -516.5], [-509.5, -389.5]];              // the four housing columns (120 m)
 GD.bands = [[-893.5, -751.5], [-531.5, -389.5]];                                                   // middle band, west and east of the park ring
-GD.CORR = (GD.ZE - 3.5 - GD.RZ - 3.5 - 3 - GD.ST * GD.n) / (GD.n - 1);                             // street corridor between two rows of homes
+GD.corr = hs => (GD.ze(hs) - 3.5 - GD.RZ - 3.5 - 3 - GD.ST * GD.nh(hs)) / (GD.nh(hs) - 1);           // street corridor between two rows of homes
 GD.TPL = { LD: 'gdDetached', LS: 'gdSemi', LT: 'gdTerrace', LA4: 'gdApartment', LA5: 'gdApartment', LA6: 'gdApartment', LP: 'gdShopParade' };
 GD.OPT = { LA4: { floors: '4' }, LA5: { floors: '5' }, LA6: { floors: '6' } };
 GD.gate = [GD.XE, 0];
@@ -3343,17 +3358,17 @@ GD.gate = [GD.XE, 0];
   const PAT = ['LS', 'LD', 'LT', 'LS', 'LD', 'LS', 'LT', 'LD'];
   // ---- the two housing halves (north z < 0, south z > 0), four columns each
   [-1, 1].forEach((hs, hi) => GD.cols.forEach(([x0, x1], ci) => {
-    const school = ci === 2;                                                             // a school on the outer rows of column C, on the spine
-    for (let j = 0; j < GD.n; j++) {
-      const e = hs * (GD.RZ + 3.5 + 1.5 + j * (GD.ST + GD.CORR)), zi = e + hs * 7, zo = e + hs * 21, ryIn = hs < 0 ? 0 : Math.PI, ryOut = hs < 0 ? Math.PI : 0;
-      const tIn = j === 0 ? 'LD' : PAT[(j - 1 + ci * 3 + hi * 5) % PAT.length], tOut = j === GD.n - 1 ? 'LD' : PAT[(j + ci * 3 + hi * 5) % PAT.length];
+    const school = ci === 2, NJ = GD.nh(hs), CORR = GD.corr(hs);                        // a school on the outer rows of column C, on the spine
+    for (let j = 0; j < NJ; j++) {
+      const e = hs * (GD.RZ + 3.5 + 1.5 + j * (GD.ST + CORR)), zi = e + hs * 7, zo = e + hs * 21, ryIn = hs < 0 ? 0 : Math.PI, ryOut = hs < 0 ? Math.PI : 0;
+      const tIn = j === 0 ? 'LD' : PAT[(j - 1 + ci * 3 + hi * 5) % PAT.length], tOut = j === NJ - 1 ? 'LD' : PAT[(j + ci * 3 + hi * 5) % PAT.length];
       let a = x0 + 2, b = x1 - 2;
-      if (j === 4) { const px = ci % 2 ? x0 + 14 : x1 - 14; GD.parks.push([px, e + hs * 14]); if (ci % 2) a = x0 + 28; else b = x1 - 28; }   // a pocket park by the spine / collector
-      if (school && j >= GD.n - 2) a = x0 + 62;
+      if (j % 6 === 4) { const px = ci % 2 ? x0 + 14 : x1 - 14; GD.parks.push([px, e + hs * 14]); if (ci % 2) a = x0 + 28; else b = x1 - 28; }   // a pocket park by the spine / collector
+      if (school && j >= NJ - 2) a = x0 + 62;
       side(tIn, a, b, zi, ryIn); side(tOut, a, b, zo, ryOut);
-      if (j < GD.n - 1) { const zc = e + hs * (GD.ST + GD.CORR / 2); if (school && j === GD.n - 2) rd(x1 - x0 - 60, 5.5, (x0 + 60 + x1) / 2, zc); else rd(x1 - x0, 5.5, (x0 + x1) / 2, zc); }
+      if (j < NJ - 1) { const zc = e + hs * (GD.ST + CORR / 2); if (school && j === NJ - 2) rd(x1 - x0 - 60, 5.5, (x0 + 60 + x1) / 2, zc); else rd(x1 - x0, 5.5, (x0 + x1) / 2, zc); }
     }
-    if (school) { const zs = hs * (GD.RZ + 3.5 + 1.5 + (GD.n - 2) * (GD.ST + GD.CORR) + (2 * GD.ST + GD.CORR) / 2); GD.kit.push(['gdSchool', { name: hs < 0 ? 'NORTH PRIMARY' : 'SOUTH PRIMARY' }, x0 + 31, zs, -Math.PI / 2]); }
+    if (school) { const zs = hs * (GD.RZ + 3.5 + 1.5 + (NJ - 2) * (GD.ST + CORR) + (2 * GD.ST + CORR) / 2); GD.kit.push(['gdSchool', { name: hs < 0 ? 'NORTH PRIMARY' : 'SOUTH PRIMARY' }, x0 + 31, zs, -Math.PI / 2]); }
   }));
   // ---- the middle band: apartment clusters (2 rows of 4 in each corner), high street, community centre, pocket parks, sports ground
   const FL = [[5, 6, 6, 5], [4, 5, 5, 4]];
@@ -3367,9 +3382,9 @@ GD.gate = [GD.XE, 0];
   GD.kit.push(['gdCommunity', {}, GD.bands[1][0] + 16, 21, Math.PI]);
   [[GD.bands[1][0] + 52, 19], [GD.bands[1][0] + 82, 19], [GD.bands[1][0] + 112, 19], [GD.bands[0][0] + 33, -38], [GD.bands[0][0] + 71, -38], [GD.bands[0][0] + 109, -38]].forEach(p => GD.parks.push(p));
   // ---- roads: perimeter + collectors (7 m), boulevard, spine and park ring (10 m), corridors (5.5 m) added above
-  const ZE = GD.ZE, XW = GD.XW, XE = GD.XE, R = GD.RZ, RW = GD.SX - 105, RE = GD.SX + 105;
-  rd(7, 2 * ZE + 7, XW, 0); rd(7, 2 * ZE + 7, XE, 0); rd(XE - XW + 7, 7, (XW + XE) / 2, -ZE); rd(XE - XW + 7, 7, (XW + XE) / 2, ZE);
-  [-1, 1].forEach(hs => { rd(RW - 5 - (XW + 3.5), 7, (XW + 3.5 + RW - 5) / 2, hs * R); rd(RE - RW + 10, 10, GD.SX, hs * R); rd(XE - 3.5 - (RE + 5), 7, (RE + 5 + XE - 3.5) / 2, hs * R);
+  const ZN = GD.ZN, ZS = GD.ZS, XW = GD.XW, XE = GD.XE, R = GD.RZ, RW = GD.SX - 105, RE = GD.SX + 105;
+  rd(7, ZN + ZS + 7, XW, (ZS - ZN) / 2); rd(7, ZN + ZS + 7, XE, (ZS - ZN) / 2); rd(XE - XW + 7, 7, (XW + XE) / 2, -ZN); rd(XE - XW + 7, 7, (XW + XE) / 2, ZS);
+  [-1, 1].forEach(hs => { const ZE = GD.ze(hs); rd(RW - 5 - (XW + 3.5), 7, (XW + 3.5 + RW - 5) / 2, hs * R); rd(RE - RW + 10, 10, GD.SX, hs * R); rd(XE - 3.5 - (RE + 5), 7, (RE + 5 + XE - 3.5) / 2, hs * R);
     rd(10, ZE - R - 7, GD.SX, hs * (R + ZE) / 2); [-770, -513].forEach(x => rd(7, ZE - R - 7, x, hs * (R + ZE) / 2)); });
   [RW, RE].forEach(x => rd(10, 2 * R - 7, x, 0));
   rd(RW - 5 - (XW + 3.5), 10, (XW + 3.5 + RW - 5) / 2, 0); rd(XE - 3.5 - (RE + 5), 10, (RE + 5 + XE - 3.5) / 2, 0); rd(GD.BELT - XE - 3.5, 10, (XE + 3.5 + GD.BELT) / 2, 0);
@@ -3569,8 +3584,8 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
 // z 0 with the gate, the lake park (natural lake, trees, rocks, no houses), shop street + big-building lots (later), a small
 // transport area (kit bus bay + buses) beside the school grounds ----
 (function drawGardenDistrict() {
-  const N = { edge: false, shadow: false }, g = new THREE.Group(), hide = new THREE.Matrix4().makeScale(0, 0, 0), ZE = GD.ZE, R = GD.RZ, SX = GD.SX;
-  spots.forEach(([x, z], i) => { if (x > GD.XW - 8 && x < GD.XE + 3 && Math.abs(z) < ZE + 8) { cr.setMatrixAt(i, hide); tk.setMatrixAt(i, hide); } });
+  const N = { edge: false, shadow: false }, g = new THREE.Group(), hide = new THREE.Matrix4().makeScale(0, 0, 0), ZN = GD.ZN, ZS = GD.ZS, R = GD.RZ, SX = GD.SX;
+  spots.forEach(([x, z], i) => { if (x > GD.XW - 8 && x < GD.XE + 3 && z > -ZN - 8 && z < ZS + 8) { cr.setMatrixAt(i, hide); tk.setMatrixAt(i, hide); } });
   cr.instanceMatrix.needsUpdate = true; tk.instanceMatrix.needsUpdate = true;
   let sd = 43; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
   GD.roads.forEach(([w, d, x, z]) => { ROADS.push([w, d, x, z]); B(g, w, 0.1, d, ROAD, x, 0.04, z, N); });
@@ -3582,7 +3597,7 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
   // the gate on the boulevard, where it leaves the green belt
   { const gx = GD.XE + 7; [-8, 8].forEach(z => { B(g, 2.2, 7, 2.2, '#e3d2ae', gx, 0, z); B(g, 2.8, 0.6, 2.8, '#c8603f', gx, 7, z); }); B(g, 1.4, 1.2, 18, '#e3d2ae', gx, 6.2, 0); signBoard(g, 'NEW DISTRICT', gx + 0.8, 5.3, 0, 9, 1.5, '#1f2f5a', '#e2b04a', Math.PI / 2); }
   // GREEN BELT between the district and the town: dense trees, rocks and bushes, nothing built
-  for (let k = 0; k < 1000; k++) { const x = GD.XE + 6 + rnd() * (GD.BELT - GD.XE - 10), z = -ZE - 18 + rnd() * (2 * ZE + 36); if (Math.abs(z) < 9) continue; const t = rnd();
+  for (let k = 0; k < 1000; k++) { const x = GD.XE + 6 + rnd() * (GD.BELT - GD.XE - 10), z = -ZN - 18 + rnd() * (ZN + ZS + 36); if (Math.abs(z) < 9) continue; const t = rnd();
     if (t < 0.7) tree(g, x, 0.1, z, t < 0.06 ? 'pink' : t < 0.2 ? 'cypress' : 'canopy', 0.9 + rnd() * 0.9); else if (t < 0.85) rock(x, z, 0.6 + rnd() * 1.6); else bush(x, z); }
   // THE LAKE PARK inside the ring: lawn, a natural lake with a beach edge, a walk round it, lamps, a jetty, trees and rocks
   const P = { x0: SX - 100, x1: SX + 100, z0: -R + 5, z1: R - 5 };
@@ -3594,12 +3609,12 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
   B(g, 2.4, 0.4, 14, C.wood, SX + 47, 0.5, 0, N); B(g, 5, 0.4, 3, C.wood, SX + 40, 0.5, 6, N);   // jetty
   for (let i = 0; i < 24; i++) { const t = i / 24 * Math.PI * 2, r = rad(t); lamp(g, SX + Math.cos(t) * 64 * r, Math.sin(t) * 100 * r); }
   for (let i = 0; i < 10; i++) { const t = i / 10 * Math.PI * 2 + 0.3, r = rad(t); bench(g, SX + Math.cos(t) * 56 * r, Math.sin(t) * 89 * r, Math.atan2(-Math.cos(t), -Math.sin(t))); }
-  for (let k = 0; k < 420; k++) { const x = P.x0 + 6 + rnd() * (P.x1 - P.x0 - 12), z = P.z0 + 6 + rnd() * (P.z1 - P.z0 - 12), t = Math.atan2(z / 100, (x - SX) / 64), r = rad(t);
+  for (let k = 0; k < 200; k++) { const x = P.x0 + 6 + rnd() * (P.x1 - P.x0 - 12), z = P.z0 + 6 + rnd() * (P.z1 - P.z0 - 12), t = Math.atan2(z / 100, (x - SX) / 64), r = rad(t);
     if (Math.hypot((x - SX) / (66 * r), z / (103 * r)) < 1) continue; const q = rnd();
     if (q < 0.72) tree(g, x, 0.1, z, q < 0.14 ? 'pink' : q < 0.22 ? 'cypress' : 'canopy', 0.9 + rnd() * 0.7); else if (q < 0.88) rock(x, z, 0.5 + rnd() * 1.4); else flowerBed(g, x, z, q < 0.94 ? C.pink : C.purple); }
   // MIDDLE BAND greens: lawn under the apartment clusters, the high street green, the west garden and the sports ground
   GD.bands.forEach(([x0, x1]) => [-1, 1].forEach(hs => { B(g, x1 - x0, 0.1, 54, '#a9cf78', (x0 + x1) / 2, 0.02, hs * 101, N);
-    for (let k = 0; k < 4; k++) [0, 1].forEach(r => { const x = x0 + 3 + 34 * k + (k ? 0 : 0), z = hs * (r ? 90 : 114.5); if (k) tree(g, x, 0.1, z + hs * (r ? 6 : -6), 'cypress', 0.9); }); }));
+  }));
   { const [x0, x1] = GD.bands[1], cx = (x0 + x1) / 2;
     B(g, x1 - x0, 0.06, 4, '#e6dccb', cx, 0.03, -5, N);                                                        // high street pavement
     B(g, x1 - x0, 0.12, 44, '#a9cf78', cx, 0.03, -48, N); B(g, x1 - x0, 0.14, 3, '#e6dccb', cx, 0.04, -48, N); B(g, 3, 0.14, 44, '#e6dccb', cx, 0.04, -48, N);   // the green behind the shops
@@ -3607,10 +3622,10 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
     [-56, -40, -24, 24, 40, 56].forEach((dx, k) => { tree(g, cx + dx, 0.1, -60, k % 3 ? 'canopy' : 'pink', 1); tree(g, cx + dx, 0.1, -36, k % 3 ? 'pink' : 'canopy', 0.95); });
     [-30, 30].forEach(dx => { bench(g, cx + dx, -45.8, Math.PI); bench(g, cx + dx, -50.2, 0); flowerBed(g, cx + dx * 0.5, -48, C.pink); });
     B(g, x1 - x0, 0.12, 62, '#a9cf78', cx, 0.03, 38, N);                                                        // lawn round the community centre
-    for (let k = 0; k < 18; k++) tree(g, x0 + 8 + (k % 9) * 15.5, 0.1, 50 + ((k / 9) | 0) * 14, k % 4 ? 'canopy' : 'pink', 0.9 + (k % 3) * 0.1); }
+    for (let k = 0; k < 9; k++) tree(g, x0 + 8 + k * 15.5, 0.1, 57, k % 4 ? 'canopy' : 'pink', 0.9 + (k % 3) * 0.1); }
   { const [x0, x1] = GD.bands[0], cx = (x0 + x1) / 2;
-    B(g, x1 - x0, 0.12, 62, '#a9cf78', cx, 0.03, -38, N); for (let k = 0; k < 9; k++) tree(g, x0 + 10 + k * 15.3, 0.1, -64 + (k % 2) * 3, k % 3 ? 'canopy' : 'pink', 0.95);
-    for (let k = 0; k < 9; k++) tree(g, x0 + 10 + k * 15.3, 0.1, -12 - (k % 2) * 2, k % 3 ? 'cypress' : 'canopy', 0.9);
+    B(g, x1 - x0, 0.12, 62, '#a9cf78', cx, 0.03, -38, N); for (let k = 0; k < 5; k++) tree(g, x0 + 10 + k * 30.6, 0.1, -64 + (k % 2) * 3, k % 3 ? 'canopy' : 'pink', 0.95);
+    for (let k = 0; k < 5; k++) tree(g, x0 + 25 + k * 30.6, 0.1, -12 - (k % 2) * 2, k % 3 ? 'cypress' : 'canopy', 0.9);
     // SPORTS GROUND: running track, football pitch, a small stand, trees
     const sz = 38; B(g, x1 - x0, 0.1, 62, '#a9cf78', cx, 0.02, sz, N); B(g, 126, 0.14, 52, '#c8603f', cx, 0.03, sz, N); B(g, 112, 0.18, 40, '#5a9a4a', cx, 0.04, sz, N);
     [[100, 0.2, 0.3, 0, -17], [100, 0.2, 0.3, 0, 17], [0.3, 0.2, 34, -50, 0], [0.3, 0.2, 34, 50, 0], [0.3, 0.2, 34, 0, 0]].forEach(([w, h, d, dx, dz]) => B(g, w, h, d, '#f6f3ea', cx + dx, 0.12, sz + dz, N));
@@ -3619,8 +3634,8 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
     for (let r = 0; r < 4; r++) B(g, 40, 0.5, 1.2, r % 2 ? '#3f5866' : '#c9922e', cx, 0.2 + r * 0.5, sz + 27.5 + r * 1.2);   // little stand on the south side
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => tree(g, cx + a * 66, 0.1, sz + b * 26, 'canopy', 1.1)); }
   // the edge of the district: hedge-and-tree line outside the perimeter road, so the suburb has a clean border
-  for (let x = GD.XW; x <= GD.XE; x += 13) [-1, 1].forEach(hs => tree(g, x, 0.1, hs * (ZE + 7), ((x / 13) | 0) % 3 ? 'canopy' : 'cypress', 0.95));
-  for (let z = -ZE; z <= ZE; z += 13) tree(g, GD.XW - 7, 0.1, z, ((z / 13) | 0) % 3 ? 'canopy' : 'cypress', 0.95);
+  for (let x = GD.XW; x <= GD.XE; x += 18) [-1, 1].forEach(hs => tree(g, x, 0.1, hs * (GD.ze(hs) + 7), ((x / 18) | 0) % 3 ? 'canopy' : 'cypress', 0.95));
+  for (let z = -ZN; z <= ZS; z += 18) tree(g, GD.XW - 7, 0.1, z, ((z / 18) | 0) % 3 ? 'canopy' : 'cypress', 0.95);
   window.GD_OBJ = bakeKeep(g, 'gardendistrict');
   // kit pieces that are not homes: schools, the community centre, pocket parks (one bake)
   whenKit(() => { const K = window.VinlandKit, T = new THREE.Group(), place = (key, o, x, z, ry) => { const m = K.make(key, o || {}); m.position.set(x, 0, z); m.rotation.y = ry || 0; T.add(m); };
