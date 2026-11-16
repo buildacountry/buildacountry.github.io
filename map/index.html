@@ -598,8 +598,23 @@ function shopCard(i) { const q = MD.slots[i], n = i + 1, grp = q[2] === 'm' ? 'M
     <div class="t">${o ? esc(o.job || 'Shop') : 'Shop spot ' + n}</div><div class="u">${o ? 'Run by ' + esc(o.shown) : 'Ask on Instagram for a shop: comment the shop you want under our latest reel.'}</div>
     ${o ? `<div class="row"><a class="push p" href="../?pp=${encodeURIComponent(o.user)}">Open passport</a><button class="push" data-c="pick" data-n="${o.n}">Their home</button></div>${socRows(o)}` : ''}`;
   c2.hidden = false; }
+// ---------- PENALTY SHOOTOUT launcher (16 Nov), shared by Maps mode and 3D. Loads the 3D engine + kit + game only on tap. ----------
+const PEN_TEAMS = { F: 'Middle', M: 'Middle', V: 'Middle', E: 'East', W: 'West', NE: 'North', NW: 'North', NSE: 'North', NSW: 'North', S: 'South', SG: 'South', SE: 'South', SW: 'South', R: 'Riverside' };
+const penTeamOf = u => { const h = V.byUser ? V.byUser.get(String(u || '').toLowerCase()) : null; return h ? PEN_TEAMS[h.a] || null : null; };
+const penJS = src => new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+window.VinPenStart = async (game = 'pen') => { if (window.PEN_ON) return; const G = game === 'cricket' ? ['VinCricket', 'cricket.js?v=16nov'] : ['VinPenalty', 'penalty.js?v=16nov'];
+  try { if (!window.THREE) await penJS('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'); if (!window.VinlandKit) await penJS('kit.js'); if (!window[G[0]]) await penJS(G[1]); }
+  catch (e) { toast('The game could not load. Check your internet and try again.'); return; }
+  const se = socSess(), lk = se && window.VLOOKS ? window.VLOOKS[String(se.user).toLowerCase()] : null; window.PEN_ON = true;
+  window[G[0]].open({ api: socApi, session: se, look: lk || null, teamOf: penTeamOf, onClose: () => { window.PEN_ON = false; if (window.VIN3D_KICK) window.VIN3D_KICK(); } }); };
+function stadiumCard2D() { V.sel = null; wake();
+  c2.innerHTML = `<button class="x" data-c="close" aria-label="Close">×</button><div class="k">Riverside · next to the Business District</div><div class="t">Vinland National Stadium</div>
+    <div class="u">Two games, 3 rounds a day each. ⚽ Penalty shootout: 5 kicks against the Vinland keeper. 🏏 Cricket: bat one over. Every goal and run counts for you and your district this week.</div>
+    <div class="row"><button class="push p" id="penPlay2">⚽ Penalties</button><button class="push p" id="crkPlay2">🏏 Bat an over</button></div>`;
+  c2.hidden = false; const b = document.getElementById('penPlay2'); if (b) b.onclick = () => window.VinPenStart('pen'); const k = document.getElementById('crkPlay2'); if (k) k.onclick = () => window.VinPenStart('cricket'); }
 function pick(px, py) { const wx = V.cx + (px - V.W / 2) / V.s, wz = V.cz + (py - V.H / 2) / V.s, lim = Math.max(7, 16 / V.s); let best = null, bd = lim;
   if (MD && MD.slots && V.s > 1.5) { let si = -1, sd = 4.2; MD.slots.forEach((q, i) => { const d = Math.hypot(q[0] - wx, q[1] - wz); if (d < sd) { sd = d; si = i; } }); if (si >= 0) return shopCard(si); }
+  { const st = MD && MD.places.find(q => q[0] === 'Vinland National Stadium'); if (st && wx > st[1] && wx < st[1] + st[3] && wz > st[2] && wz < st[2] + st[4]) return stadiumCard2D(); }
   V.homes.forEach(h => { const d = Math.hypot(h.x - wx, h.z - wz) - (h.bid ? 3 : 0); if (d < bd) { bd = d; best = h; } });
   if (best && best.bid) { const l = V.blds.get(best.bid).list; best = l.find(h => h.status === 'active') || l[0]; }
   card(best); }
@@ -2143,6 +2158,12 @@ function rsDrawBlds(occupied) {
       const mats = bl.map(b => new THREE.Matrix4().compose(new THREE.Vector3(b.x, 0, b.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI), new THREE.Vector3(2.1, 2.1, 2.1)));
       const grp = K.instances(RS.beachBaked, mats, i => { const j = ix.get(bl[i].id), st = SETS[(j + (Math.round(bl[i].z) < -640 ? 2 : 0)) % SETS.length]; return { wall: st[1], accent: st[2] }; });
       [...grp.children].forEach(ch => { ch.userData.blds = bl; if (ch.isMesh) pickables.push(ch); scene.add(ch); RS.bldMeshes.push(ch); }); } }
+  { const tl = RS.blds.filter(b => b.style === 'tower' && occupied.has(b.id));   // City Centre Towers: the kit's penthouse tower, one shared drawing for all
+    if (tl.length && !window.VinlandKit) { if (!RS.kitLoading) { RS.kitLoading = true; const sc = document.createElement('script'); sc.src = 'kit.js'; sc.onload = () => rsDrawBlds(occupied); document.head.appendChild(sc); } }
+    else if (tl.length) { const K = window.VinlandKit; RS.towerBaked = RS.towerBaked || K.bake(K.make('penthouse', {})); const WL = K.SETS.walls;
+      const mats = tl.map(b => new THREE.Matrix4().compose(new THREE.Vector3(b.x, 0, b.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), b.ry), new THREE.Vector3(1, 1, 1)));
+      const grp = K.instances(RS.towerBaked, mats, i => ({ wall: WL[(tl[i].block + tl[i].col) % WL.length] }));
+      [...grp.children].forEach(ch => { ch.userData.blds = tl; if (ch.isMesh) pickables.push(ch); scene.add(ch); RS.bldMeshes.push(ch); }); } }
   ['garden', 'terrace'].forEach(kind => { const list = RS.blds.filter(b => b.style === kind && occupied.has(b.id)); if (!list.length) return;
     if (!RS.tpl[kind]) { const bk = bakeGroup(aptStyle(kind, 0, '#fffffe')); scene.remove(bk); RS.tpl[kind] = bk.children.slice(); }
     const mats = list.map(b => new THREE.Matrix4().compose(new THREE.Vector3(b.x, 0, b.z), Q.clone().setFromAxisAngle(UPv, b.ry), SC));
@@ -2787,6 +2808,62 @@ const AMBASSADORS = [['orchestraboii', 10], ['bhaskar_26.01', 3]];   // [usernam
     B(c, 1.9, 0.75, 4, col, 0, 0.25, 0); B(c, 1.7, 0.6, 2.1, col, 0, 1.0, -0.2); B(c, 1.75, 0.45, 2, C.glass, 0, 1.05, -0.2, N); }
   window.EMB_OBJ = bakeKeep(g, 'embassy');
 })();
+// ================= CENTRAL BANK OF VINLAND (16 Nov, Dev): west of the Embassy, same row. Where Vinland's coins "live": the card shows how coins work,
+// and the bank staff are real citizens whose job is at the bank (from the sheet). No new server code: balance + history stay in the lobby wallet.
+const BANK = { x: -256.5, z: -226, w: 64, d: 72 };
+(function drawBank() {
+  const hide = new THREE.Matrix4().makeScale(0, 0, 0);
+  spots.forEach(([x, z], i) => { if (x < -218 && x > -300 && z > GOV.z0 - 8 && z < GOV.z1 + 8) { cr.setMatrixAt(i, hide); tk.setMatrixAt(i, hide); } });
+  cr.instanceMatrix.needsUpdate = true; tk.instanceMatrix.needsUpdate = true;
+  const rdW = (w, d, x, z) => { ROADS.push([w, d, x, z]); B(scene, w, 0.1, d, ROAD, x, 0.04, z, { shadow: false, edge: false }); };
+  rdW(70, 5, -256, GOV.z0); rdW(70, 5, -256, GOV.z1); rdW(5, 89, -291, (GOV.z0 + GOV.z1) / 2);
+  const g = new THREE.Group(), N = { edge: false, shadow: false }, STONE = '#efe3c8', TRIM = '#e2d3b2', BASE = '#d8c8a2', ROOFC = '#5f6f7a', GOLD = '#e2b04a', PAVE = '#e2d6bb';
+  g.position.set(BANK.x, 0, BANK.z);
+  B(g, BANK.w, 0.12, BANK.d, PAVE, 0, 0.02, 0, N);
+  B(g, 60, 0.14, 30, C.grass, 0, 0.03, 18, N); B(g, 10, 0.15, 30, PAVE, 0, 0.04, 18, N);
+  // the bank: a heavy stone block on a high base, six columns, a pediment with a gold coin, wide steps (faces south, like the Embassy)
+  B(g, 46, 2, 24, BASE, 0, 0, -12, N);
+  B(g, 44, 11, 22, STONE, 0, 2, -12); B(g, 45.5, 0.9, 23.5, TRIM, 0, 13, -12); B(g, 44, 1.6, 22, TRIM, 0, 13.9, -12); hip(g, 44, 3.4, 22, ROOFC, 0, 15.5, -12);
+  for (let x = -19; x <= 19; x += 4.75) if (Math.abs(x) > 10) { B(g, 2, 3.4, 0.3, C.glass, x, 3.6, -0.9, N); B(g, 2, 2.6, 0.3, C.glass, x, 8.4, -0.9, N); }
+  B(g, 22, 2, 7, BASE, 0, 0, 3, N); for (let k = 0; k < 4; k++) B(g, 24, 0.5, 1.2, '#e8dcc2', 0, k * 0.5, 7.2 - k * 1.1, N);
+  for (const x of [-9, -5.4, -1.8, 1.8, 5.4, 9]) { add(g, new THREE.CylinderGeometry(0.75, 0.85, 10, 14), STONE, x, 7, 3.6); B(g, 1.9, 0.5, 1.9, TRIM, x, 12, 3.6, N); }
+  B(g, 22, 1.2, 8, TRIM, 0, 12.2, 3); triPrism(g, 22, 4.2, 8, STONE, 0, 13.4, 3);
+  add(g, new THREE.CylinderGeometry(1.5, 1.5, 0.3, 24), GOLD, 0, 15, 7.1, { rx: Math.PI / 2 }); add(g, new THREE.CylinderGeometry(1.15, 1.15, 0.36, 24), '#c99a2e', 0, 15, 7.2, { rx: Math.PI / 2 });
+  B(g, 5, 7, 0.3, '#5e3f2c', 0, 2, -0.8, N); B(g, 5.6, 0.5, 0.4, GOLD, 0, 9, -0.7, N);
+  signBoard(g, 'CENTRAL BANK OF VINLAND', 0, 11.1, 7.4, 16, 1.2, '#2f2b28', '#f6d27a');
+  // two gold lamp posts by the steps, flag poles, a clock over the door
+  for (const x of [-12, 12]) { B(g, 0.3, 4.2, 0.3, '#2f2b28', x, 0, 8.5, N); add(g, new THREE.SphereGeometry(0.55, 10, 8), '#ffe8a8', x, 4.6, 8.5, N); }
+  for (const x of [-20, 20]) { B(g, 0.2, 10, 0.2, C.iron, x, 0, 30, N); B(g, 2.8, 1.7, 0.08, x < 0 ? '#2f5d4a' : '#c8603f', x + 1.5, 8, 30, N); }
+  add(g, new THREE.CylinderGeometry(1.2, 1.2, 0.2, 20), '#f6f0e2', 0, 17.6, -0.6, { rx: Math.PI / 2 });
+  // garden: hedges, flower beds, a coin fountain (the citizens' wishing well), trees; staff parking at the back
+  add(g, new THREE.CylinderGeometry(3.2, 3.2, 0.6, 24), BASE, -17, 0.3, 18, N); add(g, new THREE.CylinderGeometry(2.8, 2.8, 0.2, 24), C.water, -17, 0.62, 18, N);
+  add(g, new THREE.CylinderGeometry(0.9, 0.9, 0.2, 16), GOLD, -17, 1.4, 18, { rx: Math.PI / 2 }); add(g, new THREE.CylinderGeometry(0.3, 0.45, 1, 10), BASE, -17, 0.7, 18, N);
+  [[-8, 8], [8, 8], [8, 28], [-8, 28], [17, 18]].forEach(([x, z], k) => { B(g, 4, 0.35, 1.8, '#7a5a3a', x, 0.03, z, N); for (let a = -1.5; a <= 1.5; a += 1) add(g, new THREE.SphereGeometry(0.4, 6, 4), ['#e0457b', '#f39c1f', '#f6e27a', '#a084c8'][(k + Math.round(a + 2)) % 4], x + a, 0.6, z, N); });
+  [[-28, 6], [-28, 30], [28, 6], [28, 30], [-26, -30], [26, -30], [-28, -14], [28, -14]].forEach(([x, z], k) => { add(g, new THREE.CylinderGeometry(0.25, 0.32, 2.2, 6), C.wood, x, 1.1, z, N); add(g, new THREE.IcosahedronGeometry(2.1, 0), [C.leaf, C.pink, C.leaf][k % 3], x, 3.4, z); });
+  B(g, 40, 0.13, 8, '#4f5259', 0, 0.03, -29.5, N); for (let k = 0; k < 4; k++) { const c = new THREE.Group(); c.position.set(-12 + k * 8, 0.14, -29.5); g.add(c); const col = ['#2f2b28', '#f4efe4', '#1f4d3a', '#6b6f78'][k];
+    B(c, 1.9, 0.75, 4, col, 0, 0.25, 0); B(c, 1.7, 0.6, 2.1, col, 0, 1.0, -0.2); B(c, 1.75, 0.45, 2, C.glass, 0, 1.05, -0.2, N); }
+  window.BANK_OBJ = bakeKeep(g, 'bank');
+})();
+function bankCard() {
+  const staff = homes.filter(h => h.status === 'active' && /bank/i.test(h.job || '')).map(h => `<dt>🏦 @${esc(h.user)}</dt><dd>${esc(h.job)}</dd>`).join('');
+  return ['Government Row · next to the Embassy', 'Central Bank of Vinland',
+    `<p class="p">Where Vinland's coins are kept. Every citizen earns coins for free: a welcome gift, daily visits, stamps, trips, shifts and parties. Coins buy looks, cars and home colours in the Vinland Shop. They never buy votes, jobs or wins.</p>
+     <p class="p">Your balance and your coin history are in your wallet: <b>vinland lobby → Me → Wallet</b>.</p>
+     ${staff ? `<div class="k" style="margin-top:8px">Bank staff</div><dl class="facts">${staff}</dl>` : `<p class="p" style="color:var(--ink-dim);font-size:.82rem">The bank just opened. Its first staff are being hired from the citizens who asked for it.</p>`}`]; }
+
+// ---------- NATIONAL STADIUM card + PENALTY SHOOTOUT (16 Nov). The game file loads only when someone taps Play. ----------
+const STAD = { x: 822, z: -128, rx: 47, rz: 34 };
+function stadiumAt(cx, cy) { const r = renderer.domElement.getBoundingClientRect(); m2.set((cx - r.left) / r.width * 2 - 1, -(cy - r.top) / r.height * 2 + 1); ray.setFromCamera(m2, camera);
+  const pt = new THREE.Vector3(); if (!ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), pt)) return false;
+  return ((pt.x - STAD.x) / STAD.rx) ** 2 + ((pt.z - STAD.z) / STAD.rz) ** 2 <= 1; }
+function stadiumCard() {
+  return ['Riverside · next to the Business District', 'Vinland National Stadium',
+    `<p class="p">Opened at 2,000 citizens. The home of Vinland football, with a training pitch, sports hall, pool and courts around it.</p>
+     <div class="k" style="margin-top:8px">Play at the stadium</div>
+     <p class="p" style="font-size:.86rem">⚽ Penalty shootout: 5 kicks against the Vinland keeper. 🏏 Cricket: bat one over. Every goal and run counts for you and your district on this week's leaderboard. 3 rounds of each a day.</p>
+     <div class="row2"><button class="btn" id="penPlay">⚽ Penalties</button><button class="btn" id="crkPlay">🏏 Bat an over</button></div>`]; }
+function selectStadium() { clearSelection(); stopTour(); const c = stadiumCard(); show(c[0], c[1], c[2]); const b = document.getElementById('penPlay'); if (b) b.onclick = () => window.VinPenStart('pen'); const k = document.getElementById('crkPlay'); if (k) k.onclick = () => window.VinPenStart('cricket');
+  flyTo(new THREE.Vector3(STAD.x, 4, STAD.z), narrow ? new THREE.Vector3(STAD.x + 60, 110, STAD.z + 140) : new THREE.Vector3(STAD.x + 50, 75, STAD.z + 110)); }
 function embassyCard() {
   const list = AMBASSADORS.map(([u, n]) => `<dt>🎖️ @${esc(u)}</dt><dd>${n} citizens invited</dd>`).join('');
   return ['Next to the Passport Office · Day ' + EMB.day, 'Embassy of Vinland',
@@ -3137,7 +3214,7 @@ RS.bridgeFrom = { '-226': 292.5, '0': 292.5, '226': 152.5 };   // where each bri
 RS.riverW = z => RS.riverE - (95 + 10 * Math.sin(z / 61) + 5 * Math.sin(z / 19 + 1) + 2 * Math.sin(z / 7.3));
 // Riverside flats (user, 9 Nov: blocks of garden villa-apartments and terrace apartments). Each flat is a home number, appended
 // to PLOTS (so nobody moves); a flat plot carries its building, floor and letter. Buildings nearest the two bridges fill first.
-RS.SPEC = { garden: { step: 36, floors: 4, per: 1, fh: 3.3, x: [577, 624.5] }, terrace: { step: 38, floors: 6, per: 1, fh: 3.2, x: [578, 623.5] }, beach: { step: 31, floors: 2, per: 2, fh: 3.4, x: [0, 0] } };   // Dev, 12 Nov: every building, waterfront too: 4 flats (garden) / 6 flats (terrace), one per floor
+RS.SPEC = { garden: { step: 36, floors: 4, per: 1, fh: 3.3, x: [577, 624.5] }, terrace: { step: 38, floors: 6, per: 1, fh: 3.2, x: [578, 623.5] }, beach: { step: 31, floors: 2, per: 2, fh: 3.4, x: [0, 0] }, tower: { step: 0, floors: 12, per: 1, fh: 3.6, x: [0, 0] } };   // Dev, 12 Nov: every building, waterfront too: 4 flats (garden) / 6 flats (terrace), one per floor
 RS.blocks = [[-646, -475, 'garden'], [-465, -231, 'terrace'], [-221, -5, 'garden'], [5, 221, 'terrace'], [231, 465, 'garden'], [475, 540, 'terrace']];
 RS.blds = [];
 // Riverside Business District (user, 11 Nov): the 6 empty flat plots at the Central Bridge become 3 big business lots
@@ -3160,16 +3237,24 @@ RS.INLAND.rows.forEach(([r0, r1], ri) => RS.INLAND.blocks.forEach(([z0, z1], k) 
   // each row has its own inner lane down the middle (Dev, 11 Nov): four lines of buildings, two face the main lanes, two face the inner lane.
   // Inland buildings hold one flat per floor (4 garden / 6 terrace, Dev 11 Nov) so new citizens show up as new buildings and names are easy to read.
   for (let i = 0; i < n; i++) [[r0 + 19.5, -Math.PI / 2, 0], [m - 19.5, Math.PI / 2, 1], [m + 19.5, -Math.PI / 2, 2], [r1 - 19.5, Math.PI / 2, 3]].forEach(([x, ry, col]) => RS.blds.push({ style, block, x, z: z0 + sp * (i + 0.5), ry, col, tier: ri + 1, per: 1 })); }));
+// CITY CENTRE TOWERS (Dev, 16 Nov: ~5,000 followers, the map was full). The two empty strips either side of the central area
+// (z -320..-226 next to the stadium, z 226..310), across all three inland rows: 2 x 2 penthouse towers (kit 'penthouse', 12 floors)
+// per block, 12 homes each (one per floor, Dev). Every block has towers (Dev: no square), and a walkable park strip runs down the middle of each strip, between the two lines of towers.
+// Tier 4 = they sort after every existing building, so nobody's home number or flat changes; the new citizens fill them in order.
+RS.TOWER = { bands: [[-320, -226], [226, 310]], blocks: [[640, 712.5], [712.5, 785], [785, 857.5], [857.5, 930], [930, 1002.5], [1002.5, 1075]], park: -1 };
+RS.TOWER.bands.forEach(([z0, z1], si) => RS.TOWER.blocks.forEach(([x0, x1], k) => { if (k === RS.TOWER.park) return;
+  const block = 100 + si * 10 + k, xs = [x0 + 2.5 + 15, x1 - 2.5 - 15], zs = [z0 + 2.5 + 16, z1 - 2.5 - 16];
+  xs.forEach((x, cx) => zs.forEach((z, cz) => RS.blds.push({ style: 'tower', block, x, z, ry: z < 0 ? 0 : Math.PI, col: cx * 2 + cz, tier: 4, per: 1, tower: true }))); }));
 const RS_D = b => Math.min(Math.abs(b.z + 226), Math.abs(b.z - 226));
 RS.blds.sort((a, b) => ((a.tier || 0) - (b.tier || 0)) || (RS_D(a) - RS_D(b)) || a.col - b.col);
 RS.blds.forEach((b, i) => { b.id = i + 1; b.ci = i % 4; });
 // BEACH LANE (Dev, 13 Nov): the strip of 6 inland blocks right along the beach (the first block of every inland row, z < -595) = 24 Beach Flats
 // buildings, 4 flats each (2 floors x left/right) = 96 flats. The waterfront row is not touched. Same building ids, so nobody's flat changes. They go to the NEXT citizens (see RS.BEACH_FROM).
-RS.blds.forEach(b => { if (b.tier && b.z < -595) { b.style = 'beach'; b.per = 2; } });
+RS.blds.forEach(b => { if (b.tier && b.tier <= 3 && b.z < -595) { b.style = 'beach'; b.per = 2; } });
 RS.blds.forEach(b => { if (b.block === 4) b.z = { 75: 95, 113: 131, 151: 167, 189: 203 }[Math.round(b.z)] || b.z; });   // after the ids: nobody's flat changes
 RS.flats = [];
 RS.blds.forEach(b => { const S2 = { ...RS.SPEC[b.style], per: b.per || RS.SPEC[b.style].per }; for (let f = 1; f <= S2.floors; f++) for (let k = 0; k < S2.per; k++)
-  RS.flats.push([b.x, b.z, b.ry, 'f', { bid: b.id, block: b.block, style: b.style, floor: f, k, per: S2.per, fh: S2.fh, beach: b.style === 'beach', label: b.style === 'beach' ? 'Beach Lane, Flat ' + ((f - 1) * S2.per + k + 1) : 'Flat ' + f + (S2.per > 1 ? 'ABC'[k] : '') }]); });
+  RS.flats.push([b.x, b.z, b.ry, 'f', { bid: b.id, block: b.block, style: b.style, floor: f, k, per: S2.per, fh: S2.fh, beach: b.style === 'beach', label: b.style === 'beach' ? 'Beach Lane, Flat ' + ((f - 1) * S2.per + k + 1) : b.style === 'tower' ? 'City Centre Tower, Floor ' + f : 'Flat ' + f + (S2.per > 1 ? 'ABC'[k] : '') }]); });
 // Dev, 12 Nov: the far-north waterfront block (block 1, by the sea) stays empty for everyone already here (homes up to #1820 after the
 // 12 Nov sync = the first 456 flats); the citizens after that move into it first, then the inland rows carry on.
 RS.B1_AT = 456;
@@ -3259,7 +3344,7 @@ PLOTS.push(...RS.flats);
     for (let z = -28; z <= 26; z += 6) { win(st, 9.05, 2.6, z, Math.PI / 2, 1.6, 3.0, { shutters: false }); win(st, -9.05, 2.6, z, -Math.PI / 2, 1.6, 3.0, { shutters: false }); } }
   window.RS_OBJ = bakeKeep(g, 'riverside');
   // empty building plots (a neat paved lot + lawn); the building itself appears when its first citizen moves in (see rsDrawBlds)
-  { const lg = new THREE.Group(); RS.blds.forEach(b => { const w = b.style === 'garden' ? 26 : 28, d = b.style === 'garden' ? 22 : 24, lot = new THREE.Group(); lot.position.set(b.x, 0, b.z); lot.rotation.y = b.ry; lg.add(lot);
+  { const lg = new THREE.Group(); RS.blds.forEach(b => { const w = b.style === 'garden' ? 26 : b.style === 'tower' ? 27 : 28, d = b.style === 'garden' ? 22 : b.style === 'tower' ? 27 : 24, lot = new THREE.Group(); lot.position.set(b.x, 0, b.z); lot.rotation.y = b.ry; lg.add(lot);
       B(lot, w, 0.12, d, '#e9dfc8', 0, 0.03, 0, { edge: false, shadow: false }); B(lot, w - 4, 0.13, d - 4, '#b5d08a', 0, 0.04, 0, { edge: false, shadow: false }); });
     RS.BIZLOTS.forEach(([bz, n, W, D, x, ry]) => { const lot = new THREE.Group(); lot.position.set(x, 0, bz); lot.rotation.y = ry; lg.add(lot);   // front = local +z
       B(lot, W, 0.2, D, '#d6ccb4', 0, 0.03, 0, { edge: false, shadow: false });
@@ -3345,6 +3430,22 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
   rdD(992.5 - xa, 6, (xa + 992.5) / 2, 0);   // Central Bridge road, one straight avenue up to the Tower site (15 Nov; no roundabout, Dev)
   rdD(5, 222 - 4, 930, -(226 + 4) / 2);                                                              // service road behind the stadium car parks: bridge road (z -226) to the avenue
   [[712.5], [857.5], [1002.5]].forEach(([x]) => [[RSX.z0, -226], [226, RSX.z1]].forEach(([za, zb]) => rdD(4, zb - za - 5, x, (za + zb) / 2)));   // the inner lane down the middle of each row
+  // the park down the middle of each tower strip (Dev, 16 Nov, like the waterfront): the whole gap between the two lines of towers is
+  // lawn, with a wide smooth winding walk, lamps along it, trees, flowers and benches. Lane to lane; it stops at each road.
+  const ribbon = (xa, xb, zf, w, col, y) => { const pos = [], idx = []; let k = 0;
+    for (let x = xa; x <= xb + 0.01; x += 1, k++) { const z = zf(x), dz = (zf(x + 0.5) - zf(x - 0.5)), n = Math.hypot(1, dz), ox = -dz / n * w / 2, oz = 1 / n * w / 2;
+      pos.push(x + ox, y, z - oz, x - ox, y, z + oz); if (k) { const q = (k - 1) * 2; idx.push(q, q + 1, q + 2, q + 1, q + 3, q + 2); } }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, mat(col)); m.receiveShadow = true; g.add(m); };
+  RS.TOWER.bands.forEach(([z0, z1], si) => { const zIn0 = z0 + 2.5 + 16 + 13.5, zIn1 = z1 - 2.5 - 16 - 13.5, cz = (zIn0 + zIn1) / 2, D = zIn1 - zIn0 + 2, A = Math.max(1.5, D / 2 - 6);
+    const zf = x => cz + A * Math.sin((x + si * 37) / 13);
+    RS.TOWER.blocks.forEach(([x0, x1], k) => { const xa = x0 + (k % 2 ? 2 : 2.5), xb = x1 - (k % 2 ? 2.5 : 2), w = xb - xa, cx = (xa + xb) / 2;
+      B(g, w, 0.13, D, '#a9c97f', cx, 0.03, cz, N);                                        // lawn across the whole gap
+      ribbon(xa, xb, zf, 5.6, '#ead9b2', 0.2);                                            // the wide winding walk
+      for (let x = xa + 4; x < xb - 2; x += 6.5) { const z = zf(x), up = Math.cos((x + si * 37) / 13) > 0 ? 1 : -1;
+        lamp(g, x, z + up * 3.1);
+        const tz = z - up * (2.3 + Math.min(4, (D / 2 - A) * 0.8)); if (Math.abs(tz - cz) < D / 2 - 1.5) tree(g, x + 3, 0.1, tz, Math.round(x) % 3 === 0 ? 'pink' : 'canopy', 0.8);
+        const fz = z + up * (5.2); if (Math.abs(fz - cz) < D / 2 - 1.8) { if (Math.round(x) % 16 < 8) bench(g, x + 4, fz - up * 1.2, up > 0 ? Math.PI : 0); else flowerBed(g, x + 4, fz, Math.round(x) % 2 ? C.pink : C.purple); } } }); });
   window.RSX_OBJ = bakeKeep(g, 'riverside');
 })();
 
@@ -4101,10 +4202,12 @@ CONTENT.edu = ['South of town', 'Education District',
 const ray = new THREE.Raycaster(), m2 = new THREE.Vector2(); let down = null, hoverFlag = false;
 function pickAt(cx, cy) { const r = renderer.domElement.getBoundingClientRect(); m2.set((cx - r.left) / r.width * 2 - 1, -(cy - r.top) / r.height * 2 + 1);
   ray.setFromCamera(m2, camera); const hit = ray.intersectObjects(pickables, false)[0]; if (!hit) return null; const ud = hit.object.userData; if (ud.homes) return { home: ud.homes[hit.instanceId] }; if (ud.blds) return { bld: ud.blds[hit.instanceId] }; if (ud.items) { const it = ud.items[hit.instanceId]; return it.owner ? { shop: it } : { open: it }; } return ud.place; }
-renderer.domElement.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse' || e.buttons) return; const p = pickAt(e.clientX, e.clientY); hoverFlag = p === 'flag' || p === 'hall' || p === 'square' || p === 'corner' || p === 'school' || p === 'hospital' || p === 'statue' || p === 'mall' || p === 'mallsite' || (typeof p === 'string' && p.startsWith('cornershop:')) || p === 'gov' || p === 'parliament' || p === 'police' || p === 'fire' || p === 'train' || p === 'bus' || p === 'embassy' || p === 'beachtown' || p === 'resort' || p === 'library' || p === 'beach' || (typeof p === 'string' && p.startsWith('lot:')) || (p && (p.home || p.shop || p.open)); renderer.domElement.style.cursor = hoverFlag ? 'pointer' : 'grab'; });
+renderer.domElement.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse' || e.buttons) return; const p = pickAt(e.clientX, e.clientY); hoverFlag = p === 'flag' || p === 'hall' || p === 'square' || p === 'corner' || p === 'school' || p === 'hospital' || p === 'statue' || p === 'mall' || p === 'mallsite' || (typeof p === 'string' && p.startsWith('cornershop:')) || p === 'gov' || p === 'parliament' || p === 'police' || p === 'fire' || p === 'train' || p === 'bus' || p === 'embassy' || p === 'bank' || p === 'beachtown' || p === 'resort' || p === 'library' || p === 'beach' || (typeof p === 'string' && p.startsWith('lot:')) || (p && (p.home || p.shop || p.open)); renderer.domElement.style.cursor = hoverFlag ? 'pointer' : 'grab'; });
 renderer.domElement.addEventListener('pointerdown', e => { if (WALK.on || DRV.on) return; down = [e.clientX, e.clientY]; fly = null; stopTour(); });
 renderer.domElement.addEventListener('pointerup', e => { if (WALK.on || DRV.on) return; if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
-  const p = pickAt(e.clientX, e.clientY); if (!p) return;
+  const p = pickAt(e.clientX, e.clientY);
+  if ((!p || p === 'downtown') && stadiumAt(e.clientX, e.clientY)) { selectStadium(); return; }
+  if (!p) return;
   if (p.home) { selectHome(p.home); return; }
   if (p.bld) { selectBuilding(p.bld); return; }
   if (p.shop) { selectShop(p.shop); return; }
@@ -4117,6 +4220,7 @@ renderer.domElement.addEventListener('pointerup', e => { if (WALK.on || DRV.on) 
   if (typeof p === 'string' && p.startsWith('cornershop:')) { selectCornerShop(+p.slice(11)); return; }
   if (p === 'resort') { clearSelection(); stopTour(); const c = resortCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(-237, 4, -725), narrow ? new THREE.Vector3(-200, 90, -620) : new THREE.Vector3(-205, 65, -640)); return; }
   if (p === 'beachtown') { clearSelection(); stopTour(); const c = beachCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(0, 4, BEACH.z), narrow ? new THREE.Vector3(0, 110, BEACH.z + 140) : new THREE.Vector3(0, 80, BEACH.z + 110)); return; }
+  if (p === 'bank') { clearSelection(); stopTour(); const c = bankCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(BANK.x, 4, BANK.z), narrow ? new THREE.Vector3(BANK.x + 40, 70, BANK.z + 100) : new THREE.Vector3(BANK.x + 30, 48, BANK.z + 80)); return; }
   if (p === 'embassy') { clearSelection(); stopTour(); const c = embassyCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(EMB.x, 4, EMB.z), narrow ? new THREE.Vector3(EMB.x + 40, 70, EMB.z + 100) : new THREE.Vector3(EMB.x + 30, 48, EMB.z + 80)); return; }
   if (p === 'train') { clearSelection(); stopTour(); const c = trainCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(TRAIN.x, 4, TRAIN.z), narrow ? new THREE.Vector3(TRAIN.x - 150, 90, TRAIN.z + 60) : new THREE.Vector3(TRAIN.x - 120, 60, TRAIN.z + 50)); return; }
   if (p === 'bus') { clearSelection(); stopTour(); const c = busCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(BUS.x, 4, BUS.z), narrow ? new THREE.Vector3(BUS.x - 80, 80, BUS.z + 100) : new THREE.Vector3(BUS.x - 70, 55, BUS.z + 80)); return; }
@@ -4191,10 +4295,12 @@ const ease = k => k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let last = performance.now();
 const RUN = { until: 0, lastDraw: 0, lastTags: 0, tagsFor: null, homes: false, shown: 0, wasBusy: false, stopped: false, lastMove: 0, cam: new Float64Array(6) };
-const kick = (ms = 700) => { RUN.until = Math.max(RUN.until, performance.now() + ms); if (RUN.stopped && !(BOOT && BOOT.paused)) { RUN.stopped = false; last = performance.now(); requestAnimationFrame(frame); } };
+window.VIN3D_KICK = () => kick(1500);
+const kick = (ms = 700) => { RUN.until = Math.max(RUN.until, performance.now() + ms); if (RUN.stopped && !(BOOT && BOOT.paused) && !window.PEN_ON) { RUN.stopped = false; last = performance.now(); requestAnimationFrame(frame); } };
 controls.addEventListener('change', () => kick(350));
 ['pointerdown', 'pointermove', 'pointerup', 'wheel', 'touchstart', 'touchmove', 'keydown', 'click', 'resize'].forEach(ev => window.addEventListener(ev, () => kick(), { passive: true, capture: true }));
 function frame(now) {
+  if (window.PEN_ON) { RUN.stopped = true; return; }   // the penalty game is open: the map sleeps
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   nightFrame(now); plazaFrame(now); crackFrame(now);
   if (WALK.on) walkFrame(dt, now); else if (DRV.on) driveFrame(dt, now); else {
@@ -4236,6 +4342,8 @@ const LAYOUT_CSV_URL = '';
 const NOTICES_CSV_URL = '';
 // Official notices: only you write these (in the sheet's "notices" tab); nobody can reply on the website.
 const NOTICES_FALLBACK = `date,notice
+16 Nov,"The Central Bank of Vinland is open on Government Row, next to the Embassy. Tap it on the map. Your coins are in the lobby: Me, then Wallet."
+15 Nov,"The Vinland National Stadium is open, with a training pitch, sports hall, pool and courts around it."
 11 Nov,"The Central Bridge is open: straight from the town to Riverside. At its end, the new Business District: a car showroom, a gas station, the newspaper and a dance studio. Plus: Villa Lane has its first villa, police officers stand at the HQ, and the boat shop has boats on the beach."
 10 Nov,"The first beach shops are open: a bookstore café, a grocery store and a boat shop. Plus: you can now drive a car around Vinland (🚗 Drive). New roles at the Police HQ and the Hospital."
 8 Nov,"1,000 citizens! The old hall came down and the Citizens' Plaza went up in the centre. Every citizen's name is on a brick: zoom in on the map to find yours."
@@ -4267,11 +4375,11 @@ const DEMANDS_FALLBACK = `emoji,demand,count,likes,asked_by,status
 🥐,Bakery,3,1,@izabella_maria20 +2,Opened as a shop (Day 2)
 🖥️,Data centre,2,2,@hcwd213 +1,Waiting
 🚗,Car showroom,4,0,@ashrithsai2 +3,"Built (Day 11, Business District)"
-🏦,Bank,4,1,@jimmatl +3,Saturday vote
+🏦,Bank,5,1,@jimmatl +4,"Built (Day 16, Central Bank next to the Embassy)"
 ☕,Cafe / coffee shop,5,1,@hritu_raj_hajong +4,Opened as a shop (Day 2)
 🚌,Bus station,1,2,@notjust_jb,"Built (Day 9, Transport Hub)"
 ✈️,Airport,3,1,@swety.offside +2,Waiting
-⚽,Football stadium (Vinland FC),5,5,@v_dandwani09 +4,Waiting
+⚽,Football stadium (Vinland FC),7,5,@v_dandwani09 +6,"Built (Day 15, National Stadium)"
 🌾,Farm,3,1,@just_lovinarts +2,Waiting (new land)
 🎨,Arts centre,2,1,@izabella_maria20 +1,"Built (Day 11, dance studio in the Business District)"
 👟,Shoe / sports store,3,0,@chayce_nathe +2,Opened as a shop

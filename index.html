@@ -93,7 +93,7 @@ ol.laws{padding:0;list-style:none;counter-reset:l}ol.laws li{counter-increment:l
 /* ---------- social (step 5): knocks, friends, neighbours, parties ---------- */
 #sh{position:fixed;inset:0;z-index:25}#sh[hidden]{display:none}#sh .lcbox{top:calc(16px + var(--st));max-height:calc(100vh - 32px);overflow-y:auto;padding-bottom:18px}
 .dots{display:flex;flex-wrap:wrap;gap:9px;margin:6px 0 12px}.dots button{width:38px;height:38px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1.5px var(--rule);padding:0}.dots button.on{box-shadow:0 0 0 3px var(--navy)}
-.lookpv{display:flex;gap:14px;align-items:center;margin:8px 0 6px}.lookpv svg{width:110px;height:140px;border:1.5px solid var(--navy);border-radius:8px;flex:none}
+.lookpv{display:flex;gap:14px;align-items:center;margin:8px 0 6px}.lookpv svg{width:110px;height:140px;border:1.5px solid var(--navy);border-radius:8px;flex:none}.look3d{flex:none;width:150px;height:190px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--navy);border-radius:10px;background:#efe6cf;overflow:hidden}.look3d svg{border:0}.look3d canvas{display:block}
 .coinb{display:inline-flex;align-items:center;gap:6px;background:var(--navy);color:var(--goldlt);border-radius:20px;padding:5px 12px;font:600 13px var(--sans)}
 .shopit{display:flex;align-items:center;gap:11px;padding:10px 0;border-top:1px solid #efe3c4}.shopit:first-of-type{border-top:0}.shopit>span.sw{flex:none;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;background:#f1e6c8;border:1px solid var(--rule)}
 .shopit>span.nm{flex:1;min-width:0}.shopit b{display:block;font:600 14px var(--sans)}.shopit small{font:400 12px var(--sans);color:var(--mute)}.shopit .push{flex:0 0 auto;min-height:40px;font-size:12.5px;padding:0 12px;box-shadow:0 3px 0 var(--navy)}.shopit .push.g{box-shadow:0 3px 0 var(--golddk)}.shopit .push[disabled]{opacity:.5;box-shadow:none}
@@ -469,7 +469,7 @@ function shHTML() { const su = session(), h = su ? byUser.get(su) : null, L = SH
   if (SH.view === 'look') { const dots = (k, list) => `<div class="dots">${list.map((c, i) => `<button class="${(L[k] || 0) === i ? 'on' : ''}" style="background:${c}" data-a="lk-set" data-k="${k}" data-v="${i}" aria-label="Colour ${i + 1}" aria-pressed="${(L[k] || 0) === i}"></button>`).join('')}</div>`;
     const chips = (k, list, def) => `<div class="chips">${list.map(v => `<button class="${(L[k] || def) === v[0] ? 'on' : ''}" data-a="lk-set" data-k="${k}" data-v="${v[0]}" aria-pressed="${(L[k] || def) === v[0]}">${v[1]}</button>`).join('')}</div>`;
     const ownedOf = c => Object.keys(ITEMS).filter(i => i.startsWith(c + ':') && SH.owned.has(i)).map(i => [i.split(':')[1], ITEMS[i][1] + ' ' + ITEMS[i][2]]);
-    return x + `<div class="h" id="shT" style="font-size:20px">My look</div><div class="lookpv">${lookSVG(L)}<p class="sub" style="margin:0">This is you in Vinland: on your passport, in Play mode, at parties and at work. Everyone can see it.</p></div>
+    return x + `<div class="h" id="shT" style="font-size:20px">My look</div><div class="lookpv"><div class="look3d" id="look3d">${lookSVG(L)}</div><p class="sub" style="margin:0">This is you in Vinland: on your passport, in Play mode, at parties and at work. Everyone can see it.<br><small>Drag to turn.</small></p></div>
       <div class="k">Skin</div>${dots('skin', KITC.skins)}<div class="k">Hair</div>${chips('hairStyle', [['short', 'Short'], ['long', 'Long'], ['bun', 'Bun'], ['bald', 'Bald']], 'short')}<div class="k">Hair colour</div>${dots('hair', KITC.hairs)}
       <div class="k">Outfit</div>${chips('outfit', [['tee', 'T-shirt'], ['shirt', 'Shirt'], ['kurta', 'Kurta'], ['dress', 'Dress'], ['saree', 'Saree']], 'tee')}<div class="k">Top colour</div>${dots('top', KITC.tops)}<div class="k">Bottom colour</div>${dots('bottom', KITC.bottoms)}
       <div class="k">Hat</div>${chips('hat', [['none', 'None']].concat(ownedOf('hat')), 'none')}${(L.hat || 'none') !== 'none' ? `<div class="k">Hat colour</div>${dots('hatColor', KITC.hats)}` : ''}
@@ -483,7 +483,37 @@ function shHTML() { const su = session(), h = su ? byUser.get(su) : null, L = SH
     ${SH.cat === 'car' ? `<div class="shopit">${sw(['', '🚗'])}<span class="nm"><b>Hatchback</b><small>60 km/h · your free car</small></span>${(L.car || 'carHatch') === 'carHatch' ? '<button class="push sm" disabled>In use ✓</button>' : '<button class="push g sm" data-a="sh-use" data-k="car" data-v="carHatch">Use</button>'}</div>` : ''}
     ${list.map(i => `<div class="shopit">${sw(ITEMS[i])}<span class="nm"><b>${esc(ITEMS[i][2])}</b><small>${esc(ITEMS[i][3] || (SH.cat === 'paint' ? 'For the car parked at your home' : 'Wall and roof'))}</small></span>${itemBtn(i, inUse(i), useKey(i))}</div>`).join('')}
     ${SH.cat === 'car' ? '<p class="sub">Your car waits outside your home in Play mode (laptop). Time trials always use the same trial car for everyone.</p>' : ''}`; }
-function shRender() { $('#shIn').innerHTML = shHTML(); }
+function shRender() { $('#shIn').innerHTML = shHTML(); if (SH.view === 'look') look3dMount(); }
+// 3D "My look" (16 Nov): the real map character (map/kit.js) spinning in the panel. three.js + kit.js load only when My look is opened; the flat drawing stays as the fallback.
+const L3 = { st: '', r: null, sc: null, cam: null, me: null, key: '', rot: 0.5, drag: null, raf: 0 };
+const loadJS = src => new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+function look3dOpts(l) { return { skin: KITC.skins[l.skin || 0], hairStyle: l.hairStyle || 'short', hair: KITC.hairs[l.hair || 0], outfit: l.outfit || 'tee', top: KITC.tops[l.top || 0], bottom: KITC.bottoms[l.bottom || 0],
+  hat: l.hat || 'none', hatColor: KITC.hats[l.hatColor || 0], acc: l.acc || 'none', accColor: KITC.tops[l.top || 0] }; }
+async function look3dMount() {
+  const box = $('#look3d'); if (!box) return;
+  if (L3.st === 'fail') return;
+  if (L3.st === '') { L3.st = 'loading';
+    try { const c = document.createElement('canvas'); if (!(c.getContext('webgl') || c.getContext('experimental-webgl'))) throw 0;
+      if (!window.THREE) await loadJS('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
+      if (!window.VinlandKit) await loadJS('map/kit.js?v=16nov');
+      const r = new THREE.WebGLRenderer({ antialias: true, alpha: true }); r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); r.setSize(150, 190);
+      const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight('#fff3df', '#7a6a50', 0.85)); const sun = new THREE.DirectionalLight('#ffe8c8', 0.8); sun.position.set(3, 6, 5); sc.add(sun);
+      const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.08, 32), new THREE.MeshLambertMaterial({ color: '#e6dccb' })); pad.position.y = -0.04; sc.add(pad);
+      const cam = new THREE.PerspectiveCamera(30, 150 / 190, 0.1, 50); cam.position.set(0, 1.35, 5.2); cam.lookAt(0, 0.95, 0);
+      Object.assign(L3, { st: 'ready', r, sc, cam });
+      const cv = r.domElement; cv.style.touchAction = 'none'; cv.style.cursor = 'grab'; cv.setAttribute('aria-label', 'Your character in 3D. Drag to turn.');
+      cv.addEventListener('pointerdown', e => { L3.drag = e.clientX; cv.setPointerCapture(e.pointerId); });
+      cv.addEventListener('pointermove', e => { if (L3.drag != null) { L3.rot += (e.clientX - L3.drag) * 0.02; L3.drag = e.clientX; } });
+      ['pointerup', 'pointercancel'].forEach(ev => cv.addEventListener(ev, () => { L3.drag = null; }));
+    } catch (e) { L3.st = 'fail'; return; } }
+  if (L3.st !== 'ready') { setTimeout(look3dMount, 150); return; }
+  const b2 = $('#look3d'); if (!b2) return;
+  if (L3.r.domElement.parentNode !== b2) { b2.innerHTML = ''; b2.appendChild(L3.r.domElement); }
+  const o = look3dOpts(SH.draft || SH.look), key = JSON.stringify(o);
+  if (key !== L3.key) { if (L3.me) L3.sc.remove(L3.me); L3.me = window.VinlandKit.make('person', o); L3.me.scale.setScalar(1.05); L3.sc.add(L3.me); L3.key = key; }
+  if (!L3.raf) { const tick = () => { const open = !$('#sh').hidden && SH.view === 'look' && $('#look3d'); if (!open) { L3.raf = 0; return; }
+      if (L3.drag == null) L3.rot += 0.012; if (L3.me) L3.me.rotation.y = L3.rot; L3.r.render(L3.sc, L3.cam); L3.raf = requestAnimationFrame(tick); }; L3.raf = requestAnimationFrame(tick); }
+}
 function shOpen(v) { SH.view = v; SH.ask = ''; SH.draft = v === 'look' ? Object.assign({}, SH.look) : null; shRender(); $('#sh').hidden = false; if (!SH.ready) shopLoad(); }
 async function shSave(look, okMsg) { const se = readSession(); if (!se || SH.busy) return; SH.busy = true; const before = SH.look; SH.look = look; shRender(); render(true);   // shows at once; goes back if Supabase says no
   try { const r = await socApi({ action: 'look', token: se.token, look }); if (r && r.ok) { SH.look = r.look; if (okMsg) toast(okMsg); } else { SH.look = before; toast((r && r.msg) || 'That did not save. Try again.'); } } catch (e) { SH.look = before; toast('No internet. Try again.'); }
