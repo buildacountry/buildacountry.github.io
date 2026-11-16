@@ -460,8 +460,8 @@
   }
 
   def({ key: 'vinlandTower', name: 'Vinland Tower', cat: 'Landmarks', part: 1, budget: 6000, size: 'Plaza 120 \u00d7 120 m \u00b7 250 m tall', night: true,
-    opts: { style: choices('Style', ['campanile', 'glass', 'classic']), state: choices('State', ['done', 'site']) },   // campanile = new default; glass = the 13 Nov look; classic = shelved art deco try
-    make: o => (o.style === 'glass' ? glassTower(o) : o.style === 'classic' ? decoTower(o) : campanile(o)) });
+    opts: { style: choices('Style', ['campanile', 'empire', 'glass', 'classic']), state: choices('State', ['done', 'site']) },   // campanile = default; empire = 16 Nov try (deco setbacks + glass); glass = the 13 Nov look; classic = shelved art deco try
+    make: o => (o.style === 'glass' ? glassTower(o) : o.style === 'classic' ? decoTower(o) : o.style === 'empire' ? empireTower(o) : campanile(o)) });
   // ---- cars (made-up shapes: no real brands, no logos, no badges) ----
   // Hatchback: small city car. Slot: body.
   def({ key: 'carHatch', name: 'Hatchback', cat: 'Cars', part: 1, budget: 400, size: '1.9 \u00d7 4.2 m',
@@ -2596,6 +2596,370 @@
       gdLamp(g, 1.6, 1.6); B(g, 0.5, 0.8, 0.5, '#47684a', -1.6, 0.2, 1.6, NE);
       return g;
     } });
+
+  // ================= DISTRICT SERVICES, DOWNTOWN QUARTERS, VINLAND TOWER CONSTRUCTION (Dev OK'd, 16 Nov) =================
+  // Same style as the gd* pieces: Vinland colours, toon look, walls / roof slots, winAt windows (lit at night), front = +z, centred.
+  const SV = {
+    WHITE: '#f6f3ea', BLUE: '#2f4a7a', GREEN: '#2f9a5a', ASPH: '#55524c', LINE: '#f6f3ea', STONE: '#efe6d2', STONE2: '#e2d6bb', CONC: '#b9b4aa', CONC2: '#a39e94',
+    CROSS: glowMat('#2f9a5a', '#4fd08a'), BLUEL: glowMat('#3f7fdf', '#6fa8ff'), REDL: glowMat('#d8302a', '#ff5a3a'), GLASS: BK.SHOPGL, DARKGL: glowMat('#4a6470', '#ffd98a'),
+    walls: ['#f6f3ea', '#efe6d2', '#e9e2d0', '#f3e6cc', '#e3d8c4', '#f2cfb3'], roofs: [PAL.terra, '#5b5f66', PAL.terra2, '#8a5a3a']
+  };
+  const svOpts = { wall: colours('Walls', SV.walls), roof: colours('Roof', SV.roofs) };
+  const svSign = (p, text, bg, fg, w, h, x, y, z, ry) => P(p, w, h, textMat(text, bg, fg), x, y, z, ry ? { ry } : {});
+  const svCross = (p, s, x, y, z) => { P(p, s, s, SV.WHITE, x, y, z); P(p, s * 0.22, s * 0.7, SV.CROSS, x, y + s * 0.15, z + 0.02); P(p, s * 0.7, s * 0.22, SV.CROSS, x, y + s * 0.39, z + 0.03); };
+  const svFlag = (p, x, z, h) => { B(p, 0.14, h || 9, 0.14, '#c9ced2', x, 0.2, z, NE); B(p, 2.2, 1.4, 0.04, PAL.terra, x + 1.15, (h || 9) - 1.4, z, FLAT); };
+  const svRoofFlat = (p, w, d, x, y, z) => { B(p, w + 0.4, 0.7, d + 0.4, SV.STONE, x, y, z, NE); B(p, w - 0.4, 0.06, d - 0.4, '#9a948a', x, y + 0.66, z, FLAT); };   // parapet + roof deck
+  // a vehicle from the kit, parked: 'amb' (white van, red stripe, blue lights), 'police' (blue + white stripe, light bar)
+  function svCar(p, kind, x, z, ry) {
+    const c = kind === 'amb' ? KIT.carVan({ body: SV.WHITE }) : KIT.carSedan({ body: SV.BLUE }); c.position.set(x, 0.2, z); c.rotation.y = ry || 0; p.add(c);
+    const b = new THREE.Box3().setFromObject(c), top = b.max.y - 0.2, L = kind === 'amb' ? 4.9 : 4.6, W = kind === 'amb' ? 2.04 : 1.94;
+    B(c, W, 0.22, L - 0.6, kind === 'amb' ? '#c8303a' : SV.WHITE, 0, top * (kind === 'amb' ? 0.55 : 0.45), 0, NE);
+    B(c, 1.0, 0.2, 0.32, SV.BLUEL, 0, top, kind === 'amb' ? 1.6 : 0, NE); if (kind === 'amb') B(c, 0.3, 0.2, 0.3, SV.REDL, 0.5, top, -2.0, NE);
+    return c;
+  }
+
+  // ---------- SMALL DISTRICT SERVICES ----------
+  // 1. svClinic: a neighbourhood clinic, 2 floors, 20 x 14 m, green cross signs, entrance canopy, covered ambulance bay + 1 ambulance. 32 x 26 m lot.
+  def({ key: 'svClinic', name: 'Neighbourhood clinic', cat: 'District services', part: 2, budget: 1400, size: '20 × 14 m · 2 floors · 32 × 26 m lot', night: true, opts: svOpts,
+    make(o) {
+      const g = new THREE.Group(), W = slot('wall', o.wall || SV.walls[0]), x0 = -5, zf = 4, H = 6.8;
+      B(g, 32, 0.2, 26, PAL.grass, 0, 0, 0, { shadow: false }); B(g, 32, 0.05, 8, CP.PAVE, 0, 0.2, 9, FLAT); B(g, 9, 0.05, 18, SV.ASPH, 11, 0.2, 1, FLAT);
+      B(g, 20, H, 14, W, x0, 0.2, -3); B(g, 20.2, 0.45, 14.2, SV.STONE2, x0, 0.2, -3, NE); B(g, 20.1, 0.5, 14.1, '#4f9a86', x0, 3.4, -3, NE); svRoofFlat(g, 20, 14, x0, H + 0.2, -3);
+      P(g, 3.6, 2.7, GD.FRAME, x0, 0.2, zf + 0.02); P(g, 3.2, 2.5, SV.GLASS, x0, 0.25, zf + 0.05); B(g, 6, 0.3, 2.6, SV.WHITE, x0, 3.0, zf + 1.3); [-2.6, 2.6].forEach(dx => B(g, 0.2, 2.9, 0.2, SV.WHITE, x0 + dx, 0.2, zf + 2.4, NE));
+      svCross(g, 2.2, x0, 4.0, zf + 0.04); svSign(g, 'CLINIC', SV.GREEN, SV.WHITE, 6, 0.9, x0, 6.0, zf + 0.04);
+      [-11.5, -8, 1.5].forEach(x => gdWin(g, x, 1.0, zf + 0.02, 2.0, 1.5)); [-12, -9, 0, 3].forEach(x => gdWin(g, x, 4.4, zf + 0.02, 1.8, 1.4));
+      [-1, 1].forEach(s => [1.0, 4.4].forEach(y => [-6, -1].forEach(z => gdWin(g, x0 + s * 10.02, y, z, 1.8, 1.4, s * Math.PI / 2))));
+      [-12, -7, -2, 2].forEach(x => [1.0, 4.4].forEach(y => gdWin(g, x, y, -10.02, 1.8, 1.4, Math.PI)));
+      // ambulance bay: canopy on posts, bay lines, 1 ambulance
+      B(g, 8, 0.35, 10, SV.WHITE, 11, 4.2, 0); [[7.4, -4.6], [14.6, -4.6], [7.4, 4.6], [14.6, 4.6]].forEach(([x, z]) => B(g, 0.3, 4.0, 0.3, SV.WHITE, x, 0.2, z, NE));
+      B(g, 8.1, 0.36, 0.3, '#c8303a', 11, 4.2, 5, NE); svSign(g, 'AMBULANCE', '#c8303a', SV.WHITE, 5, 0.6, 11, 3.6, 5.2);
+      [8, 14].forEach(x => B(g, 0.15, 0.03, 8, SV.LINE, x, 0.25, 0, FLAT)); svCar(g, 'amb', 11, 0.5, Math.PI);
+      gdBench(g, -12, 8.5, 0); gdTree(g, -14, 0.2, 10.5, 0.8); gdTree(g, 3, 0.2, 10.5, 0.8); gdLamp(g, 7, 10);
+      return g;
+    } });
+
+  // 2. svPolicePost: a small police station, 18 x 14 m, 2 floors, blue band, POLICE sign, blue lamp, flag, 2 police cars in the yard. 30 x 26 m lot.
+  def({ key: 'svPolicePost', name: 'Police post', cat: 'District services', part: 2, budget: 1500, size: '18 × 14 m · 2 floors · 30 × 26 m lot', night: true, opts: svOpts,
+    make(o) {
+      const g = new THREE.Group(), W = slot('wall', o.wall || SV.walls[2]), R = slot('roof', o.roof || SV.roofs[1]), x0 = -5, zf = 4, H = 6.6;
+      B(g, 30, 0.2, 26, PAL.grass, 0, 0, 0, { shadow: false }); B(g, 30, 0.05, 8, CP.PAVE, 0, 0.2, 9, FLAT); B(g, 9, 0.05, 20, SV.ASPH, 10, 0.2, 2, FLAT);
+      B(g, 18, H, 14, W, x0, 0.2, -3); B(g, 18.2, 0.45, 14.2, SV.STONE2, x0, 0.2, -3, NE); B(g, 18.1, 0.55, 14.1, SV.BLUE, x0, 3.3, -3, NE);
+      HIP(g, 19.4, 3.0, 15.4, R, x0, H + 0.2, -3);
+      gdDoor(g, x0, 0.25, zf + 0.02, SV.BLUE, winAt(x0, 1, zf)); B(g, 3.4, 0.25, 1.6, SV.STONE, x0, 2.8, zf + 0.8, NE); B(g, 0.5, 0.6, 0.5, SV.BLUEL, x0, 3.05, zf + 1.3, NE);   // door, hood, blue lamp
+      svSign(g, 'POLICE', SV.BLUE, SV.WHITE, 7, 1.1, x0, 4.0, zf + 0.04);
+      [-11, -8, -2, 1].forEach(x => gdWin(g, x, 0.9, zf + 0.02, 1.6, 1.5)); [-11, -8, -2, 1].forEach(x => gdWin(g, x, 4.4, zf + 0.02, 1.4, 1.3));
+      [-1, 1].forEach(s => [0.9, 4.4].forEach(y => [-6, -0.5].forEach(z => gdWin(g, x0 + s * 9.02, y, z, 1.4, 1.3, s * Math.PI / 2))));
+      [-11, -6, -1].forEach(x => [0.9, 4.4].forEach(y => gdWin(g, x, y, -10.02, 1.4, 1.3, Math.PI)));
+      svFlag(g, -15, 8.5, 9); B(g, 1.2, 0.3, 1.2, SV.STONE2, -15, 0.2, 8.5, NE);
+      [-1, 1].forEach(s => B(g, 0.15, 0.03, 5.2, SV.LINE, 10 + s * 1.6, 0.25, -2, FLAT)); svCar(g, 'police', 8.4, -2, Math.PI); svCar(g, 'police', 11.6, 5.5, Math.PI);
+      B(g, 0.12, 1.1, 18, CP.IRON, 14.9, 0.2, -1, FLAT); gdTree(g, 3.5, 0.2, 10.5, 0.8); gdLamp(g, -9, 10.5);
+      return g;
+    } });
+
+  // 3. svBusStation: a small bus station, 40 x 20 m: 3 saw-tooth bays, a platform with a long canopy, benches, a ticket kiosk, 2 buses.
+  def({ key: 'svBusStation', name: 'Bus station', cat: 'District services', part: 2, budget: 3000, size: '40 × 20 m · 3 bays · 2 buses', night: true,
+    opts: { canopy: colours('Canopy', ['#2f7a68', PAL.terra, '#3f5866', '#c9922e']) },
+    make(o) {
+      const g = new THREE.Group(), C = slot('canopy', o.canopy || '#2f7a68');
+      B(g, 40, 0.2, 20, SV.ASPH, 0, 0, 0, { shadow: false }); B(g, 40, 0.35, 4, CP.PAVE, 0, 0, 7.5); B(g, 40, 0.37, 0.25, '#e8b830', 0, 0, 5.6, NE);   // platform + yellow edge
+      [-12, 0, 12].forEach((x, i) => { [-1, 1].forEach(s => B(g, 0.15, 0.03, 12, SV.LINE, x + s * 1.9, 0.21, -0.4, FLAT)); P(g, 1.0, 1.0, textMat(String(i + 1), '#3f5866', SV.WHITE), x, 3.2, 5.65); });
+      // canopy: posts along the back of the platform, roof sloping to the buses
+      for (let x = -18; x <= 18; x += 6) B(g, 0.3, 3.8, 0.3, CP.IRON, x, 0.35, 8.8, NE);
+      put(g, geo('box', () => new THREE.BoxGeometry(1, 1, 1)), C, 0, 4.25, 7.0, { rx: -0.12, s: [40, 0.3, 5.4] });
+      B(g, 40.2, 0.5, 0.3, SV.WHITE, 0, 3.8, 4.4, NE); svSign(g, 'BUS STATION', '#3f5866', SV.WHITE, 9, 1.1, 0, 4.4, 4.27, Math.PI);
+      svSign(g, 'BUS STATION', '#3f5866', SV.WHITE, 9, 1.1, 0, 3.6, 9.7);
+      [-15, -6, 6, 15].forEach(x => gdBench(g, x, 8.4, Math.PI)); [-10, 10].forEach(x => gdLamp(g, x, 9.3));
+      // ticket kiosk at the east end
+      B(g, 4, 3, 3, SV.WHITE, 17.4, 0.35, -5); B(g, 4.6, 0.3, 3.6, C, 17.4, 3.35, -5, NE); P(g, 2.4, 1.2, SV.GLASS, 17.4, 1.4, -3.48); svSign(g, 'TICKETS', '#3f5866', SV.WHITE, 2.6, 0.5, 17.4, 2.75, -3.46);
+      [-12, 0].forEach((x, i) => { const b = KIT.bus({ body: i ? PAL.terra : '#2f7a68' }); b.position.set(x, 0.2, -0.2); g.add(b); });
+      return g;
+    } });
+
+  // 4. svShopRow: a single-storey row of 4 small shops, 32 x 12 m, awnings, shop windows, sign panels (blank unless o.signs is given).
+  def({ key: 'svShopRow', name: 'Shop row (1 floor)', cat: 'District services', part: 2, budget: 900, size: '32 × 12 m · 4 shops · 1 floor', night: true,
+    opts: { wall: colours('Walls', SV.walls), awnings: choices('Awnings', Object.keys(CP.awnings)), signs: choices('Signs', ['blank', 'sample']) },
+    make(o) {
+      const g = new THREE.Group(), W = slot('wall', o.wall || SV.walls[3]), aw = CP.awnings[o.awnings] || CP.awnings.mix, zf = 4, H = 4.6;
+      const signs = o.signs === 'sample' ? ['GROCER', 'PHARMACY', 'BARBER', 'BAKERY'] : Array.isArray(o.signs) ? o.signs : [];
+      B(g, 32, 0.25, 5, CP.PAVE, 0, 0, 6.5, { shadow: false }); B(g, 32, H, 12, W, 0, 0.2, -2); svRoofFlat(g, 32, 12, 0, H + 0.2, -2);
+      B(g, 32.2, 0.9, 0.3, '#3f5866', 0, 3.5, zf + 0.15, NE);
+      for (let i = 0; i < 4; i++) { const x = -12 + 8 * i, s = signs[i];
+        P(g, 5.4, 2.7, GD.FRAME, x - 0.8, 0.4, zf + 0.02); P(g, 5.0, 2.4, SV.GLASS, x - 0.8, 0.55, zf + 0.05); P(g, 1.5, 2.7, GD.FRAME, x + 2.6, 0.2, zf + 0.02); P(g, 1.2, 2.5, SV.GLASS, x + 2.6, 0.3, zf + 0.05);
+        P(g, 6.4, 0.7, s ? textMat(s, aw[i], SV.WHITE) : '#efe6d2', x, 3.6, zf + 0.32); awning(g, 6.6, aw[i], x, 2.95, zf + 0.75);
+        gdWin(g, x, 1.2, -8.02, 1.4, 1.3, Math.PI); }
+      for (let i = 0; i <= 4; i++) B(g, 0.5, H, 0.3, GD.FRAME, -16 + 8 * i, 0.2, zf + 0.15, NE);
+      [-1, 1].forEach(s => { gdLamp(g, s * 13, 8.4); B(g, 1.2, 0.6, 0.6, SV.STONE2, s * 5, 0.25, 8.5, NE); plant(g, s * 5, 0.85, 8.5, PAL.pink); }); gdBench(g, 0, 8.3, Math.PI);
+      return g;
+    } });
+
+  // ---------- DOWNTOWN QUARTERS (mid-rise, 3-5 floors) ----------
+  // a classical portico: podium steps, n round columns, entablature and a pediment, all in stone
+  function dtPortico(p, w, n, H, z, ST) {
+    for (let i = 0; i < 3; i++) B(p, w + 4 - i * 1.2, 0.5, 3.2 - i * 0.8, SV.STONE2, 0, i * 0.5, z + 1.6 - i * 0.4, NE);           // front steps
+    const g = grp(p, 0, 1.5, z - 2.2);
+    B(g, w, 0.3, 4.4, ST, 0, 0, 0, NE);
+    for (let i = 0; i < n; i++) CYL(g, 0.55, 0.65, H, 8, ST, -w / 2 + 1 + i * (w - 2) / (n - 1), 0.3, 1.4);
+    B(g, w + 0.6, 1.4, 4.8, ST, 0, H + 0.3, 0); GABLE(g, w + 0.6, 3.2, 4.8, ST, 0, H + 1.7, 0); return g;
+  }
+  // 5a. dtMuseum: Civic Square museum, 44 x 30 m, 2 tall floors on a podium, 6-column portico, pediment, tall windows, MUSEUM sign, hip roof.
+  def({ key: 'dtMuseum', name: 'Museum', cat: 'Downtown quarters', part: 2, budget: 2000, size: '44 × 30 m · 2 tall floors (15 m)', night: true, opts: svOpts,
+    make(o) {
+      const g = new THREE.Group(), W = slot('wall', o.wall || SV.walls[1]), R = slot('roof', o.roof || SV.roofs[1]), H = 13;
+      B(g, 48, 1.5, 34, SV.STONE2, 0, 0, -1); B(g, 44, H, 30, W, 0, 1.5, -2); B(g, 44.8, 1.2, 30.8, SV.STONE, 0, 1.5 + H, -2, NE); HIP(g, 45, 4, 31, R, 0, 2.7 + H, -2);
+      dtPortico(g, 20, 6, 10.5, 15, SV.STONE);
+      P(g, 4, 5, '#5a3c28', 0, 1.8, 13.03); svSign(g, 'MUSEUM', '#2f2b28', '#e2b04a', 10, 1.3, 0, 12.6, 15.45);
+      [-19, -15, 15, 19].forEach(x => [2.8, 8.6].forEach(y => gdWin(g, x, y, 13.02, 1.8, 3.2)));
+      [-1, 1].forEach(s => [-12, -6, 0, 6].forEach(z => [2.8, 8.6].forEach(y => gdWin(g, s * 22.02, y, z, 1.8, 3.2, s * Math.PI / 2))));
+      [-16, -8, 0, 8, 16].forEach(x => gdWin(g, x, 6, -17.02, 1.8, 3.2, Math.PI));
+      [-1, 1].forEach(s => { B(g, 3, 1.2, 3, SV.STONE2, s * 16, 0, 19, NE); B(g, 1.6, 1.4, 2.4, '#c9ced2', s * 16, 1.2, 19); });   // two plinths with statues (abstract)
+      return g;
+    } });
+  // 5b. dtLibrary: Civic Square library, 40 x 28 m, 3 floors, 4-column entrance, long arched windows, attic + a small dome.
+  def({ key: 'dtLibrary', name: 'City library', cat: 'Downtown quarters', part: 2, budget: 2000, size: '40 × 28 m · 3 floors', night: true, opts: svOpts,
+    make(o) {
+      const g = new THREE.Group(), W = slot('wall', o.wall || SV.walls[3]), R = slot('roof', o.roof || '#4f9a86'), H = 13.5;
+      B(g, 44, 1.5, 32, SV.STONE2, 0, 0, -1); B(g, 40, H, 28, W, 0, 1.5, -2); B(g, 40.6, 0.8, 28.6, SV.STONE, 0, 1.5 + H, -2, NE); svRoofFlat(g, 40, 28, 0, 2.3 + H, -2);
+      B(g, 18, 3, 14, W, 0, 3 + H, -3); CYL(g, 7, 7.2, 2, 12, SV.STONE, 0, 6 + H, -3); CAP(g, 6.8, R, 0, 8 + H, -3);   // attic + drum + dome
+      dtPortico(g, 14, 4, 10.5, 14, SV.STONE);
+      P(g, 3.6, 4.5, '#5a3c28', 0, 1.8, 12.03); svSign(g, 'LIBRARY', '#2f2b28', '#e2b04a', 9, 1.2, 0, 12.6, 14.45);
+      [-17, -13, -9, 9, 13, 17].forEach(x => { gdWin(g, x, 2.6, 12.02, 1.8, 4.2); ARCH(g, 1.8, winAt(x, 7, 12), x, 6.8, 12.05); gdWin(g, x, 9.4, 12.02, 1.6, 2.4); });
+      [-1, 1].forEach(s => [-10, -4, 2, 8].forEach(z => [2.6, 9.4].forEach(y => gdWin(g, s * 20.02, y, z, 1.6, 2.6, s * Math.PI / 2))));
+      [-14, -7, 0, 7, 14].forEach(x => [2.6, 9.4].forEach(y => gdWin(g, x, y, -16.02, 1.6, 2.6, Math.PI)));
+      gdTree(g, -19, 1.5, 14, 0.8); gdTree(g, 19, 1.5, 14, 0.8);
+      return g;
+    } });
+
+  // 6a. dtRestaurants: a 3-floor row with 4 restaurants on the ground floor, glass fronts, awnings, and terraces in front with tables + umbrellas. 40 x 14 m + 7 m terrace.
+  def({ key: 'dtRestaurants', name: 'Restaurant row', cat: 'Downtown quarters', part: 2, budget: 2200, size: '40 × 14 m · 3 floors · 4 restaurants + terraces', night: true,
+    opts: { wall: colours('Walls', SV.walls), roof: colours('Roof', SV.roofs), umbrellas: choices('Umbrellas', ['mix', 'cream', 'terracotta']), signs: choices('Signs', ['blank', 'sample']) },
+    make(o) {
+      const g = new THREE.Group(), W = slot('wall', o.wall || SV.walls[5]), R = slot('roof', o.roof || SV.roofs[0]), zf = 4, H = 11;
+      const signs = o.signs === 'sample' ? ['TRATTORIA', 'SPICE HOUSE', 'NOODLE BAR', 'THE GRILL'] : Array.isArray(o.signs) ? o.signs : [];
+      const UM = { mix: [PAL.terra, '#f6f3ea', '#2f7a68', '#c9922e'], cream: ['#f6f3ea', '#efe6d2', '#f6f3ea', '#efe6d2'], terracotta: [PAL.terra, PAL.terra2, PAL.terra, PAL.terra2] }[o.umbrellas] || [PAL.terra, '#f6f3ea', '#2f7a68', '#c9922e'];
+      B(g, 40, 0.25, 8, CP.PAVE, 0, 0, 8, { shadow: false }); B(g, 40, H, 14, W, 0, 0.2, -3); B(g, 40.4, 0.4, 14.4, SV.STONE, 0, 4.2, -3, NE);
+      GABLE(g, 15, 2.6, 40.6, R, 0, H + 0.2, -3, { ry: Math.PI / 2 });
+      for (let i = 0; i < 4; i++) { const x = -15 + 10 * i, s = signs[i];
+        P(g, 8.4, 3.0, GD.FRAME, x, 0.4, zf + 0.02); P(g, 8.0, 2.8, SV.GLASS, x, 0.5, zf + 0.05);
+        P(g, 8, 0.8, s ? textMat(s, '#2f2b28', '#e2b04a') : '#efe6d2', x, 3.45, zf + 0.06); awning(g, 8.4, CP.awnings.mix[i], x, 3.0, zf + 0.8);
+        [-2.8, 0, 2.8].forEach(dx => [4.8, 8.2].forEach(y => gdWin(g, x + dx, y, zf + 0.02, 1.4, 1.6))); [-2.5, 2.5].forEach(dx => bar(g, 1.6, x + dx, 5.6, zf + 0.12));
+        [-2.5, 2.5].forEach(dx => [1, 4.8].forEach(y => gdWin(g, x + dx, y, -10.02, 1.4, 1.5, Math.PI)));
+        // terrace: low planter edge, 3 tables with umbrellas
+        B(g, 9, 0.6, 0.5, SV.STONE2, x, 0.25, 11.6, NE); plant(g, x - 3.5, 0.85, 11.6, PAL.pink); plant(g, x + 3.5, 0.85, 11.6, PAL.pink);
+        [-3, 0, 3].forEach((dx, k) => { CYL(g, 0.6, 0.6, 0.75, 6, SV.WHITE, x + dx, 0.25, 8.2 + (k % 2) * 1.2, { edge: false });
+          B(g, 0.08, 2.4, 0.08, '#2f2b28', x + dx, 0.25, 8.2 + (k % 2) * 1.2, FLAT); CYL(g, 0.02, 1.7, 0.7, 6, UM[(i + k) % 4], x + dx, 2.3, 8.2 + (k % 2) * 1.2); }); }
+      [-1, 1].forEach(s => gdLamp(g, s * 19.5, 11.6));
+      return g;
+    } });
+  // 6b. dtRetail: a small shopping arcade, 44 x 24 m, 3 floors: shops either side of a glass-roofed passage through the middle, ARCADE sign.
+  def({ key: 'dtRetail', name: 'Shopping arcade', cat: 'Downtown quarters', part: 2, budget: 2000, size: '44 × 24 m · 3 floors · glass passage', night: true,
+    opts: { wall: colours('Walls', SV.walls), roof: colours('Roof', SV.roofs), signs: choices('Signs', ['blank', 'sample']) },
+    make(o) {
+      const g = new THREE.Group(), W = slot('wall', o.wall || SV.walls[1]), R = slot('roof', o.roof || SV.roofs[1]), zf = 10, H = 11.5;
+      const signs = o.signs === 'sample' ? ['SHOES', 'BOOKS', 'GIFTS', 'TAILOR'] : Array.isArray(o.signs) ? o.signs : [];
+      B(g, 48, 0.25, 6, CP.PAVE, 0, 0, 13, { shadow: false });
+      [-1, 1].forEach(s => { B(g, 17, H, 20, W, s * 13.5, 0.2, 0); HIP(g, 18, 3, 21, R, s * 13.5, H + 0.2, 0); B(g, 17.2, 0.4, 20.2, SV.STONE, s * 13.5, 4.2, 0, NE); });
+      // the arch over the passage + glass gable roof
+      B(g, 10, 2.8, 20, W, 0, H - 2.6, 0); B(g, 10, 0.35, 20, SV.STONE, 0, 0.2, 0, NE); GABLE(g, 10, 3.2, 20.4, CP.GLASS_SEE, 0, H + 0.2, 0);
+      B(g, 10.4, 0.8, 0.6, SV.STONE, 0, H - 2.6, zf + 0.1, NE); svSign(g, 'ARCADE', '#2f2b28', '#e2b04a', 6.4, 1.2, 0, H - 1.6, zf + 0.42);
+      [-1, 1].forEach(s => { for (let k = 0; k < 2; k++) { const x = s * (7 + 4.5 + k * 9), i = (s < 0 ? 0 : 2) + k, t = signs[i];
+          P(g, 7, 2.8, GD.FRAME, x, 0.4, zf + 0.02); P(g, 6.6, 2.6, SV.GLASS, x, 0.5, zf + 0.05); P(g, 7, 0.7, t ? textMat(t, '#3f5866', SV.WHITE) : '#efe6d2', x, 3.4, zf + 0.06);
+          [-2.4, 0, 2.4].forEach(dx => [4.9, 8.2].forEach(y => gdWin(g, x + dx, y, zf + 0.02, 1.3, 1.6))); }
+        [-6, -2, 2, 6].forEach(z => P(g, 2.4, 2.6, SV.GLASS, s * 5.02, 0.5, z, { ry: -s * Math.PI / 2 }));   // shop windows inside the passage
+        [-6, 0, 6].forEach(z => [1, 4.9, 8.2].forEach(y => gdWin(g, s * 22.02, y, z, 1.4, 1.5, s * Math.PI / 2))); });
+      [-18, -9, 9, 18].forEach(x => [1, 4.9, 8.2].forEach(y => gdWin(g, x, y, -10.02, 1.4, 1.5, Math.PI)));
+      [-1, 1].forEach(s => { B(g, 1.4, 0.6, 1.4, SV.STONE2, s * 5.8, 0.25, 12.2, NE); gdTree(g, s * 5.8, 0.85, 12.2, 0.6); });
+      return g;
+    } });
+
+  // 7a. dtHotel: a 5-floor hotel, 32 x 18 m, glass lobby, a canopy over the drop-off, HOTEL sign on the roof, flags, small balconies.
+  def({ key: 'dtHotel', name: 'Hotel', cat: 'Downtown quarters', part: 2, budget: 2000, size: '32 × 18 m · 5 floors', night: true, opts: svOpts,
+    make(o) {
+      const g = new THREE.Group(), W = slot('wall', o.wall || SV.walls[5]), R = slot('roof', o.roof || SV.roofs[0]), zf = 5, FH = 3.2, F = 5, H = F * FH + 1;
+      B(g, 36, 0.25, 9, CP.PAVE, 0, 0, 9.5, { shadow: false }); B(g, 32, H, 18, W, 0, 0.2, -4); B(g, 32.2, 4.2, 18.2, SV.STONE, 0, 0.2, -4, NE);
+      B(g, 32.6, 0.5, 18.6, SV.STONE, 0, H, -4, NE); HIP(g, 33.2, 3.4, 19.2, R, 0, H + 0.4, -4);
+      P(g, 14, 3.3, GD.FRAME, 0, 0.4, zf + 0.02); P(g, 13.4, 3.1, SV.GLASS, 0, 0.5, zf + 0.05);                              // lobby glass
+      B(g, 12, 0.45, 6.5, '#2f2b28', 0, 3.6, zf + 3.2); [-5.6, 5.6].forEach(x => B(g, 0.25, 3.4, 0.25, '#c9a24a', x, 0.25, zf + 6.2, NE));   // canopy
+      B(g, 11, 0.04, 6, '#8a3a2e', 0, 0.26, zf + 3.0, FLAT);                                                                 // red carpet
+      svSign(g, 'HOTEL', '#2f2b28', '#e2b04a', 7.2, 1.4, 0, 4.15, zf + 6.48); B(g, 12, 2.4, 0.4, '#2f2b28', 0, H + 0.4, zf - 0.6, NE);
+      svSign(g, 'HOTEL', '#2f2b28', '#ffd98a', 11.4, 2.0, 0, H + 0.6, zf - 0.38);
+      for (let f = 1; f < F; f++) { const y = 4.2 + (f - 1) * FH;
+        [-13.5, -10.5, -7.5, -4.5, -1.5, 1.5, 4.5, 7.5, 10.5, 13.5].forEach(x => gdWin(g, x, y + 0.7, zf + 0.02, 1.4, 1.7));
+        [-12, -6, 6, 12].forEach(x => B(g, 2.2, 0.15, 0.7, SV.STONE, x, y + 0.2, zf + 0.35, NE));
+        [-13.5, -7.5, -1.5, 4.5, 10.5].forEach(x => gdWin(g, x, y + 0.7, -13.02, 1.4, 1.7, Math.PI));
+        [-1, 1].forEach(s => [-9, -3].forEach(z => gdWin(g, s * 16.02, y + 0.7, z, 1.4, 1.7, s * Math.PI / 2))); }
+      [-12, 12].forEach(x => gdWin(g, x, 1.2, zf + 0.02, 3, 2));
+      [-9, -7.5, -6].forEach(x => svFlag(g, x, 12.5, 8)); gdTree(g, 9, 0.25, 12.5, 0.8); gdTree(g, 14, 0.25, 12.5, 0.8);
+      return g;
+    } });
+  // 7b. dtConvention: a low wide convention centre, 56 x 36 m, one tall hall (12 m), full-height glass front, wide canopy, clerestory, forecourt with flags.
+  def({ key: 'dtConvention', name: 'Convention centre', cat: 'Downtown quarters', part: 2, budget: 1800, size: '56 × 36 m · 1 tall hall (12 m)', night: true, opts: svOpts,
+    make(o) {
+      const g = new THREE.Group(), W = slot('wall', o.wall || SV.walls[1]), R = slot('roof', o.roof || SV.roofs[1]), zf = 12, H = 12;
+      B(g, 60, 0.25, 14, CP.PAVE, 0, 0, 19, { shadow: false }); B(g, 56, H, 36, W, 0, 0.2, -6); svRoofFlat(g, 56, 36, 0, H + 0.2, -6);
+      B(g, 30, 3, 20, W, 0, H + 0.9, -8); GABLE(g, 31, 2.4, 21, R, 0, H + 3.9, -8, { ry: Math.PI / 2 });
+      [-14, -7, 0, 7, 14].forEach(x => P(g, 6, 2, SV.DARKGL, x, H + 1.4, 2.03));                                     // clerestory band
+      P(g, 40, 10, GD.FRAME, 0, 0.6, zf + 0.02); P(g, 39, 9.6, SV.GLASS, 0, 0.7, zf + 0.05);
+      for (let x = -18; x <= 18; x += 4.5) B(g, 0.25, 9.6, 0.2, '#f6f3ea', x, 0.7, zf + 0.12, FLAT);                  // glass mullions
+      B(g, 44, 0.5, 6, SV.WHITE, 0, 10.2, zf + 3); [-20, -10, 0, 10, 20].forEach(x => B(g, 0.35, 10, 0.35, SV.WHITE, x, 0.25, zf + 5.6, NE));
+      svSign(g, 'CONVENTION CENTRE', '#3f5866', SV.WHITE, 18, 1.6, 0, 10.0, zf + 6.03);
+      [-1, 1].forEach(s => [-16, -6, 4].forEach(z => gdWin(g, s * 28.02, 2, z, 4, 3, s * Math.PI / 2)));
+      for (let k = 0; k < 6; k++) svFlag(g, -25 + k * 2.4 + (k > 2 ? 40 : 0), 23, 9);
+      [-14, 14].forEach(x => { B(g, 5, 0.6, 2, SV.STONE2, x, 0.25, 22, NE); plant(g, x - 1.5, 0.85, 22, PAL.pink); plant(g, x + 1.5, 0.85, 22, '#f2c14e'); });
+      return g;
+    } });
+
+  // 8. dtOffice: a mid-rise office block, 32 x 20 m. o.variant 'A' = 5 floors, stone with horizontal glass ribbons, plant room on the roof;
+  //    'B' = 4 floors, glass curtain wall in a stone frame with fins, an arcade at ground floor, roof terrace with a pergola.
+  def({ key: 'dtOffice', name: 'Office block', cat: 'Downtown quarters', part: 2, budget: 1800, size: '32 × 20 m · 4–5 floors', night: true,
+    opts: { variant: choices('Variant', ['A', 'B']), wall: colours('Walls', SV.walls) },
+    make(o) {
+      const g = new THREE.Group(), W = slot('wall', o.wall || SV.walls[o.variant === 'B' ? 4 : 1]), B2 = o.variant === 'B', F = B2 ? 4 : 5, FH = 3.6, H = F * FH + 0.6, zf = 6;
+      B(g, 36, 0.25, 6, CP.PAVE, 0, 0, 10, { shadow: false });
+      if (!B2) {
+        B(g, 32, H, 20, W, 0, 0.2, -4); B(g, 32.4, 0.6, 20.4, SV.STONE, 0, H + 0.2, -4, NE); B(g, 12, 2.6, 8, SV.CONC, 4, H + 0.8, -6);
+        for (let f = 0; f < F; f++) { const y = 0.2 + f * FH + 1.0;
+          for (let k = 0; k < 6; k++) { const x = -13.5 + k * 5.4; P(g, 5.0, 1.8, winAt(x, y, zf), x, y, zf + 0.03); P(g, 5.0, 1.6, winAt(x, y, -14), x, y, -14.03, { ry: Math.PI }); }
+          [-1, 1].forEach(s => [-10, -4, 2].forEach(z => P(g, 5.0, 1.8, winAt(s, y, z), s * 16.03, y, z, { ry: s * Math.PI / 2 })));
+          B(g, 32.2, 0.35, 0.3, SV.STONE, 0, y - 0.45, zf + 0.12, NE); }
+        P(g, 6, 2.8, SV.GLASS, 0, 0.3, zf + 0.06); B(g, 7, 0.3, 2, SV.STONE, 0, 3.1, zf + 1, NE);
+      } else {
+        B(g, 32, H, 20, W, 0, 0.2, -4); B(g, 26, H - 4.4, 0.5, '#3f5866', 0, 4.4, zf + 0.1, NE);
+        for (let f = 1; f < F; f++) { const y = 0.2 + f * FH + 0.4; for (let k = 0; k < 5; k++) { const x = -10.4 + k * 5.2; P(g, 4.8, 3.0, winAt(x, y, zf), x, y, zf + 0.4); }
+          [-1, 1].forEach(s => [-10, -4, 2].forEach(z => gdWin(g, s * 16.02, y + 0.3, z, 2.4, 2.2, s * Math.PI / 2)));
+          [-12, -6, 0, 6, 12].forEach(x => gdWin(g, x, y + 0.3, -14.02, 2.4, 2.2, Math.PI)); }
+        for (let k = 0; k <= 5; k++) B(g, 0.4, H - 4.4, 0.8, SV.STONE, -13 + k * 5.2, 4.4, zf + 0.5, NE);                  // fins
+        B(g, 32, 0.8, 1.2, SV.STONE, 0, 3.6, zf + 0.6, NE); for (let k = 0; k < 7; k++) B(g, 0.8, 3.4, 0.8, SV.STONE, -14 + k * 4.67, 0.2, zf + 0.5, NE);   // ground arcade
+        P(g, 28, 2.8, SV.GLASS, 0, 0.4, zf - 1.9); B(g, 32.4, 0.6, 20.4, SV.STONE, 0, H + 0.2, -4, NE);
+        const pg = grp(g, -6, H + 0.8, -4); [[-5, -3], [5, -3], [-5, 3], [5, 3]].forEach(([x, z]) => B(pg, 0.25, 2.6, 0.25, PAL.wood, x, 0, z, FLAT));
+        [-3, 0, 3].forEach(z => B(pg, 10.4, 0.2, 0.2, PAL.wood, 0, 2.6, z, FLAT)); [8, -14].forEach(x => { B(g, 1.4, 0.6, 1.4, SV.STONE2, x, H + 0.8, -2, NE); plant(g, x, H + 1.4, -2, PAL.leaf2); });
+      }
+      [-15, 15].forEach(x => gdTree(g, x, 0.25, 10.5, 0.75));
+      return g;
+    } });
+
+  // 9. dtHospital: a small city hospital, 40 x 24 m, 3 floors, entrance canopy, green cross, CITY HOSPITAL sign, covered ambulance bay + 2 ambulances.
+  def({ key: 'dtHospital', name: 'City hospital (small)', cat: 'Downtown quarters', part: 2, budget: 2400, size: '40 × 24 m · 3 floors · 54 × 40 m lot', night: true, opts: svOpts,
+    make(o) {
+      const g = new THREE.Group(), W = slot('wall', o.wall || SV.walls[0]), x0 = -6, zf = 7, FH = 3.6, H = 3 * FH + 0.4;
+      B(g, 54, 0.2, 40, PAL.grass, 0, 0, 0, { shadow: false }); B(g, 54, 0.05, 11, CP.PAVE, 0, 0.2, 14, FLAT); B(g, 12, 0.05, 30, SV.ASPH, 20, 0.2, 2, FLAT);
+      B(g, 40, H, 24, W, x0, 0.2, -5); B(g, 40.2, 0.5, 24.2, SV.STONE2, x0, 0.2, -5, NE); svRoofFlat(g, 40, 24, x0, H + 0.2, -5);
+      for (let f = 0; f < 3; f++) B(g, 40.1, 0.4, 24.1, '#4f9a86', x0, 0.2 + f * FH + 3.2, -5, NE);
+      P(g, 8, 3, GD.FRAME, x0, 0.2, zf + 0.02); P(g, 7.4, 2.8, SV.GLASS, x0, 0.25, zf + 0.05); B(g, 12, 0.4, 5, SV.WHITE, x0, 3.4, zf + 2.5); [-5.4, 5.4].forEach(dx => B(g, 0.3, 3.2, 0.3, SV.WHITE, x0 + dx, 0.2, zf + 4.7, NE));
+      svCross(g, 2.6, x0, 4.4, zf + 0.04); svSign(g, 'CITY HOSPITAL', SV.GREEN, SV.WHITE, 12, 1.3, x0, H - 1.6, zf + 0.04);
+      for (let f = 0; f < 3; f++) { const y = 0.2 + f * FH + 1.0; [-24, -20, -16, 4, 8, 12].forEach(x => { if (f || Math.abs(x - x0) > 7) gdWin(g, x, y, zf + 0.02, 2.4, 1.6); });
+        if (f) [-10, -6, -2].forEach(x => gdWin(g, x, y, zf + 0.02, 2.4, 1.6));
+        [-24, -18, -12, -6, 0, 6, 12].forEach(x => gdWin(g, x, y, -17.02, 2.4, 1.6, Math.PI));
+        [-1, 1].forEach(s => [-13, -7, -1, 5].forEach(z => gdWin(g, x0 + s * 20.02, y, z, 2.4, 1.6, s * Math.PI / 2))); }
+      // ambulance bay on the east side
+      B(g, 11, 0.4, 14, SV.WHITE, 20, 4.4, -1); [[15, -7.6], [25, -7.6], [15, 5.6], [25, 5.6]].forEach(([x, z]) => B(g, 0.35, 4.2, 0.35, SV.WHITE, x, 0.2, z, NE));
+      B(g, 11.1, 0.42, 0.3, '#c8303a', 20, 4.4, 6, NE); svSign(g, 'AMBULANCE', '#c8303a', SV.WHITE, 6, 0.7, 20, 3.7, 6.2);
+      svCar(g, 'amb', 17.5, -1, Math.PI); svCar(g, 'amb', 22.5, 0, Math.PI);
+      [-22, -14, 6].forEach(x => gdBench(g, x, 13.5, 0)); [-25, 10].forEach(x => gdTree(g, x, 0.2, 17, 0.85)); gdLamp(g, -2, 18);
+      return g;
+    } });
+
+  // ---------- VINLAND TOWER CONSTRUCTION ----------
+  // 10. vtTowerBuild: the Vinland Tower going up, o.stage 0-10 (0 = dug site, 5 = about half, 10 = topped out). Same site as the map's
+  //     tower site (72 x 72 m) and the same tower as the kit's campanile (36 x 36 m base, 24 m shaft, body up to 180 m).
+  //     Concrete core, floor slabs, stone cladding below, scaffolding on the top floors, a climbing crane on the core (+ a ground crane early),
+  //     site fence + hoarding with a blank sign panel (o.sign gives it words). Night: crane + site lights.
+  def({ key: 'vtTowerBuild', name: 'Vinland Tower (construction)', cat: 'Construction', part: 2, budget: 4500, size: 'site 72 × 72 m · tower 36 m base, up to 180 m', night: true,
+    opts: { stage: choices('Stage', ['5', '0', '1', '2', '3', '4', '6', '7', '8', '9', '10']), sign: { label: 'Sign', choices: ['', 'VINLAND TOWER · OPENS AT 10,000'] } },
+    make(o) {
+      const g = new THREE.Group(), st = Math.max(0, Math.min(10, +(o.stage === undefined ? 5 : o.stage))), FL = 4, TOP = 180, h = st ? 12 + (TOP - 12) * st / 10 : 0;
+      const ST = glowMat(PAL.cream, '#6a5a40'), BR = PAL.terra2, SCAF = '#c98a3a', GLW = BK.WIN;
+      B(g, 72, 0.2, 72, '#cdb98f', 0, 0, 0, { shadow: false }); B(g, 10, 0.06, 18, '#9a948a', 0, 0.2, 27, FLAT);           // site ground + gate road
+      // fence + hoarding (gap for the gate at the front) and the sign panel
+      [[0, -35.9, 72, 0.2], [-35.9, 0, 0.2, 72], [35.9, 0, 0.2, 72], [-20.5, 35.9, 31, 0.2], [20.5, 35.9, 31, 0.2]].forEach(([x, z, w, d]) => B(g, w, 2.6, d, '#e6dccb', x, 0.2, z, NE));
+      [[-20.5, 36.02], [20.5, 36.02]].forEach(([x, z]) => B(g, 31, 0.3, 0.06, '#2f5d4a', x, 2.5, z, FLAT));
+      B(g, 16, 4.4, 0.3, '#2f5d4a', -20, 0.2, 36.2, NE); P(g, 15.4, 3.8, o.sign ? textMat(o.sign, '#2f5d4a', '#f6f3ea') : '#f6f3ea', -20, 0.5, 36.37);
+      [-5, 5].forEach(x => B(g, 0.4, 3, 0.4, '#2f5d4a', x, 0.2, 35.9, NE));
+      [-34, 34].forEach(x => [-34, 34].forEach(z => { B(g, 0.15, 6, 0.15, CP.IRON, x, 0.2, z, FLAT); B(g, 0.6, 0.5, 0.6, CP.LAMP, x, 6.2, z, NE); }));
+      if (!st) {                                                                                                          // stage 0: dug, piles, one crane
+        B(g, 38, 0.3, 38, '#8a7458', 0, 0.05, 0, { shadow: false }); for (let i = 0; i < 16; i++) B(g, 0.8, 1.4, 0.8, SV.CONC, -15 + (i % 4) * 10, 0.3, -15 + ((i / 4) | 0) * 10, NE);
+      } else {
+        const podium = Math.min(h, 12), body = h - podium;
+        B(g, 36, podium, 36, SV.CONC, 0, 0.2, 0); if (h >= 12) { B(g, 37, 1, 37, BR, 0, 12, 0, NE); P(g, 6, 7, '#6a5a48', 0, 0.4, 18.05); }
+        if (body > 0) {
+          const clad = Math.max(0, body - 3 * FL);                                                                        // clad up to 3 floors below the top
+          if (clad > 0) { B(g, 24, clad, 24, ST, 0, 12.6, 0); for (let y = 30; y < 12 + clad; y += 30) B(g, 24.6, 1.2, 24.6, BR, 0, 12.6 + y - 12, 0, NE);
+            for (let y = 16; y < 12 + clad - 3; y += 8) [0, 1, 2, 3].forEach(k => { const a = k * Math.PI / 2; P(g, 3, 4, winAt(k, y, 1), Math.sin(a) * 12.05, y, Math.cos(a) * 12.05, { ry: a }); }); }
+          const y0 = 12.6 + clad, open = h - y0;
+          B(g, 10, open + 3, 10, SV.CONC2, 0, y0, 0);                                                                     // core above the cladding
+          for (let y = y0; y <= h; y += FL) B(g, 24, 0.5, 24, SV.CONC, 0, y, 0, NE);                                    // open floor slabs
+          [-11, 11].forEach(x => [-11, 11].forEach(z => B(g, 1, open, 1, SV.CONC, x, y0, z, NE)));                     // corner columns
+          // scaffolding round the top floors (posts + rails + a safety net colour band)
+          const sy = Math.max(12.6, h - 14), sh = h + 2 - sy;
+          [-12.8, 12.8].forEach(x => [-12.8, -4.3, 4.3, 12.8].forEach(z => { B(g, 0.15, sh, 0.15, SCAF, x, sy, z, FLAT); B(g, 0.15, sh, 0.15, SCAF, z, sy, x, FLAT); }));
+          for (let y = sy + 2; y < sy + sh; y += 4) [[0, -12.8, 25.8, 0.12], [0, 12.8, 25.8, 0.12], [-12.8, 0, 0.12, 25.8], [12.8, 0, 0.12, 25.8]].forEach(([x, z, w, d]) => B(g, w, 0.12, d, SCAF, x, y, z, FLAT));
+          [[0, -13, 25.8, 0.05], [0, 13, 25.8, 0.05], [-13, 0, 0.05, 25.8], [13, 0, 0.05, 25.8]].forEach(([x, z, w, d]) => B(g, w, Math.min(6, sh), d, glowMat('#4f9a86', '#22332e'), x, sy + 0.5, z, FLAT));
+        }
+        B(g, 2, h, 2.6, '#e8b830', 14, 0.2, 9, NE); B(g, 2.4, 2.4, 2.6, '#f6f3ea', 15.4, Math.max(0.2, h - 6), 9, NE);   // goods hoist on the side
+      }
+      // cranes: a climbing crane on the core (stage 1+), a ground crane while the tower is low
+      if (st) { const c = KIT.towerCrane(); c.position.set(0, Math.max(0, h - 30), 0); c.rotation.y = 0.6; g.add(c); }
+      if (st <= 4) { const c = KIT.towerCrane(); c.position.set(-26, 0.2, -20); c.rotation.y = st ? 2.4 : 1.2; g.add(c); }
+      // yard: site cabins, materials, a mixer
+      [0, 1].forEach(k => { B(g, 6, 2.6, 2.6, k ? '#3f5866' : '#c9922e', 24, 0.2 + k * 2.6, 24, NE); P(g, 1.2, 0.9, winAt(24, k, 25), 24, 1.2 + k * 2.6, 25.32); });
+      const mt = KIT.materials(); mt.position.set(-24, 0.2, 24); g.add(mt); const mx = KIT.cementMixer(); mx.position.set(-12, 0.2, 27); mx.rotation.y = 0.8; g.add(mx);
+      return g;
+    } });
+
+  // Vinland Tower, 'empire' style (16 Nov try, Dev: "like the Empire State, in our look, a little glassy, it's downtown"):
+  // an art deco setback skyscraper in cream stone. Wide podium, then 4 setbacks, each tier with tall stone piers and
+  // vertical ribbons of silver-blue glass (lit like windows at night), terracotta bands at every setback, copper trim,
+  // a stepped glass crown that glows at night, a glass observation deck, an octagonal mast and a needle with a red beacon
+  // (about 262 m, same as the campanile). Same plaza and footprint. o.state 'site' = podium + first tier, scaffolding, crane, board.
+  function empireTower(o) {
+    const g = new THREE.Group(), site = o.state === 'site';
+    towerPlaza(g, '#f3ede1', PAL.sand2);
+    const ST = glowMat(PAL.cream, '#6a5a40'), BR = glowMat(PAL.terra2, '#4a2a1c'), CU = '#4f9a86', GOLD = '#e2b04a';
+    const GL = glowMat('#8fb3c4', '#ffd27a'), GLO = glowMat('#8fb3c4', '#3a3a34'), DOORG = glowMat(PAL.glassWarm, '#ffcf6a');
+    const CROWN = (() => { const m = glowMat('#cfe6ef', '#fff3c4'); m.userData.dayGlow = '#1c2a30'; return m; })();
+    const lit = (x, y, k) => (Math.abs(Math.sin(x * 12.9898 + y * 78.233 + k * 37.719) * 43758.5453) % 1) < 0.7 ? GL : GLO;
+    // one tier: a stone block of width w from y0 to y1, corner piers, and n glass ribbons a face in 10 m panels
+    const tier = (w, y0, y1, n, seg) => {
+      B(g, w, y1 - y0, w, ST, 0, y0, 0);
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => B(g, 1.6, y1 - y0, 1.6, ST, a * (w / 2 - 0.3), y0, b * (w / 2 - 0.3), NE));
+      const sw = (w - 4) / n * 0.62;
+      [0, 1, 2, 3].forEach(k => { const f = grp(grp(g, 0, 0, 0, k * Math.PI / 2), 0, 0, w / 2 + 0.04);
+        for (let y = y0 + 1.5; y + seg - 1 <= y1 - 0.5; y += seg) for (let i = 0; i < n; i++) { const x = -(w - 4) / 2 + (i + 0.5) * (w - 4) / n; P(f, sw, seg - 1.2, lit(x, y, k), x, y, 0); } });
+    };
+    const band = (w, y, c, h) => B(g, w, h || 1.2, w, c || BR, 0, y, 0, NE);
+    // podium (6 floors) with a tall deco entrance on each side
+    tier(44, 0.3, 24, 6, 5.5); band(45, 24);
+    [0, 1, 2, 3].forEach(k => { const s = grp(grp(g, 0, 0, 0, k * Math.PI / 2), 0, 0, 22.06);
+      P(s, 12, 12.5, '#e9dcc0', 0, 0.3, 0); P(s, 8, 9, DOORG, 0, 0.6, 0.03); P(s, 5, 2.4, DOORG, 0, 9.9, 0.03);
+      B(s, 9.6, 0.6, 0.5, GOLD, 0, 9.6, 0.1, NE); B(s, 13, 0.8, 0.6, BR, 0, 12.8, 0.1, NE); });
+    const top1 = site ? 54 : 66;
+    tier(34, 25.2, top1, 6, 7);
+    if (!site) {
+      band(35, 66); tier(26, 67.2, 196, 5, 10); band(27, 196); B(g, 27.6, 0.4, 27.6, CU, 0, 197.2, 0, NE);
+      tier(20, 197.6, 210, 3, 6); band(21, 210, CU, 0.8);
+      tier(15, 210.8, 220, 3, 4.6); band(16, 220, GOLD, 0.6);
+      // the stepped glass crown: three glowing glass tiers with gold ribs, then the observation deck
+      let y = 220.6;
+      [[12, 6], [9, 5], [6.6, 4]].forEach(([w, h]) => { B(g, w, h, w, CROWN, 0, y, 0);
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => B(g, 0.5, h, 0.5, GOLD, a * w / 2, y, b * w / 2, NE));
+        B(g, w + 0.6, 0.4, w + 0.6, GOLD, 0, y + h, 0, NE); y += h + 0.4; });
+      B(g, 9, 0.3, 9, ST, 0, y, 0, NE); B(g, 8, 3, 8, CROWN, 0, y + 0.3, 0); B(g, 9.2, 0.15, 9.2, PAL.iron, 0, y + 1.4, 0, FLAT); y += 3.3;   // observation deck
+      CYL(g, 2.6, 3.4, 14, 8, ST, 0, y, 0); for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + Math.PI / 8; B(g, 0.4, 13, 0.4, CU, Math.sin(a) * 3.1, y, Math.cos(a) * 3.1, FLAT); }   // mast
+      y += 14; CYL(g, 3, 3, 0.6, 8, GOLD, 0, y, 0, NE); y += 0.6;
+      CYL(g, 0.15, 0.9, 12.5, 6, '#c9ced2', 0, y, 0); y += 12.5; BALL(g, 0.7, glowMat('#ff4a30', '#ff3a20'), 0, y + 0.4, 0, NE);   // needle + red beacon
+      // floodlit stone at night: warm lamps at the setbacks
+      [66.6, 196.6, 210.4].forEach(yy => [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => { const w = yy < 100 ? 34 : yy < 200 ? 26 : 20; BALL(g, 0.5, CP.LAMP, a * (w / 2 + 0.6), yy + 1.2, b * (w / 2 + 0.6), NE); }));
+    } else {
+      const SC = '#8a8f94', NET = '#5f8a5a';
+      [0, 1, 2, 3].forEach(k => { const s = grp(grp(g, 0, 0, 0, k * Math.PI / 2), 0, 0, 18.6);
+        [-16, -8, 0, 8, 16].forEach(x => B(s, 0.25, top1 - 16, 0.25, SC, x, 25.2, 0, FLAT));
+        for (let y = 30; y <= top1 + 4; y += 8) B(s, 34, 0.25, 1.6, '#b98b5e', 0, y, -0.6, FLAT);
+        P(s, 34, 10, NET, 0, top1 - 8, 0.15, { edge: true }); });
+      const cr = KIT.towerCrane(); cr.scale.setScalar(2); cr.position.set(26, 0.3, -26); cr.rotation.y = -Math.PI * 0.75; g.add(cr);
+      const mt = KIT.materials(); mt.position.set(28, 0.3, 14); g.add(mt);
+      const bd = KIT.milestoneBoard({ text: o.boardText || 'Vinland Tower · opens at 10,000 citizens' }); bd.position.set(-14, 0.3, 30); g.add(bd); g.userData.setText = bd.userData.setText;
+    }
+    return g;
+  }
 
   // ---------- tools ----------
   // how many triangles an asset has (outline lines are not counted)

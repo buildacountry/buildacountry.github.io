@@ -205,7 +205,7 @@ const PLAYHOOK_TICK = (dt, now) => { if (!P.on) return; if (P.lock && DRV.on) DR
   if (P.body) { P.body.visible = WALK.on; if (WALK.on) { WALK.batches.forEach(b => { b.im.setMatrixAt(0, ZERO4); b.im.instanceMatrix.needsUpdate = true; });   // your own kit citizen stands in for the plain walker
       const d = Math.hypot(WALK.x - P.bodyAt[0], WALK.z - P.bodyAt[1]); P.bodyAt = [WALK.x, WALK.z]; P.bodyPh += d * 2.6; const sw = d > 0.002 ? Math.sin(P.bodyPh) * 0.7 : 0, lm = P.body.userData.limbs || {};
       if (lm.legL) { lm.legL.rotation.x = sw; lm.legR.rotation.x = -sw; } if (lm.armL) { lm.armL.rotation.x = -sw * 0.8; lm.armR.rotation.x = sw * 0.8; }
-      P.body.position.set(WALK.x, groundY(WALK.x, WALK.z) + 0.02, WALK.z); P.body.rotation.y = WALK.ang; } }
+      P.body.position.set(WALK.x, groundY(WALK.x, WALK.z) + 0.02 + (WALK.jy || 0), WALK.z); P.body.rotation.y = WALK.ang + (WALK.spin || 0); } }
   if (WALK.on) { vv.set(WALK.x, 2.75, WALK.z).project(camera); pTag.hidden = vv.z >= 1; pTag.style.left = ((vv.x + 1) / 2 * wrap.clientWidth) + 'px'; pTag.style.top = ((1 - vv.y) / 2 * wrap.clientHeight) + 'px'; } else pTag.hidden = true;
   if (cup.visible) cup.rotation.y = now / 700; };
 

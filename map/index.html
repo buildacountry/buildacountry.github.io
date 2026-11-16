@@ -328,6 +328,10 @@ body.driving #labels .lbl.walker { display: none !important; }
 #walkHud .wemo { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 6px; }
 #walkHud .wemo button { font-size: 1.3rem; width: 46px; height: 46px; border-radius: 50%; background: var(--card); border: 1px solid var(--line); cursor: pointer; line-height: 1; }
 #walkHud .wemo button:active { transform: scale(.92); }
+#walkHud .wgrid { position: absolute; right: 0; bottom: 54px; display: grid; grid-template-columns: repeat(4, 46px); gap: 6px; padding: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
+#walkHud .wgrid[hidden] { display: none; }
+#walkNear.game { pointer-events: auto; padding: 6px 8px 6px 14px; }
+#walkNear.game button { font: 700 .82rem var(--body); margin-left: 6px; padding: 7px 11px; border-radius: 999px; border: 0; background: var(--terra, #c8603f); color: #fff; cursor: pointer; }
 #walkJoy { position: fixed; left: max(22px, env(safe-area-inset-left, 0px)); bottom: calc(26px + env(safe-area-inset-bottom, 0px)); width: 124px; height: 124px; border-radius: 50%; background: rgba(251,246,236,.55); border: 2px solid rgba(80,60,40,.22); display: none; touch-action: none; }
 #walkJoy span { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: var(--terracotta); box-shadow: 0 2px 8px rgba(0,0,0,.25); }
 @media (pointer: coarse) { #walkJoy { display: block; } #walkHud .wemo { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); flex-direction: column; } }
@@ -361,7 +365,7 @@ body.walking .topbar { pointer-events: none; }
 <main id="panels"><section data-tab="citizens" hidden></section><section data-tab="country" hidden></section><section data-tab="estate" hidden></section><section data-tab="locked" hidden></section></main>
 <div class="controls"><button id="compass" aria-label="Turn the map so north is up" title="North up"><svg viewBox="0 0 40 40" width="26" height="26" aria-hidden="true"><g id="compassNeedle" style="transform-origin:20px 20px"><polygon points="20,4 25,20 15,20" fill="#c8603f"/><polygon points="20,36 25,20 15,20" fill="#cfc6b4"/><text x="20" y="3.2" font-size="0" fill="none">N</text></g><circle cx="20" cy="20" r="2.4" fill="#2f2b28"/></svg><span>N</span></button><button id="all">Whole land</button><button id="flagBtn">The flag</button><button id="tour" aria-pressed="false">Auto tour</button><button id="walkBtn" class="walkbtn">🚶 Walk</button><button id="playBtn" hidden title="Play as your citizen (laptop)">🎮 Play</button><button id="driveBtn" class="walkbtn">🚗 Drive</button><button id="supportBtn">☕ Support</button><button id="nightBtn" aria-pressed="false">🌙 Night</button><button id="crackBtn" class="crack" aria-label="Light a Diwali cracker" title="Light a cracker" hidden>🎆</button><button id="moreBtn" class="fab" aria-label="More map buttons: whole land, flag, tour, north" aria-expanded="false">⋯</button></div><div class="quick" id="quick"></div>
 <div id="driveHud" hidden><div class="wtop"><span id="driveSpeed">0 km/h</span><button id="driveExit">✕ Exit drive</button></div><button id="driveHorn" aria-label="Horn">📯</button><div id="driveJoy" aria-label="Steering joystick"><span></span></div><div id="driveNear" hidden></div><div id="driveHint" hidden></div><div id="driveTags"></div></div>
-<div id="walkHud" hidden><div class="wtop"><span id="walkCount">Just you here</span><button id="walkExit">✕ Exit walk</button></div><div class="wemo" aria-label="Wave"><button data-emoji="👋" aria-label="Wave">👋</button><button data-emoji="🎉" aria-label="Celebrate">🎉</button><button data-emoji="🪔" aria-label="Diya">🪔</button><button data-emoji="❤️" aria-label="Love">❤️</button></div><div id="walkJoy" aria-label="Joystick"><span></span></div><div id="walkNear" hidden></div><div id="walkHint" hidden></div><div id="walkTags"></div></div>
+<div id="walkHud" hidden><div class="wtop"><span id="walkCount">Just you here</span><button id="walkExit">✕ Exit walk</button></div><div class="wemo"><div class="wgrid" id="walkEmo" hidden><button data-emoji="👋" aria-label="Wave">👋</button><button data-emoji="🎉" aria-label="Celebrate">🎉</button><button data-emoji="🪔" aria-label="Diya">🪔</button><button data-emoji="❤️" aria-label="Love">❤️</button><button data-emoji="💃" aria-label="Dance">💃</button><button data-emoji="👏" aria-label="Clap">👏</button><button data-emoji="😂" aria-label="Laugh">😂</button><button data-emoji="🫡" aria-label="Salute">🫡</button></div><button id="walkEmoBtn" aria-label="Emotes">😀</button><button id="walkJump" aria-label="Jump">⤴️</button></div><div id="walkJoy" aria-label="Joystick"><span></span></div><div id="walkNear" hidden></div><div id="walkHint" hidden></div><div id="walkTags"></div></div>
 <div class="toast" id="toast" hidden></div>
 <div id="v2d" hidden><canvas id="plan" aria-label="Map of Vinland. Drag to move, pinch to zoom, tap a home."></canvas>
   <div class="b2"><a href="../" class="vback" aria-label="Back to Vinland">←<span>Vinland</span></a><div class="b2s"><input id="q2" type="search" placeholder="Search a citizen" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" aria-label="Search a citizen"><div id="r2" hidden></div></div><a class="mechip" href="../#me" data-me hidden></a></div>
@@ -1663,6 +1667,13 @@ window.whenKit = whenKit;
 // kit colour sets (walls, roof, doors); a detached house takes its owner's chosen colours. Ink outlines go into the shared outline piece.
 const GD_COL = { wall: ['#f3e6cc', '#f3e2a0', '#f2cfb3', '#e3d8c4', '#efd9b4', '#e9e2d0'], roof: ['#c8603f', '#5b5f66', '#b5543a', '#8a5a3a'], door: ['#47684a', '#3f5866', '#b5543a', '#c9922e', '#f6f3ea', '#7a4f34'] };
 const gdTemplates = {};
+// VINLAND TOWER UNDER CONSTRUCTION (Dev, 16 Nov night): the empire-style tower on the tower plot (x 990..1074, z -42..42), a building
+// site (podium + first tier, scaffolding, crane) until the country really has 10,000 citizens; then it stands finished.
+let towerBuild = null, towerStage = -1;
+function placeTowerBuild(hs) { const n = hs.filter(h => h.status !== 'abandoned').length, st = Math.max(0, Math.min(10, Math.floor(n / 1000)));
+  if (st === towerStage && towerBuild) return; towerStage = st; if (towerBuild) { scene.remove(towerBuild); towerBuild = null; }
+  const g = window.VinlandKit.make('vinlandTower', { style: 'empire', state: st >= 10 ? 'done' : 'site' }); g.scale.setScalar(0.7); g.position.set(1032, 0, 0); g.rotation.y = -Math.PI / 2;   // Dev: the empire style is the landmark
+  const w = new THREE.Group(); w.add(g); towerBuild = bakeGroup(w); }
 function drawGardenBuildings(hs, lineParts) {
   if (typeof GD === 'undefined' || !GD.blds.length) return;
   const K = window.VinlandKit, byB = new Map(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1), col = new THREE.Color(), v = new THREE.Vector3();
@@ -1670,7 +1681,7 @@ function drawGardenBuildings(hs, lineParts) {
   // (16 Nov evening, Dev) a home building stands only once someone lives in it; the high street shops stand from day one.
   // An empty plot is a plain lawn with its front hedge and path (3 instanced batches for the whole district).
   const lived = b => b.t === 'LP' || byB.has(b.i), groups = {}, empty = [];
-  GD.blds.forEach(b => { if (lived(b)) (groups[b.t] = groups[b.t] || []).push(b); else empty.push(b); });
+  GD.blds.forEach(b => { if (b.gone) return; if (lived(b)) (groups[b.t] = groups[b.t] || []).push(b); else empty.push(b); });
   if (empty.length) { const LOT = { LD: [10, 14], LS: [16, 14], LT: [36, 13] }, unit = new THREE.BoxGeometry(1, 1, 1), loc = new THREE.Matrix4(), bm = new THREE.Matrix4();
     const parts = [['#9fc86e', 1, (w, d) => [[w - 0.6, 0.12, d - 0.6, 0, 0.06, 0]]],
       ['#4f8a42', 2, (w, d) => [-1, 1].map(sx => [w / 2 - 1.1, 0.7, 0.5, sx * (w / 4 + 0.4), 0.35, d / 2 - 0.6])],
@@ -1736,6 +1747,7 @@ function drawHomes(hs) {
   idx.forEach((i, j) => { const m = M ? M[j] : mats[i], o = j * L.length; for (let k = 0; k < L.length; k += 3) { v.set(L[k], L[k + 1], L[k + 2]).applyMatrix4(m); out[o + k] = v.x; out[o + k + 1] = v.y; out[o + k + 2] = v.z; } });
   lineParts.push(out); });
   if (window.VinlandKit) drawGardenBuildings(hs, lineParts);   // Garden District: a building once someone lives in it (shops always)
+  if (window.VinlandKit) placeTowerBuild(hs);   // Vinland Tower rises with the real citizen count (16 Nov)
   // all outlines in one piece
   const out = new Float32Array(lineParts.reduce((t, a) => t + a.length, 0)); { let k = 0; lineParts.forEach(a => { out.set(a, k); k += a.length; }); }
   const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(out, 3)); lg.computeBoundingSphere();
@@ -3379,7 +3391,6 @@ GD.gate = [GD.XE, 0];
   }));
   { const [x0, x1] = GD.bands[1], cx = (x0 + x1) / 2;                                    // HIGH STREET: 3 shop parades facing the boulevard
     [-36, 0, 36].forEach(dx => put('LP', cx + dx, -15, 0, UNITS.LP)); }
-  GD.kit.push(['gdCommunity', {}, GD.bands[1][0] + 16, 21, Math.PI]);
   [[GD.bands[1][0] + 52, 19], [GD.bands[1][0] + 82, 19], [GD.bands[1][0] + 112, 19], [GD.bands[0][0] + 33, -38], [GD.bands[0][0] + 71, -38], [GD.bands[0][0] + 109, -38]].forEach(p => GD.parks.push(p));
   // ---- roads: perimeter + collectors (7 m), boulevard, spine and park ring (10 m), corridors (5.5 m) added above
   const ZN = GD.ZN, ZS = GD.ZS, XW = GD.XW, XE = GD.XE, R = GD.RZ, RW = GD.SX - 105, RE = GD.SX + 105;
@@ -3390,9 +3401,19 @@ GD.gate = [GD.XE, 0];
   rd(RW - 5 - (XW + 3.5), 10, (XW + 3.5 + RW - 5) / 2, 0); rd(XE - 3.5 - (RE + 5), 10, (RE + 5 + XE - 3.5) / 2, 0); rd(GD.BELT - XE - 3.5, 10, (XE + 3.5 + GD.BELT) / 2, 0);
   GD.round = [[GD.SX, -R], [GD.SX, R], [RW, 0], [RE, 0]];
   // ---- homes: the ones nearest the gate fill first; the homes of one building stay together (flats from the ground floor up)
-  const dist = b => Math.hypot(b.x - GD.gate[0], b.z - GD.gate[1]), out = [];
-  B.slice().sort((a, b) => dist(a) - dist(b)).forEach(b => b.units.slice().sort((p, q) => p[2] - q[2] || p[3] - q[3]).forEach(([x, z, ly, u], k) =>
-    out.push([+x.toFixed(2), +(z + (ly > 6 ? (ly | 0) * 0.01 : 0)).toFixed(2), b.ry, b.t.slice(0, 2), null, { bid: b.i, u, ly }])));
+  const dist = b => Math.hypot(b.x - GD.gate[0], b.z - GD.gate[1]), out = [], rec = (b, [x, z, ly, u]) => [+x.toFixed(2), +(z + (ly > 6 ? (ly | 0) * 0.01 : 0)).toFixed(2), b.ry, b.t.slice(0, 2), null, { bid: b.i, u, ly }];
+  B.slice().sort((a, b) => dist(a) - dist(b)).forEach(b => b.units.slice().sort((p, q) => p[2] - q[2] || p[3] - q[3]).forEach(un => out.push(rec(b, un))));
+  // ---- (Dev, 16 Nov night) NO BIG FLATS OR SHOP FLATS: those buildings go. Every flat keeps its home number and moves into an empty
+  // house of the district: the empty houses next in line after home #GD.KEEP (nobody lives there yet) give their spot to a flat, then
+  // drop out, so the homes after them simply move up one place (all still empty). Homes up to #GD.KEEP never change.
+  GD.KEEP = 5450; const iT = GD.KEEP - PLOTS.length, flat = i => out[i][3] === 'LA' || out[i][3] === 'LP', take = new Set();
+  let k = 0; for (let i = 0; i < out.length; i++) if (flat(i)) { let j = Math.max(iT, i + 1); while (j < out.length && (take.has(j) || flat(j))) j++; take.add(j); B[out[i][5].bid].gone = true; out[i] = out[j]; k++; }
+  for (let i = out.length - 1; i >= 0; i--) if (take.has(i)) out.splice(i, 1);
+  GD.moved = k;
+  // services on the old apartment land (front to the collector), a pocket park and trees on the second row
+  { const [w0] = GD.bands[0], [e0] = GD.bands[1], N = Math.PI;
+    // (Dev, 16 Nov night) the middle band stays open green: sports ground + pocket parks only, no buildings
+    GD.bands.forEach(([x0]) => [-1, 1].forEach(hs => GD.parks.push([x0 + 71, hs * 92]))); }
   GD.n0 = PLOTS.length; GD.homes = out.length; PLOTS.push(...out); }
 (function drawRiverside() {
   const N = { edge: false, shadow: false }, RAILC = '#2f2b28', hide = new THREE.Matrix4().makeScale(0, 0, 0), g = new THREE.Group();
@@ -5496,7 +5517,7 @@ function walkBodies() {
 function colourSlot(i, shirt, seed) { const c = new THREE.Color(), { body, legL, legR } = WALK.parts;
   body.forEach(b => { c.set(b.vary === 0 ? SHIRTS[shirt % SHIRTS.length] : b.vary === 1 ? SKINS[seed % SKINS.length] : b.vary === 2 ? HAIRS[(seed >> 2) % HAIRS.length] : b.color); b.im.setColorAt(i, c); if (b.im.instanceColor) b.im.instanceColor.needsUpdate = true; });
   [...legL, ...legR].forEach(b => { c.set(b.vary >= 0 ? PANTS[(seed >> 4) % PANTS.length] : b.color); b.im.setColorAt(i, c); if (b.im.instanceColor) b.im.instanceColor.needsUpdate = true; }); }
-function poseSlot(i, x, z, ang, swing, k) { const { body, legL, legR } = WALK.parts, bob = Math.abs(swing) * 0.06;
+function poseSlot(i, x, z, ang, swing, k, lift = 0) { const { body, legL, legR } = WALK.parts, bob = Math.abs(swing) * 0.06 + lift;
   PS.set(k, k, k); PP.set(x, 0.12 + bob, z); PQ.setFromAxisAngle(UPV, ang); PM.compose(PP, PQ, PS); body.forEach(b => b.im.setMatrixAt(i, PM));
   [[legL, -0.14, swing], [legR, 0.14, -swing]].forEach(([bt, ox, a]) => { const off = new THREE.Vector3(ox * k, 0, 0).applyAxisAngle(UPV, ang);
     PP.set(x + off.x, 0.12 + 0.7 * k + bob, z + off.z); PE.set(a * 0.5, ang, 0, 'YXZ'); PQ.setFromEuler(PE); PM.compose(PP, PQ, PS); bt.forEach(b => b.im.setMatrixAt(i, PM)); }); }
@@ -5538,7 +5559,7 @@ function stopWalk() {
 walkBtn.onclick = () => startWalk();
 document.getElementById('walkExit').onclick = stopWalk;
 addEventListener('keydown', e => { if (!WALK.on) return; if (e.target.closest && e.target.closest('input,textarea')) return;
-  if (e.key === 'Escape') { stopWalk(); return; } WALK.keys[e.key.toLowerCase()] = true; if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(e.key.toLowerCase())) e.preventDefault(); });
+  if (e.key === 'Escape') { stopWalk(); return; } if (e.key === ' ' && !e.repeat) walkJump(); WALK.keys[e.key.toLowerCase()] = true; if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(e.key.toLowerCase())) e.preventDefault(); });
 addEventListener('keyup', e => { WALK.keys[e.key.toLowerCase()] = false; });
 addEventListener('blur', () => { WALK.keys = {}; });
 // joystick (phones) and drag-to-look (everyone)
@@ -5554,8 +5575,17 @@ addEventListener('pointermove', e => { const L = WALK.look; if (!WALK.on || !L |
 addEventListener('pointerup', e => { if (WALK.look && e.pointerId === WALK.look.id) WALK.look = null; });
 // emoji waves
 walkHud.querySelectorAll('[data-emoji]').forEach(b => b.onclick = () => { const now = performance.now(); if (now - WALK.lastEmoji < 1500) return; WALK.lastEmoji = now;
-  const e = b.dataset.emoji; popEmoji(WALK.me, e); if (WALK.ch) WALK.ch.send({ type: 'broadcast', event: 'e', payload: { i: WALK.me, e } }); track('walk-wave'); });
-const EMOJIS = ['👋', '🎉', '🪔', '❤️'];
+  const e = b.dataset.emoji; popEmoji(WALK.me, e); WALK.move = { e, t: now }; if (WALK.ch) WALK.ch.send({ type: 'broadcast', event: 'e', payload: { i: WALK.me, e } }); track('walk-wave');
+  document.getElementById('walkEmo').hidden = true; });
+document.getElementById('walkEmoBtn').onclick = () => { const g = document.getElementById('walkEmo'); g.hidden = !g.hidden; };
+// JUMP (16 Nov): the button or the space bar; other walkers see you jump too
+function walkJump() { const now = performance.now(); if (WALK.jt && now - WALK.jt < 650) return; WALK.jt = now; if (WALK.ch) WALK.ch.send({ type: 'broadcast', event: 'e', payload: { i: WALK.me, e: 'jump' } }); track('walk-jump'); }
+document.getElementById('walkJump').onclick = walkJump;
+const jumpY = (t0, now) => { if (!t0) return 0; const t = (now - t0) / 600; return t > 0 && t < 1 ? 1.3 * 4 * t * (1 - t) : 0; };
+// dance = a spin, clap / laugh / celebrate = little hops, for about a second and a half
+const moveOf = (m, now) => { if (!m) return [0, 0]; const t = (now - m.t) / 1000; if (t > 1.5) return [0, 0];
+  if (m.e === '💃') return [t * Math.PI * 2 / 0.75, Math.abs(Math.sin(t * 8)) * 0.15]; if (m.e === '👏' || m.e === '😂' || m.e === '🎉') return [0, Math.abs(Math.sin(t * 10)) * 0.25]; return [0, 0]; };
+const EMOJIS = ['👋', '🎉', '🪔', '❤️', '💃', '👏', '😂', '🫡'];
 function popEmoji(id, e) { if (!EMOJIS.includes(e)) return; const el = document.createElement('div'); el.className = 'wemoji'; el.textContent = e; el.dataset.id = id; el.dataset.t = performance.now(); walkTags.appendChild(el); setTimeout(() => el.remove(), 3200); }
 // ---- every frame while walking ----
 const WV = new THREE.Vector3();
@@ -5572,7 +5602,7 @@ function walkFrame(dt, now) {
     if (-mz > 0.3 && !WALK.look) { let dy = WALK.ang - WALK.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); WALK.yaw += dy * Math.min(1, dt * 1.6 * mag); }   // the camera slowly swings in behind you
     WALK.phase += dt * 7.5 * run * mag; WALK.moving = true; WALK.idle = 0;
   } else { WALK.moving = false; WALK.phase *= 0.8; WALK.idle += dt; }
-  poseSlot(0, WALK.x, WALK.z, WALK.ang, WALK.moving ? Math.sin(WALK.phase) : 0, 1.1);
+  { const [spin, hop] = moveOf(WALK.move, now); WALK.jy = jumpY(WALK.jt, now) + hop; WALK.spin = spin; poseSlot(0, WALK.x, WALK.z, WALK.ang + spin, WALK.moving ? Math.sin(WALK.phase) : 0, 1.1, WALK.jy); }
   // camera: behind and a little above
   const want = wrap.clientWidth < wrap.clientHeight ? 11.5 : 8.4, cp = Math.cos(WALK.pitch), tx = WALK.x, tz = WALK.z, bx = -Math.sin(WALK.yaw), bz = -Math.cos(WALK.yaw);
   let dist = 1.2; while (dist < want && !blockedAt(tx + bx * dist * cp, tz + bz * dist * cp)) dist += 0.25;   // a wall behind you pulls the camera in
@@ -5590,7 +5620,7 @@ function walkFrame(dt, now) {
     const dx = o.tx - o.x, dz = o.tz - o.z, l = Math.hypot(dx, dz);
     if (l > 30) { o.x = o.tx; o.z = o.tz; } else if (l > 0.05) { const st = Math.min(l, Math.max(6.2, l * 1.2) * dt); o.x += dx / l * st; o.z += dz / l * st; o.phase += dt * 7.5; o.ang = Math.atan2(dx, dz); } else o.phase *= 0.8;
     if (o.slot !== i) { o.slot = i; colourSlot(i, o.c, hashStr(id)); }
-    poseSlot(i, o.x, o.z, o.ang, l > 0.05 ? Math.sin(o.phase) : 0, 1.1); i++;
+    { const [spin, hop] = moveOf(o.move, now); poseSlot(i, o.x, o.z, o.ang + spin, l > 0.05 ? Math.sin(o.phase) : 0, 1.1, jumpY(o.jt, now) + hop); } i++;
     if (!o.el) { o.el = document.createElement('div'); o.el.className = 'lbl wvis'; o.el.textContent = 'Visitor'; walkTags.appendChild(o.el); }   // real people walking right now, not the citizens on the streets
     vv.set(o.x, 2.55, o.z).project(camera); const d = Math.hypot(o.x - tx, o.z - tz);
     if (vv.z >= 1 || Math.abs(vv.x) > 1.05 || Math.abs(vv.y) > 1.05 || d > 60) o.el.hidden = true; else { o.el.hidden = false; o.el.style.left = ((vv.x + 1) / 2 * W) + 'px'; o.el.style.top = ((1 - vv.y) / 2 * H) + 'px'; }
@@ -5602,7 +5632,13 @@ function walkFrame(dt, now) {
     if (vv.z >= 1 || Math.abs(vv.x) > 1.1 || Math.abs(vv.y) > 1.1) { el.style.opacity = 0; return; }
     el.style.opacity = Math.max(0, 1 - Math.max(0, age - 2.4) / 0.8); el.style.left = ((vv.x + 1) / 2 * W) + 'px'; el.style.top = ((1 - vv.y) / 2 * H) + 'px'; });
   // the nearest home: whose is it?
-  if (!walkFrame.t || now - walkFrame.t > 250) { walkFrame.t = now; let best = null, bd = 10;
+  if (!walkFrame.t || now - walkFrame.t > 250) { const atStad = ((tx - STAD.x) / (STAD.rx + 16)) ** 2 + ((tz - STAD.z) / (STAD.rz + 16)) ** 2 < 1;
+    if (atStad !== !!WALK.atStad) { WALK.atStad = atStad; WALK.near = undefined;
+      if (atStad) { walkNear.className = 'game'; walkNear.innerHTML = '🏟️ Vinland Stadium<button id="wPen">⚽ Penalties</button><button id="wCrk">🏏 Bat an over</button>'; walkNear.hidden = false;
+        document.getElementById('wPen').onclick = () => { WALK.keys = {}; window.VinPenStart('pen'); }; document.getElementById('wCrk').onclick = () => { WALK.keys = {}; window.VinPenStart('cricket'); }; }
+      else { walkNear.className = ''; walkNear.hidden = true; } }
+    if (atStad) { walkFrame.t = now; } }
+  if (!WALK.atStad && (!walkFrame.t || now - walkFrame.t > 250)) { walkFrame.t = now; let best = null, bd = 10;
     for (const h of homes) { const d = Math.hypot(h.x - tx, h.z - tz); if (d < bd) { bd = d; best = h; } }
     if (best !== WALK.near) { WALK.near = best;
       if (best) { walkNear.innerHTML = best.status === 'abandoned' ? `🏚️ Home #${best.n} · empty` : `🏠 ${best.status === 'hidden' ? 'A citizen' : '@' + esc(best.user)}'s home${best.job ? ' · ' + esc(best.job) : ''}`; walkNear.hidden = false; }
@@ -5622,7 +5658,7 @@ async function walkConnect() {
     ch.on('broadcast', { event: 'p' }, ({ payload: p }) => { if (!p || typeof p.i !== 'string' || p.i === WALK.me || !isFinite(p.x) || !isFinite(p.z)) return;
         let o = WALK.others.get(p.i); if (!o) { o = { x: +p.x, z: +p.z, ang: 0, phase: 0, slot: -1 }; WALK.others.set(p.i, o); }
         o.tx = +p.x; o.tz = +p.z; o.c = (p.c | 0) % 9; o.seen = performance.now(); if (isFinite(p.a)) o.ang = +p.a; })
-      .on('broadcast', { event: 'e' }, ({ payload: p }) => { if (p && WALK.others.has(p.i)) popEmoji(p.i, p.e); })
+      .on('broadcast', { event: 'e' }, ({ payload: p }) => { const o = p && WALK.others.get(p.i); if (!o) return; if (p.e === 'jump') { o.jt = performance.now(); return; } if (EMOJIS.includes(p.e)) { popEmoji(p.i, p.e); o.move = { e: p.e, t: performance.now() }; } })
       .on('presence', { event: 'sync' }, () => { const n = Object.keys(ch.presenceState()).length; WALK.count = Math.max(1, n);
         walkCount.textContent = n > 1 ? `👣 ${n} walking now` : 'Just you here'; })
       .on('presence', { event: 'leave' }, ({ key }) => { const o = WALK.others.get(key); if (o && o.el) o.el.remove(); WALK.others.delete(key); })
@@ -5939,7 +5975,7 @@ function shiftScene() { const S5 = window.VSOC; if (!S5) return; const list = (S
   if (pb && !PHONE) { pb.hidden = false;
     pb.onclick = () => { if (!me()) { if (BOOT && BOOT.toast) BOOT.toast(window.VSOC && window.VSOC.user ? 'Your home is not on the map yet. Play opens when it is built.' : 'Play is for citizens. Log in first: DM KEY to @buildacountry.', 4200); return; }
       if (window.VPLAY) { window.VPLAY.start(); return; } pb.disabled = true;
-      fetch('play.js?v=1').then(r => { if (!r.ok) throw 0; return r.text(); }).then(t => { run(t + '\n//# sourceURL=play.js'); pb.disabled = false; if (window.VPLAY) window.VPLAY.start(); }).catch(() => { pb.disabled = false; if (BOOT && BOOT.toast) BOOT.toast('Play could not load. Check your internet and try again.', 3600); }); }; } }
+      fetch('play.js?v=16nov').then(r => { if (!r.ok) throw 0; return r.text(); }).then(t => { run(t + '\n//# sourceURL=play.js'); pb.disabled = false; if (window.VPLAY) window.VPLAY.start(); }).catch(() => { pb.disabled = false; if (BOOT && BOOT.toast) BOOT.toast('Play could not load. Check your internet and try again.', 3600); }); }; } }
 // THE VINLAND BUILDER (14 Nov): /map/?edit on a laptop. builder.js is downloaded only then, and runs inside the map like play.js. Visitors never load it.
 if (window.VIN_EDIT) { const runB = code => eval(code); setTimeout(() => fetch('builder.js?v=1', { cache: 'no-cache' }).then(r => { if (!r.ok) throw 0; return r.text(); }).then(t => runB(t + '\n//# sourceURL=builder.js')).catch(() => { if (BOOT && BOOT.toast) BOOT.toast('The Builder could not load (builder.js is missing).', 5000); }), 300); }
 window.VIN3D_API = { wake: () => kick(900), looks: () => { try { homeLooks(); PARTY.key = ''; SHIFT.key = ''; shiftScene(); partyScene(); if (typeof buildPeople === 'function' && Object.keys(window.VLOOKS || {}).length) buildPeople(); } catch (e) {} }, party: () => { try { shiftScene(); } catch (e) {} try { partyScene(); if (selected && selected.status === 'active' && !PARTY.carded) { PARTY.carded = true; selectHome(selected); } } catch (e) {} },   // the open home card gets its Knock / party lines once the social state arrives
