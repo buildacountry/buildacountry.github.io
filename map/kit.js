@@ -1245,6 +1245,189 @@
   def({ key: 'trainingCentre', name: 'Training centre', cat: 'Landmarks', part: 2, budget: 400, size: '26 × 40 m · 2 floors', night: true, opts: {},
     make() { const g = new THREE.Group(), GL = glowMat('#7fa7bd', '#f2d28a'); B(g, 40, 8, 26, '#e9e3d6', 0, 0, 0); B(g, 41, 0.8, 27, '#9aa3ad', 0, 8, 0, NE);
       [1, 4.6].forEach(y => P(g, 36, 2.6, GL, 0, y, 13.03)); B(g, 18, 1.6, 0.3, NAVY, 0, 8.9, 13.2, NE); P(g, 17, 1.3, textMat('TRAINING CENTRE', NAVY, '#ffffff'), 0, 9.05, 13.36); return g; } });
+  // ===== NEW DISTRICT homes (16 Nov, Dev: new house designs before anything is placed). Front = +z, plot 10 x 10 m (fourplex 18 x 12 m).
+  // Shared bits: lawn, path, a low fence with a gate gap, a tree, flower pots. Wall + roof colours are slots (each home its own).
+  const ndPlot = (g, w, d, fence, gateX) => { B(g, w, 0.2, d, PAL.grass, 0, 0, 0, { shadow: false });
+    B(g, 1.3, 0.06, d / 2 - 1.5, '#e2d8c4', gateX, 0.2, d / 4 + 0.75, FLAT);
+    const z = d / 2 - 0.1, segs = [[-w / 2, gateX - 0.8], [gateX + 0.8, w / 2]];
+    segs.forEach(([a, b]) => { if (b - a < 0.3) return; if (fence === 'picket') { B(g, b - a, 0.1, 0.08, '#ffffff', (a + b) / 2, 0.75, z, NE); B(g, b - a, 0.1, 0.08, '#ffffff', (a + b) / 2, 0.4, z, NE);
+        for (let x = a + 0.2; x <= b - 0.1; x += 0.55) B(g, 0.09, 0.95, 0.09, '#ffffff', x, 0.2, z, NE); }
+      else if (fence === 'hedge') B(g, b - a, 0.8, 0.7, PAL.leaf, (a + b) / 2, 0.2, z - 0.3);
+      else { B(g, b - a, 0.7, 0.3, '#d9cdb5', (a + b) / 2, 0.2, z); B(g, b - a, 0.1, 0.4, '#c9bca2', (a + b) / 2, 0.9, z, NE); } }); };
+  const ndTree = (g, x, z, kind, s) => { if (kind === 'pink') { CYL(g, 0.12 * s, 0.16 * s, 1.4 * s, 6, PAL.wood, x, 0.2, z); ICO(g, 1.2 * s, 0, PAL.pink, x, 2.2 * s, z); }
+    else { CYL(g, 0.12 * s, 0.16 * s, 1.4 * s, 6, PAL.wood, x, 0.2, z); ICO(g, 1.25 * s, 0, PAL.leaf2, x, 2.3 * s, z); } };
+  const ndPots = (g, pts) => pts.forEach(([x, z, c]) => { B(g, 0.45, 0.4, 0.45, PAL.terra2, x, 0.2, z, NE); ICO(g, 0.32, 0, c, x, 0.78, z, NE); });
+
+  // 1. Modern family house: two-storey white block, flat dark roof, wooden wing with a sloping roof, big windows, picket fence.
+  def({ key: 'ndModern', name: 'Modern family house', cat: 'New District', part: 2, budget: 700, size: '10 × 10 m · 2 floors · 1 home',
+    opts: { wall: colours('Wall', SETS.walls), roof: colours('Roof', ['#4a4f57', '#5b5f66', '#7a4f34']) },
+    make(o) { const g = new THREE.Group(), W = slot('wall', pick(o, 'wall', SETS.walls)), R = slot('roof', pick(o, 'roof', ['#4a4f57'])), WOOD = '#b98a5e';
+      ndPlot(g, 10, 10, 'picket', 0.6);
+      B(g, 5.4, 6.0, 5.4, W, -1.4, 0.2, -1.4);
+      B(g, 6.0, 0.4, 6.0, R, -1.4, 6.2, -1.4); B(g, 6.0, 0.5, 0.15, R, -1.4, 6.6, 1.55, NE);
+      B(g, 3.6, 3.2, 4.8, WOOD, 2.9, 0.2, -1.6); for (let x = 1.4; x <= 4.6; x += 0.5) B(g, 0.06, 3.2, 0.06, '#9a6f48', x, 0.2, 0.82, NE);
+      const r = B(g, 4.3, 0.3, 5.4, R, 2.9, 3.55, -1.6); r.rotation.z = 0.2;
+      P(g, 1.1, 2.2, '#5b3a26', 0.4, 0.2, 1.31); B(g, 2.0, 0.15, 1.3, '#e2d8c4', 0.4, 2.55, 1.9, NE);
+      P(g, 2.6, 1.9, PAL.glass, -2.4, 1.0, 1.32); P(g, 3.9, 1.5, PAL.glass, -1.5, 3.9, 1.32); P(g, 2.2, 1.6, PAL.glass, 2.9, 1.0, 0.83);
+      B(g, 4.2, 0.12, 0.9, '#ffffff', -1.5, 3.65, 1.75, NE); B(g, 4.2, 0.9, 0.06, '#bfe0ea', -1.5, 3.77, 2.2, NE);   // small glass balcony
+      ndTree(g, -3.8, 3.3, 'canopy', 0.8); ndPots(g, [[1.6, 2.4, PAL.pink], [-0.6, 2.4, '#e2b04a']]); B(g, 2.8, 0.7, 0.8, PAL.leaf, 3.2, 0.2, 3.7, NE);
+      return g; } });
+
+  // 2. Cottage: one and a half floors, steep slate roof with a dormer, wooden porch on posts, stone base, flower boxes, hedge.
+  def({ key: 'ndCottage', name: 'Cottage', cat: 'New District', part: 2, budget: 700, size: '10 × 10 m · 1.5 floors · 1 home',
+    opts: { wall: colours('Wall', SETS.walls), roof: colours('Roof', ['#5b5f66', '#4f6b7a', '#7a4a3a', '#3f5866']) },
+    make(o) { const g = new THREE.Group(), W = slot('wall', pick(o, 'wall', SETS.walls)), R = slot('roof', pick(o, 'roof', ['#5b5f66']));
+      ndPlot(g, 10, 10, 'hedge', -0.2);
+      B(g, 7.2, 0.6, 5.4, '#b9ad98', 0, 0.2, -1.2); B(g, 7, 3.0, 5.2, W, 0, 0.8, -1.2);
+      GABLE(g, 6.0, 3.6, 7.8, R, 0, 3.8, -1.2, { ry: Math.PI / 2 });                                      // steep roof, ridge along the street
+      B(g, 2.0, 1.6, 1.6, W, 1.4, 4.4, 0.6); GABLE(g, 2.4, 1.0, 1.9, R, 1.4, 6.0, 0.6);                     // dormer
+      P(g, 1.2, 1.0, PAL.glass, 1.4, 4.7, 1.41);
+      B(g, 3.6, 0.25, 2.0, '#a07a52', -0.2, 0.8, 2.4); [-1.8, 1.4].forEach(x => B(g, 0.2, 2.6, 0.2, '#f6f0e2', x, 1.05, 3.25, NE));
+      B(g, 3.9, 0.25, 2.3, R, -0.2, 3.6, 2.45);                                                               // porch roof
+      P(g, 1.1, 2.1, '#3f6f8a', -0.2, 0.8, 1.41);
+      [-2.4, 2.4].forEach(x => { P(g, 1.2, 1.3, PAL.glass, x, 1.7, 1.41); [-0.75, 0.75].forEach(d => P(g, 0.32, 1.3, PAL.shutter, x + d, 1.7, 1.42)); B(g, 1.4, 0.35, 0.4, PAL.wood, x, 1.3, 1.6, NE); ICO(g, 0.25, 0, PAL.pink, x - 0.35, 1.75, 1.62, NE); ICO(g, 0.25, 0, '#e2b04a', x + 0.35, 1.75, 1.62, NE); });
+      B(g, 0.9, 1.6, 0.9, '#b9ad98', -2.6, 6.0, -2.2);                                                         // chimney
+      ndTree(g, 3.6, 3.0, 'pink', 0.8); ndPots(g, [[1.2, 3.0, PAL.purple]]);
+      return g; } });
+
+  // 3. Indian bungalow: one wide floor, flat roof with a parapet and a roof terrace + pergola, a verandah on columns, jali screen, gate pillars.
+  def({ key: 'ndBungalow', name: 'Bungalow', cat: 'New District', part: 2, budget: 750, size: '10 × 10 m · 1 floor + roof terrace · 1 home',
+    opts: { wall: colours('Wall', SETS.walls), roof: colours('Trim', ['#c8603f', '#4f9a86', '#c9922e', '#7a4a3a']) },
+    make(o) { const g = new THREE.Group(), W = slot('wall', pick(o, 'wall', SETS.walls)), T = slot('roof', pick(o, 'roof', ['#c8603f']));
+      ndPlot(g, 10, 10, 'wall', 0);
+      [-0.95, 0.95].forEach(x => { B(g, 0.6, 1.4, 0.6, '#efe4cc', x, 0.2, 4.9); B(g, 0.75, 0.15, 0.75, T, x, 1.6, 4.9, NE); });   // gate pillars
+      B(g, 8.4, 3.4, 5.6, W, 0, 0.2, -1.6); B(g, 8.8, 0.3, 6.0, T, 0, 3.6, -1.6);                             // the house + roof band
+      B(g, 8.8, 0.7, 0.2, W, 0, 3.9, 1.3, NE); B(g, 0.2, 0.7, 6.0, W, -4.3, 3.9, -1.6, NE); B(g, 0.2, 0.7, 6.0, W, 4.3, 3.9, -1.6, NE); B(g, 8.8, 0.7, 0.2, W, 0, 3.9, -4.5, NE);   // parapet
+      B(g, 8.4, 0.3, 2.4, '#e9dcc0', 0, 0.2, 2.4); [-3.9, -1.3, 1.3, 3.9].forEach(x => B(g, 0.35, 2.9, 0.35, '#f6f0e2', x, 0.5, 3.4)); B(g, 8.8, 0.35, 2.7, T, 0, 3.4, 2.45);   // verandah
+      P(g, 1.3, 2.3, '#7a4f34', 0, 0.5, 1.21); [-2.8, 2.8].forEach(x => P(g, 1.6, 1.4, PAL.glass, x, 1.3, 1.21));
+      for (let i = 0; i < 6; i++) B(g, 0.1, 1.2, 0.08, '#ffffff', -3.4 + i * 0.25, 1.4, 3.42, NE);          // jali screen
+      const pg = grp(g, 2.0, 4.2, -2.2); [-1.6, 1.6].forEach(x => [-1.2, 1.2].forEach(z => B(pg, 0.18, 2.0, 0.18, '#a07a52', x, 0, z, NE)));
+      for (let x = -1.8; x <= 1.8; x += 0.6) B(pg, 0.12, 0.12, 2.8, '#a07a52', x, 2.0, 0, NE); B(pg, 3.6, 0.12, 0.12, '#a07a52', 0, 2.0, 1.2, NE);   // pergola
+      ndPots(g, [[-1.8, 4.1, PAL.leaf], [1.8, 4.1, PAL.leaf], [-3.2, -0.3 + 4.0, PAL.pink], [-2.8, 4.6 - 0.6 + 0.2, '#e2b04a']]);
+      ndTree(g, 3.8, 3.6, 'canopy', 0.75);
+      return g; } });
+
+  // 4. Fourplex: one building, 4 homes (2 up, 2 down), two front doors with their own steps, outside stairs to the upper homes,
+  //    balconies, a shared garden. 18 x 12 m plot (two house plots).
+  def({ key: 'ndFourplex', name: 'Fourplex (4 homes)', cat: 'New District', part: 2, budget: 1100, size: '18 × 12 m · 2 floors · 4 homes',
+    opts: { wall: colours('Wall', SETS.walls), roof: colours('Roof', ['#c8603f', '#5b5f66', '#4f6b7a']) },
+    make(o) { const g = new THREE.Group(), W = slot('wall', pick(o, 'wall', SETS.walls)), R = slot('roof', pick(o, 'roof', ['#c8603f'])), DOORS = ['#3f6f8a', '#c8603f', '#2f7a68', '#c9922e'];
+      ndPlot(g, 18, 12, 'picket', 0);
+      B(g, 13, 6.2, 6.4, W, 0, 0.2, -1.6); B(g, 13.6, 0.35, 7.0, R, 0, 6.4, -1.6);
+      GABLE(g, 7.0, 2.4, 13.4, R, 0, 6.75, -1.6, { ry: Math.PI / 2 });
+      B(g, 0.3, 6.2, 6.6, '#e2d8c4', 0, 0.2, -1.6, NE);                                                       // the wall line between the halves
+      [-1, 1].forEach(sd => { const x0 = sd * 3.3;
+        P(g, 1.1, 2.1, DOORS[sd < 0 ? 0 : 1], x0, 0.2, 1.61); P(g, 2.0, 1.4, PAL.glass, x0 + sd * 1.9, 1.0, 1.61);   // ground-floor homes
+        B(g, 2.2, 0.15, 1.2, '#e2d8c4', x0, 2.4, 2.2, NE);
+        const bx = x0 + sd * 1.5; B(g, 2.8, 0.2, 1.3, '#efe4cc', bx, 3.3, 2.25);                                  // upper balcony in front of the upper door
+        B(g, 2.8, 0.08, 0.08, PAL.iron, bx, 4.35, 2.88, NE); for (let k = -1.3; k <= 1.31; k += 0.325) B(g, 0.05, 0.85, 0.05, PAL.iron, bx + k, 3.5, 2.88, NE);
+        P(g, 1.0, 2.0, DOORS[sd < 0 ? 2 : 3], bx, 3.5, 1.61); P(g, 1.6, 1.3, PAL.glass, x0 - sd * 1.3, 4.0, 1.61);
+        for (let i = 0; i < 8; i++) B(g, 1.0, 0.18, 0.35, '#d9cdb5', sd * (6.9 + 0.0), 0.2 + i * 0.4, 1.4 - i * 0.35 + 0.0, NE);   // outside stairs up
+      });
+      ndTree(g, -7.6, 4.2, 'pink', 0.8); ndTree(g, 7.6, 4.2, 'canopy', 0.8); ndPots(g, [[-1.0, 4.6, PAL.pink], [1.0, 4.6, '#e2b04a'], [-4.3, 2.6, PAL.purple], [4.3, 2.6, PAL.leaf]]);
+      B(g, 5, 0.12, 2.2, '#e2d8c4', 0, 0.2, 4.6, FLAT);
+      return g; } });
+
+  // ===== NEW DISTRICT · Vinland style (16 Nov, Dev: "more matching our current vibe"): cream / peach walls, terracotta roofs,
+  // green shutters, arches, stone garden walls, blossom trees. New shapes, not the town's house.
+  const vlWin = (p, x, y, z, w = 1.1, h = 1.5, arch = false) => { P(p, w + 0.3, h + 0.3, PAL.cream, x, y - 0.15, z); P(p, w, h, PAL.glass, x, y, z + 0.01);
+    if (arch) ARCH(p, w, PAL.glass, x, y + h, z + 0.01); [-1, 1].forEach(sd => P(p, w * 0.45, h, PAL.shutter, x + sd * w * 0.75, y, z + 0.02)); };
+  const vlWall = (g, w, d, gateX) => { const z = d / 2 - 0.15; [[-w / 2, gateX - 0.9], [gateX + 0.9, w / 2]].forEach(([a, b]) => { if (b - a < 0.3) return;
+      B(g, b - a, 0.8, 0.35, '#e3d2ae', (a + b) / 2, 0.2, z); B(g, b - a, 0.12, 0.45, '#d9c49a', (a + b) / 2, 1.0, z, NE); });
+    [-1, 1].forEach(sd => B(g, 0.45, 1.3, 0.45, '#d9c49a', gateX + sd * 0.95, 0.2, z, NE)); };
+  const vlBase = (g, w, d, gateX) => { B(g, w, 0.2, d, PAL.grass, 0, 0, 0, { shadow: false }); B(g, 1.3, 0.06, d / 2 - 1.5, '#e9dcc0', gateX, 0.2, d / 4 + 0.75, FLAT); vlWall(g, w, d, gateX); };
+
+  // 5. Vinland villa: two floors, terracotta hip roof, arched front door with a little canopy, green shutters, a balcony with plants.
+  def({ key: 'vlVilla', name: 'Vinland villa', cat: 'New District', part: 2, budget: 750, size: '10 × 10 m · 2 floors · 1 home',
+    opts: { wall: colours('Wall', SETS.walls), roof: colours('Roof', SETS.roofs) },
+    make(o) { const g = new THREE.Group(), W = slot('wall', pick(o, 'wall', SETS.walls)), R = slot('roof', pick(o, 'roof', SETS.roofs));
+      vlBase(g, 10, 10, 0);
+      B(g, 7, 6, 5.6, W, 0, 0.2, -1.4); B(g, 7.3, 0.3, 5.9, PAL.cream, 0, 3.15, -1.4, NE); HIP(g, 8.2, 2.4, 6.8, R, 0, 6.2, -1.4);
+      P(g, 1.2, 2.0, PAL.wood, 0, 0.2, 1.41); ARCH(g, 1.2, PAL.wood, 0, 2.2, 1.41); B(g, 2.0, 0.15, 1.0, R, 0, 2.95, 1.9, NE);
+      vlWin(g, -2.3, 1.1, 1.41); vlWin(g, 2.3, 1.1, 1.41); vlWin(g, -2.3, 4.0, 1.41, 1.0, 1.4, true); vlWin(g, 2.3, 4.0, 1.41, 1.0, 1.4, true);
+      B(g, 2.4, 0.2, 1.0, PAL.cream, 0, 3.7, 1.9); B(g, 2.4, 0.07, 0.07, PAL.iron, 0, 4.55, 2.38, NE); for (let x = -1.1; x <= 1.11; x += 0.275) B(g, 0.05, 0.7, 0.05, PAL.iron, x, 3.9, 2.38, NE); P(g, 1.0, 1.8, PAL.glass, 0, 3.75, 1.41); ARCH(g, 1.0, PAL.glass, 0, 5.55, 1.41);
+      ICO(g, 0.3, 0, PAL.pink, -0.8, 4.8, 2.1, NE); ICO(g, 0.3, 0, PAL.leaf2, 0.8, 4.8, 2.1, NE);
+      ndTree(g, -3.7, 3.2, 'pink', 0.85); B(g, 0.6, 2.6, 0.6, PAL.cypress, 3.9, 0.2, 3.4, NE); ndPots(g, [[-1.1, 2.0, PAL.pink], [1.1, 2.0, PAL.purple]]);
+      return g; } });
+
+  // 6. Loggia house: an arched loggia (open porch with three arches) on the ground floor, a terrace above it, terracotta gable roof.
+  def({ key: 'vlLoggia', name: 'Loggia house', cat: 'New District', part: 2, budget: 800, size: '10 × 10 m · 2 floors · 1 home',
+    opts: { wall: colours('Wall', SETS.walls), roof: colours('Roof', SETS.roofs) },
+    make(o) { const g = new THREE.Group(), W = slot('wall', pick(o, 'wall', SETS.walls)), R = slot('roof', pick(o, 'roof', SETS.roofs));
+      vlBase(g, 10, 10, 1.2);
+      B(g, 7.2, 6.0, 4.4, W, 0, 0.2, -2.0); GABLE(g, 5.0, 2.2, 7.8, R, 0, 6.2, -2.0, { ry: Math.PI / 2 });
+      B(g, 7.2, 3.0, 2.2, W, 0, 0.2, 1.3);                                                                   // loggia block
+      const lg = grp(g, 0, 0, 2.42); [-2.4, 0, 2.4].forEach(x => { P(lg, 1.7, 1.7, '#5c4a3a', x, 0.2, 0); ARCH(lg, 1.7, '#5c4a3a', x, 1.9, 0); });   // three dark arches
+      B(g, 7.4, 0.25, 2.4, PAL.cream, 0, 3.2, 1.3, NE); [[-3.6, 0], [3.6, 0]].forEach(([x]) => B(g, 0.15, 0.8, 2.3, PAL.cream, x, 3.45, 1.3, NE)); B(g, 7.3, 0.8, 0.15, PAL.cream, 0, 3.45, 2.42, NE);   // terrace rail
+      vlWin(g, -2.2, 4.0, 0.21, 1.0, 1.5, true); P(g, 1.1, 2.0, PAL.glass, 1.4, 3.45, 0.21); ARCH(g, 1.1, PAL.glass, 1.4, 5.45, 0.21);
+      [[-3.0, PAL.pink], [3.0, '#e2b04a']].forEach(([x, c]) => ndPots(g, [[x, 2.0 - 0.0 + 1.3 - 1.1, c]]));
+      ndTree(g, 3.8, 3.8, 'canopy', 0.75); ndTree(g, -4.0, 3.6, 'pink', 0.7);
+      return g; } });
+
+  // 7. Tower house: a two-floor house with a little three-floor corner tower (a room with a view), terracotta roofs, a walled front garden.
+  def({ key: 'vlTower', name: 'Tower house', cat: 'New District', part: 2, budget: 850, size: '10 × 10 m · 2–3 floors · 1 home',
+    opts: { wall: colours('Wall', SETS.walls), roof: colours('Roof', SETS.roofs) },
+    make(o) { const g = new THREE.Group(), W = slot('wall', pick(o, 'wall', SETS.walls)), R = slot('roof', pick(o, 'roof', SETS.roofs));
+      vlBase(g, 10, 10, -0.8);
+      B(g, 6.2, 5.8, 5.2, W, -1.0, 0.2, -1.6); GABLE(g, 5.6, 2.0, 6.8, R, -1.0, 6.0, -1.6, { ry: Math.PI / 2 });
+      B(g, 3.0, 8.6, 3.0, W, 2.6, 0.2, -0.4); HIP(g, 3.8, 1.8, 3.8, R, 2.6, 8.8, -0.4);                        // the tower
+      [-0.9, 0, 0.9].forEach(x => { P(g, 0.5, 1.0, PAL.glass, 2.6 + x, 7.3, 1.11); ARCH(g, 0.5, PAL.glass, 2.6 + x, 8.3, 1.11); });   // tower top windows
+      vlWin(g, 2.6, 4.2, 1.11, 0.9, 1.4); P(g, 1.1, 2.1, PAL.wood, -1.0, 0.2, 1.01); ARCH(g, 1.1, PAL.wood, -1.0, 2.3, 1.01);
+      vlWin(g, -3.0, 1.2, 1.01); vlWin(g, -2.2, 4.0, 1.01, 1.0, 1.4, true); vlWin(g, 0.2, 4.0, 1.01, 0.8, 1.3);
+      B(g, 2.8, 0.5, 0.6, '#8a5a3a', -3.0, 0.9, 1.3, NE); ICO(g, 0.28, 0, PAL.pink, -3.6, 1.55, 1.3, NE); ICO(g, 0.28, 0, PAL.purple, -2.5, 1.55, 1.3, NE);
+      ndTree(g, 3.9, 3.6, 'pink', 0.8); ndPots(g, [[-0.1, 2.2, PAL.leaf2]]);
+      return g; } });
+
+  // 8. Vinland fourplex: 4 homes round a shared front courtyard. Terracotta hip roof, an arched gateway, two front doors down,
+  //    two upstairs homes reached by an inside stair (one door each on the gallery), green shutters everywhere.
+  def({ key: 'vlFourplex', name: 'Vinland fourplex (4 homes)', cat: 'New District', part: 2, budget: 1200, size: '18 × 12 m · 2 floors · 4 homes',
+    opts: { wall: colours('Wall', SETS.walls), roof: colours('Roof', SETS.roofs) },
+    make(o) { const g = new THREE.Group(), W = slot('wall', pick(o, 'wall', SETS.walls)), R = slot('roof', pick(o, 'roof', SETS.roofs)), DOORS = ['#47684a', '#3f5866', '#7a4f34', '#b5543a'];
+      vlBase(g, 18, 12, 0);
+      B(g, 14, 6.2, 6.0, W, 0, 0.2, -2.2); B(g, 14.3, 0.3, 6.3, PAL.cream, 0, 3.25, -2.2, NE); HIP(g, 15.2, 2.6, 7.2, R, 0, 6.4, -2.2);
+      [-1, 1].forEach(sd => { B(g, 3.2, 6.2, 3.2, W, sd * 5.4, 0.2, 2.0); HIP(g, 3.9, 1.6, 3.9, R, sd * 5.4, 6.4, 2.0);   // two front wings
+        vlWin(g, sd * 5.4, 1.2, 3.61); vlWin(g, sd * 5.4, 4.0, 3.61, 1.0, 1.4, true);
+        P(g, 1.1, 2.1, DOORS[sd < 0 ? 0 : 1], sd * 2.6, 0.2, 0.81); ARCH(g, 1.1, DOORS[sd < 0 ? 0 : 1], sd * 2.6, 2.3, 0.81);   // ground-floor homes
+        P(g, 1.0, 2.0, DOORS[sd < 0 ? 2 : 3], sd * 2.6, 3.6, 0.81); });                                       // upstairs homes, on the gallery
+      B(g, 7.6, 0.25, 1.4, PAL.cream, 0, 3.35, 1.5); B(g, 7.6, 0.07, 0.07, PAL.iron, 0, 4.4, 2.18, NE); for (let x = -3.6; x <= 3.6; x += 0.6) B(g, 0.05, 0.8, 0.05, PAL.iron, x, 3.6, 2.18, NE);   // gallery
+      P(g, 1.4, 2.4, '#5c4a3a', 0, 0.2, 0.81); ARCH(g, 1.4, '#5c4a3a', 0, 2.6, 0.81);                         // arched way in to the stairs
+      vlWin(g, -1.2, 4.0, 0.81, 0.8, 1.3); vlWin(g, 1.2, 4.0, 0.81, 0.8, 1.3);
+      B(g, 2.2, 0.15, 2.2, '#e9dcc0', 0, 0.2, 2.6, FLAT); CYL(g, 0.8, 0.9, 0.6, 12, '#d9c49a', 0, 0.2, 2.6); CYL(g, 0.6, 0.6, 0.1, 12, PAL.water, 0, 0.8, 2.6, { edge: false });   // little fountain in the courtyard
+      ndTree(g, -7.7, 4.3, 'pink', 0.8); ndTree(g, 7.7, 4.3, 'pink', 0.8); ndPots(g, [[-1.5, 3.4, PAL.pink], [1.5, 3.4, PAL.purple], [-3.6, 4.4, PAL.leaf2], [3.6, 4.4, '#e2b04a']]);
+      return g; } });
+
+  // ===== NEW DISTRICT suburb homes (16 Nov, Dev's picks from the Asset Kit look): cream / yellow walls, terracotta roofs, green shutters,
+  // a red porch canopy, white picket fence, blossom tree. Wall + roof are slots (each home gets a slightly different shade).
+  const sbFence = (g, gateX) => { const z = 4.9; [[-5, gateX - 0.8], [gateX + 0.8, 5]].forEach(([a, b]) => { if (b - a < 0.3) return;
+      B(g, b - a, 0.1, 0.08, '#ffffff', (a + b) / 2, 0.75, z, NE); B(g, b - a, 0.1, 0.08, '#ffffff', (a + b) / 2, 0.42, z, NE);
+      for (let x = a + 0.2; x <= b - 0.1; x += 0.5) B(g, 0.09, 0.9, 0.09, '#ffffff', x, 0.2, z, NE); }); };
+  const sbWin = (p, x, y, z, w = 1.1, h = 1.3) => { P(p, w, h, PAL.glass, x, y, z); [-1, 1].forEach(sd => P(p, w * 0.42, h, PAL.shutter, x + sd * w * 0.73, y, z + 0.01)); };
+  // 9. Suburb cottage: one and a half floors, terracotta gable roof with a dormer, a porch with a red canopy, picket fence.
+  def({ key: 'sbCottage', name: 'Suburb cottage', cat: 'New District', part: 2, budget: 650, size: '10 × 10 m · 1.5 floors · 1 home',
+    opts: { wall: colours('Wall', ['#f3e3b5', '#f6f0e2', '#f2cfb3', '#e8d5b0']), roof: colours('Roof', ['#c8603f', '#b5543a', '#d06a45']) },
+    make(o) { const g = new THREE.Group(), W = slot('wall', pick(o, 'wall', ['#f3e3b5'])), R = slot('roof', pick(o, 'roof', ['#c8603f']));
+      B(g, 10, 0.2, 10, PAL.grass, 0, 0, 0, { shadow: false }); B(g, 1.3, 0.06, 3.4, '#efe4cc', 0.6, 0.2, 3.2, FLAT); sbFence(g, 0.6);
+      B(g, 7, 3.0, 5.6, W, 0, 0.2, -1.4); GABLE(g, 6.4, 3.0, 7.6, R, 0, 3.2, -1.4, { ry: Math.PI / 2 });
+      B(g, 2.0, 1.5, 1.4, W, -1.6, 3.9, 0.6); GABLE(g, 2.4, 1.0, 1.7, R, -1.6, 5.4, 0.6); P(g, 1.1, 0.9, PAL.glass, -1.6, 4.2, 1.31);   // dormer
+      B(g, 3.0, 0.2, 1.8, '#efe4cc', 0.6, 0.2, 2.2, NE); B(g, 3.4, 0.2, 2.0, '#c8603f', 0.6, 2.7, 2.3); [-0.7, 1.9].forEach(x => B(g, 0.15, 2.5, 0.15, '#ffffff', x, 0.2, 3.1, NE));   // porch
+      P(g, 1.0, 2.0, '#47684a', 0.6, 0.4, 1.41); sbWin(g, -2.2, 1.1, 1.41); sbWin(g, 2.6, 1.1, 1.41, 0.9, 1.2);
+      P(g, 0.6, 0.5, '#3a2a20', 1.6, 0.9, 2.95); ICO(g, 1.0, 0, PAL.pink, -4.0, 2.6, 3.4); CYL(g, 0.13, 0.17, 1.6, 6, PAL.wood, -4.0, 0.2, 3.4);
+      B(g, 0.8, 0.9, 0.6, '#3f6f3a', 3.6, 0.2, 3.9, NE); ICO(g, 0.3, 0, PAL.pink, -0.8, 0.5, 4.3, NE); ICO(g, 0.3, 0, '#e2b04a', 2.4, 0.5, 4.3, NE);
+      return g; } });
+  // 10. Suburb house: two floors, terracotta hip roof, rows of shuttered windows, a red porch canopy over the door, side steps, hedge.
+  def({ key: 'sbHouse', name: 'Suburb house', cat: 'New District', part: 2, budget: 750, size: '10 × 10 m · 2 floors · 1 home',
+    opts: { wall: colours('Wall', ['#f3d88a', '#f3e3b5', '#f2cfb3', '#f6f0e2']), roof: colours('Roof', ['#c8603f', '#b5543a', '#d06a45']) },
+    make(o) { const g = new THREE.Group(), W = slot('wall', pick(o, 'wall', ['#f3d88a'])), R = slot('roof', pick(o, 'roof', ['#c8603f']));
+      B(g, 10, 0.2, 10, PAL.grass, 0, 0, 0, { shadow: false }); B(g, 1.3, 0.06, 3.4, '#efe4cc', 0, 0.2, 3.2, FLAT); sbFence(g, 0);
+      B(g, 8, 5.6, 5.4, W, 0, 0.2, -1.6); B(g, 8.3, 0.25, 5.7, PAL.cream, 0, 2.95, -1.6, NE); HIP(g, 9.0, 2.4, 6.4, R, 0, 5.8, -1.6);
+      [-2.8, -1.2, 1.2, 2.8].forEach(x => sbWin(g, x, 3.5, 1.11, 0.9, 1.3)); [-2.6, 2.6].forEach(x => sbWin(g, x, 0.9, 1.11, 1.1, 1.4));
+      P(g, 1.6, 2.1, '#5c4a3a', 0, 0.3, 1.11); B(g, 3.0, 0.2, 1.6, '#c8603f', 0, 2.5, 1.9); B(g, 2.8, 0.3, 1.2, '#efe4cc', 0, 0.2, 1.7, NE);
+      for (let i = 0; i < 4; i++) B(g, 1.0, 0.2, 0.4, '#efe4cc', -4.6, 0.2 + i * 0.35, 0.2 - i * 0.4, NE);
+      B(g, 0.8, 1.1, 3.6, '#3f6f3a', -4.4, 0.2, 2.6, NE); ICO(g, 1.1, 0, PAL.pink, -2.6, 2.7, 3.4); CYL(g, 0.13, 0.17, 1.6, 6, PAL.wood, -2.6, 0.2, 3.4);
+      ICO(g, 1.1, 0, PAL.leaf2, 3.5, 2.7, 3.3); CYL(g, 0.13, 0.17, 1.6, 6, PAL.wood, 3.5, 0.2, 3.3); B(g, 1.8, 0.4, 0.6, '#7a4f34', 2.0, 0.2, 2.4, NE);
+      return g; } });
+  // ndFourplex roof options gain terracotta so it sits with the suburb homes
+
   def({ key: 'cypressTree', name: 'Cypress tree', cat: 'Street', part: 2, budget: 40, size: '7 m tall', opts: {},
     make() { const g = new THREE.Group(); CYL(g, 0.18, 0.22, 1, 5, PAL.wood, 0, 0, 0, { edge: false, open: true }); put(g, geo('cyp', () => new THREE.ConeGeometry(1, 1, 6)), PAL.cypress, 0, 4, 0, { edge: false, s: [1.1, 6, 1.1] }); return g; } });
   // Vinland Field (Dev, 15 Nov): an American retro ballpark in Vinland colours. Rectangular bowl with rounded corners, terracotta-brick walls
@@ -2067,6 +2250,352 @@
     }
     return g;
   }
+
+  // ================= NEW DISTRICT LOOKS (Assets chat, 16 Nov): samples for Dev to choose a feel =================
+  // Garden suburb (pastel cottages, picket fences, front gardens) and hill village (stone houses on terraces, stairs,
+  // pergolas, olive + cypress). Each look has a home for 1 citizen and a home for 4 citizens living together.
+  // Name plates: o.names = ['@a', '@b', '@c', '@d'] (blank brass plates if not given, so copies still batch). Night: windows glow.
+  const ND = {
+    suburb: { mint: ['#cfe3c8', PAL.shutter], butter: ['#f3e2a0', '#3f5866'], peach: ['#f6d3bd', PAL.terra2], sky: ['#cfe0ec', '#3f5866'] },
+    stone: { warm: '#dccdb0', honey: '#e3cd9e', grey: '#cfc7b6', white: '#f2ede2' },
+    PICKET: '#f6f3ea', BRASS: '#c9a24a', OLIVE: '#9aab7a', BASE: '#b8ab92'
+  };
+  const plates = (p, names, n, x, y, z, ry) => { const s = grp(p, x, y, z, ry); B(s, 0.9, 0.22 * n + 0.1, 0.06, '#5a3c28', 0, 0, 0, FLAT);
+    for (let i = 0; i < n; i++) { const t = names && names[i]; P(s, 0.8, 0.18, t ? textMat(String(t), ND.BRASS, '#2f2b28') : ND.BRASS, 0, 0.06 + i * 0.22, 0.04); } };
+  function picket(p, x1, x2, z) {                                       // white picket fence along x, from x1 to x2
+    const L = x2 - x1, n = Math.max(2, Math.round(L / 0.55)); B(p, L, 0.08, 0.06, ND.PICKET, (x1 + x2) / 2, 0.75, z, FLAT); B(p, L, 0.08, 0.06, ND.PICKET, (x1 + x2) / 2, 0.4, z, FLAT);
+    for (let i = 0; i <= n; i++) TAPER(p, 0.12, 1.0, 0.05, ND.PICKET, x1 + i * L / n, 0.2, z + 0.04, { tw: 0.15, td: 1 }, FLAT);
+  }
+  const olive = (p, x, y, z, s) => { s = s || 1; CYL(p, 0.16 * s, 0.26 * s, 1.6 * s, 5, '#7a6a52', x, y, z, { edge: false, open: true }); ICO(p, 1.5 * s, 0, ND.OLIVE, x, y + 2.3 * s, z, { s: [1.5 * s, 0.9 * s, 1.5 * s] }); };
+  const ramp = (p, w, h, d, m, x, y, z, ry) => TAPER(grp(p, x, y, z, ry), w, h, d, m, 0, 0, 0, { tw: 1, td: 0.06, tz: -0.47 });   // a stair as one wedge, high end at -z
+  const lilWin = (p, x, y, z, w, h) => { P(p, w + 0.24, h + 0.24, '#efe6d2', x, y - 0.12, z + 0.02); P(p, w, h, winAt(x, y, z), x, y, z + 0.04); [-1, 1].forEach(s => P(p, w * 0.5, h, PAL.shutter, x + s * (w * 0.75 + 0.12), y, z + 0.05)); };
+
+  // --- Garden suburb, 1 citizen: pastel cottage, porch, dormer, front garden, picket fence, gate, letterbox. 10 x 10 m.
+  def({ key: 'gsCottage', name: 'Suburb cottage (1 home)', cat: 'New District', part: 2, budget: 700, size: '10 × 10 m · 1.5 floors · 1 citizen', night: true,
+    opts: { set: choices('Colours', Object.keys(ND.suburb)) },
+    make(o) {
+      const g = new THREE.Group(), [W, DR] = ND.suburb[o.set] || ND.suburb.mint, zf = 1.4;
+      B(g, 10, 0.2, 10, PAL.grass, 0, 0, 0, { shadow: false }); B(g, 1.3, 0.05, 3.4, PAL.sand, 0, 0.2, 3.2, FLAT);
+      B(g, 7, 3.2, 5.6, W, 0, 0.2, -1.4); GABLE(g, 6.6, 2.6, 7.8, CP.ROOF, 0, 3.4, -1.4, { ry: Math.PI / 2 });
+      B(g, 1.8, 1.3, 1.5, W, 0, 3.7, 0.7); GABLE(g, 2.1, 0.9, 1.9, CP.ROOF, 0, 5.0, 0.75); P(g, 1.0, 0.8, winAt(0, 4, 1), 0, 4.0, 1.47);   // dormer
+      B(g, 3.4, 0.3, 1.9, '#efe6d2', 0, 0.2, zf + 0.95); [-1.5, 1.5].forEach(x => B(g, 0.18, 2.5, 0.18, ND.PICKET, x, 0.5, zf + 1.75, NE));   // porch
+      put(g, geo('box', () => new THREE.BoxGeometry(1, 1, 1)), CP.ROOF, 0, 3.05, zf + 1.0, { rx: 0.18, s: [3.8, 0.14, 2.2] });
+      P(g, 1.0, 2.1, DR, 0, 0.5, zf + 0.03); [-2.4, 2.4].forEach(x => lilWin(g, x, 1.1, zf, 1.1, 1.4));
+      [-1, 1].forEach(s => P(g, 1.1, 1.3, winAt(s, 1, 9), s * 3.51, 1.2, -1.4, { ry: s * Math.PI / 2 }));
+      picket(g, -4.9, -0.8, 4.85); picket(g, 0.8, 4.9, 4.85); [-0.8, 0.8].forEach(x => B(g, 0.2, 1.2, 0.2, ND.PICKET, x, 0.2, 4.85, NE));
+      B(g, 0.1, 1.1, 0.1, '#5a3c28', 1.3, 0.2, 4.4, FLAT); B(g, 0.45, 0.32, 0.3, DR, 1.3, 1.3, 4.4, NE); plates(g, o.names, 1, 1.3, 0.85, 4.47, 0);   // letterbox + name plate
+      [[-3.6, 3.6], [-2.2, 3.9], [2.6, 3.8], [3.8, 3.5]].forEach(([x, z], i) => plant(g, x, 0.2, z, [PAL.pink, '#f2c14e', '#a084c8', PAL.pink][i]));
+      CYL(g, 0.14, 0.2, 2.2, 5, PAL.wood, -3.8, 0.2, -4.2, { edge: false, open: true }); ICO(g, 1.7, 0, PAL.pink, -3.8, 3.4, -4.2);
+      hedge(g, 0.8, 5, 4.6, -1.8);
+      return g;
+    } });
+
+  // --- Garden suburb, 4 citizens: a big two-storey house split into 4 homes (2 down, 2 up by outside stairs), one shared
+  //     garden, picket fence, 4 letterboxes + a name board by the gate. 20 x 16 m lot.
+  def({ key: 'gsHouse4', name: 'Suburb house for 4', cat: 'New District', part: 2, budget: 1300, size: '20 × 16 m · 2 floors · 4 citizens', night: true,
+    opts: { set: choices('Colours', Object.keys(ND.suburb)) },
+    make(o) {
+      const g = new THREE.Group(), [W, DR] = ND.suburb[o.set] || ND.suburb.butter, zb = -2.5, D = 8, zf = zb + D / 2, FH = 3.2;
+      B(g, 20, 0.2, 16, PAL.grass, 0, 0, 0, { shadow: false }); B(g, 1.6, 0.05, 6.4, PAL.sand, 0, 0.2, 4.6, FLAT);
+      B(g, 13, 2 * FH, D, W, 0, 0.2, zb); B(g, 13.4, 0.22, D + 0.4, '#efe6d2', 0, 0.2 + FH - 0.1, zb, NE);
+      HIP(g, 14.6, 3, D + 1.6, CP.ROOF, 0, 0.2 + 2 * FH, zb);
+      // ground: two front doors under one porch, big windows either side
+      B(g, 5.2, 0.3, 1.8, '#efe6d2', 0, 0.2, zf + 0.9); [-2.4, 2.4].forEach(x => B(g, 0.18, 2.5, 0.18, ND.PICKET, x, 0.5, zf + 1.7, NE));
+      put(g, geo('box', () => new THREE.BoxGeometry(1, 1, 1)), CP.ROOF, 0, 3.05, zf + 1.0, { rx: 0.18, s: [5.6, 0.14, 2.1] });
+      [-1.1, 1.1].forEach(x => P(g, 0.95, 2.1, DR, x, 0.5, zf + 0.03)); [-4.4, 4.4].forEach(x => lilWin(g, x, 1.1, zf, 1.4, 1.5));
+      // first floor: windows + two small balconies
+      [-4.4, -1.7, 1.7, 4.4].forEach(x => lilWin(g, x, FH + 1.0, zf, 1.1, 1.4));
+      [-1.7, 1.7].forEach(x => { B(g, 2.4, 0.14, 0.7, '#efe6d2', x, FH + 0.3, zf + 0.35, NE); bar(g, 2.4, x, FH + 1.15, zf + 0.68); plant(g, x + 0.8, FH + 0.44, zf + 0.4, PAL.pink); });
+      // outside stairs on both sides to the upper homes
+      [-1, 1].forEach(s => { ramp(g, 1.2, FH, 4.4, '#efe6d2', s * 7.1, 0.2, zb + 1.4, s > 0 ? 0 : 0); B(g, 1.6, 0.25, 1.6, '#efe6d2', s * 7.3, FH, zb - 1.6, NE);
+        P(g, 0.95, 2.1, DR, s * 6.52, FH + 0.25, zb - 1.6, { ry: s * Math.PI / 2 }); bar(g, 4.4, s * 7.7, FH * 0.5 + 0.9, zb + 0.6, Math.PI / 2); });
+      [-1, 1].forEach(s => P(g, 1.2, 1.3, winAt(s, 2, 8), s * 6.51, 1.2, zb + 1.8, { ry: s * Math.PI / 2 }));
+      // fence, gate, 4 letterboxes + name board, shared garden
+      picket(g, -9.9, -0.9, 7.85); picket(g, 0.9, 9.9, 7.85); [-0.9, 0.9].forEach(x => B(g, 0.22, 1.3, 0.22, ND.PICKET, x, 0.2, 7.85, NE));
+      B(g, 2.2, 0.08, 0.08, '#5a3c28', 2.4, 1.1, 7.4, FLAT); [0, 1, 2, 3].forEach(i => B(g, 0.42, 0.3, 0.28, DR, 1.65 + i * 0.5, 1.15, 7.4, NE)); B(g, 0.1, 1.1, 0.1, '#5a3c28', 2.4, 0.2, 7.4, FLAT);
+      plates(g, o.names, 4, -1.5, 0.75, 7.95, 0);
+      [[-6, 5.5, PAL.pink], [6.5, 5.2, 'canopy']].forEach(([x, z, k]) => { CYL(g, 0.16, 0.22, 2.4, 5, PAL.wood, x, 0.2, z, { edge: false, open: true }); ICO(g, 1.9, 0, k === 'canopy' ? PAL.leaf : k, x, 3.7, z); });
+      B(g, 2.2, 0.45, 0.6, PAL.wood, -4.2, 0.2, 3.6, NE); [[-8.6, 3.2], [-7.6, 3.4], [8.4, 3], [5.2, 6.6]].forEach(([x, z], i) => plant(g, x, 0.2, z, [PAL.pink, '#f2c14e', '#a084c8', PAL.pink][i]));
+      hedge(g, 0.8, 9, -9.5, -3); hedge(g, 0.8, 9, 9.5, -3);
+      return g;
+    } });
+
+  // --- Hill village, 1 citizen: a small stone house on a terrace (retaining wall + steps), outside stair to the upper door,
+  //     pergola with a vine, olive and cypress. 10 x 10 m. The terrace is what makes a street of these "climb".
+  def({ key: 'hvHouse', name: 'Hill village house (1 home)', cat: 'New District', part: 2, budget: 700, size: '10 × 12 m (steps to the street) · 2 floors on a terrace · 1 citizen', night: true,
+    opts: { stone: choices('Stone', Object.keys(ND.stone)), terrace: choices('Terrace', ['1.5 m', 'none', '3 m']) },
+    make(o) {
+      const g = new THREE.Group(), ST = ND.stone[o.stone] || ND.stone.warm, T = o.terrace === 'none' ? 0 : o.terrace === '3 m' ? 3 : 1.5, y = T + 0.2;
+      B(g, 10, T + 0.2, 10, ND.BASE, 0, 0, 0); B(g, 10.2, 0.14, 10.2, '#cfc3a8', 0, T + 0.2, 0, NE); B(g, 9.6, 0.05, 9.6, '#c9b896', 0, y, 0, FLAT);   // terrace
+      if (T) for (let i = 0; i < Math.round(T / 0.3); i++) B(g, 1.6, 0.3 * (i + 1), 0.4, ND.BASE, 3.6, 0, 5.2 + (Math.round(T / 0.3) - 1 - i) * 0.4, NE);   // steps up to the terrace
+      B(g, 6, 5.4, 5.4, ST, -1, y, -1.8); [[-4, 0.9], [2, 0.9]].forEach(([x, z]) => B(g, 0.5, 5.6, 0.5, '#e8dcc2', x, y, z, NE));   // house + corner stones
+      GABLE(g, 6.2, 1.8, 7, CP.ROOF, -1, y + 5.4, -1.8, { ry: Math.PI / 2 });
+      P(g, 1.2, 2.0, PAL.wood, -2.6, y, 0.93); ARCH(g, 1.2, PAL.wood, -2.6, y + 2.0, 0.93);       // arched door
+      lilWin(g, 0.6, y + 0.9, 0.9, 0.9, 1.2); lilWin(g, -2.6, y + 3.4, 0.9, 0.9, 1.1);
+      ramp(g, 1.0, 2.7, 3.2, '#cfc3a8', 2.6, y, -0.4, 0); B(g, 1.3, 0.2, 1.4, '#cfc3a8', 2.55, y + 2.6, -2.6, NE);   // outside stair to the upper door
+      P(g, 0.9, 1.9, PAL.wood, 1.95, y + 2.75, -2.6, { ry: Math.PI / 2 });
+      const pg = grp(g, -1, y, 2.8); [[-2.6, -0.8], [2.6, -0.8], [-2.6, 1.6], [2.6, 1.6]].forEach(([x, z]) => B(pg, 0.18, 2.4, 0.18, PAL.wood, x, 0, z, FLAT));   // pergola + vine
+      [-0.8, 0.4, 1.6].forEach(z => B(pg, 5.6, 0.14, 0.14, PAL.wood, 0, 2.4, z, FLAT)); B(pg, 5.4, 0.12, 2.6, PAL.leaf2, 0, 2.56, 0.4, { edge: false });
+      B(pg, 1.2, 0.05, 1.2, '#efe6d2', -1, 0.75, 0.4, FLAT); B(pg, 0.08, 0.75, 0.08, '#5a3c28', -1, 0, 0.4, FLAT);
+      olive(g, 3.4, y, 3, 0.9); tree(g, -4.2, y, -4, 'cypress', 0.8);
+      [[-4.3, 4.3], [4.4, 1.2]].forEach(([x, z]) => { B(g, 0.5, 0.45, 0.5, PAL.terra2, x, y, z, NE); plant(g, x, y + 0.35, z, PAL.pink); });
+      plates(g, o.names, 1, -1.6, y + 1.3, 0.94, 0);
+      return g;
+    } });
+
+  // --- Hill village, 4 citizens: two stepped stone houses. Lower house (2 homes) in front, upper house (2 homes) behind and
+  //     1 terrace higher; the lower house's flat roof is the upper homes' shared terrace with a pergola. One shared stair,
+  //     4 name plates at its foot. 16 x 16 m lot.
+  def({ key: 'hvHouse4', name: 'Hill village house for 4', cat: 'New District', part: 2, budget: 1300, size: '16 × 16 m · stepped · 4 citizens', night: true,
+    opts: { stone: choices('Stone', Object.keys(ND.stone)) },
+    make(o) {
+      const g = new THREE.Group(), ST = ND.stone[o.stone] || ND.stone.honey, L = '#cfc3a8', y1 = 1.4, y2 = 4.8;
+      B(g, 16, y1, 16, ND.BASE, 0, 0, 0); B(g, 16.2, 0.12, 16.2, L, 0, y1, 0, NE);                  // bottom terrace
+      B(g, 16, y2 - y1, 7, ND.BASE, 0, y1, -4.5);                                                     // upper terrace wall
+      // lower house: 2 homes, flat roof = terrace
+      B(g, 12, 3.2, 5, ST, 0.6, y1, 1.5); B(g, 12.4, 0.35, 5.4, L, 0.6, y1 + 3.2, 1.5, NE);
+      [[-3.2, 'A'], [3.8, 'B']].forEach(([x]) => { P(g, 1.1, 2.0, PAL.wood, x, y1, 4.03); ARCH(g, 1.1, PAL.wood, x, y1 + 2.0, 4.03); lilWin(g, x + 1.9, y1 + 0.9, 4.0, 0.9, 1.2); });
+      bar(g, 12.4, 0.6, y1 + 4.4, 4.15); [-5.4, 6.6].forEach(x => B(g, 0.1, 0.9, 0.1, CP.IRON, x, y1 + 3.55, 4.15, FLAT));
+      // upper house: 2 homes, behind and higher, terracotta roof
+      B(g, 13, 3.4, 5.6, ST, 0.4, y2, -4.6); GABLE(g, 6.4, 1.8, 13.6, CP.ROOF, 0.4, y2 + 3.4, -4.6, { ry: Math.PI / 2 });
+      [[-3.4], [3.6]].forEach(([x]) => { P(g, 1.1, 2.0, PAL.wood, x, y2, -1.77); ARCH(g, 1.1, PAL.wood, x, y2 + 2.0, -1.77); lilWin(g, x + 1.9, y2 + 0.9, -1.8, 0.9, 1.2); lilWin(g, x - 1.9, y2 + 0.9, -1.8, 0.9, 1.2); });
+      // shared stair on the left: street -> bottom terrace -> roof terrace -> upper homes
+      ramp(g, 1.4, y1, 2.2, L, -6.9, 0, 7.6, 0); ramp(g, 1.4, y2 - y1 + 0.35, 4.4, L, -6.9, y1, 3.2, 0);
+      // roof-terrace pergola + table for the upper homes
+      const pg = grp(g, 1.2, y1 + 3.55, 1.5); [[-3, -1.8], [3, -1.8], [-3, 1.8], [3, 1.8]].forEach(([x, z]) => B(pg, 0.16, 2.3, 0.16, PAL.wood, x, 0, z, FLAT));
+      [-1.8, 0, 1.8].forEach(z => B(pg, 6.4, 0.12, 0.12, PAL.wood, 0, 2.3, z, FLAT)); B(pg, 6.2, 0.1, 3.4, PAL.leaf2, 0, 2.44, 0, { edge: false });
+      B(pg, 1.6, 0.05, 0.9, '#efe6d2', 0, 0.75, 0, FLAT); B(pg, 0.08, 0.75, 0.08, '#5a3c28', 0, 0, 0, FLAT);
+      plates(g, o.names, 4, -5.6, 0.5, 8.03, 0);
+      olive(g, 5.6, y1, 6, 0.9); tree(g, -6.6, y2, -6.6, 'cypress', 0.9); tree(g, 7, y2, -6.8, 'cypress', 0.75);
+      [[-4.6, 6.6], [2.2, 6.8], [6.8, 3.6]].forEach(([x, z]) => { B(g, 0.5, 0.45, 0.5, PAL.terra2, x, y1, z, NE); plant(g, x, y1 + 0.35, z, PAL.pink); });
+      return g;
+    } });
+
+  // ================= GARDEN DISTRICT (Dev, 16 Nov): an affordable middle-class European suburb in the Vinland colours =================
+  // Practical and lived-in, not luxury: plain 2-storey houses, semis, a terrace row, flats, a shop parade, a school, a community centre,
+  // a pocket park. Front = +z, centred on 0,0, ground y = 0. Walls / roof / doors are slots (each copy its own shade).
+  // Windows use winAt (lit / unlit pattern at night, shared materials), so copies batch with bake() + instances().
+  const GD = {
+    walls: ['#f3e6cc', '#f3e2a0', '#f2cfb3', '#e3d8c4', '#efd9b4', '#e9e2d0'],          // cream, butter, peach, pale stone, sand, off-white
+    roofs: [PAL.terra, '#5b5f66', PAL.terra2, '#8a5a3a'],                               // terracotta, slate, dark terracotta, brown tile
+    doors: ['#47684a', '#3f5866', '#b5543a', '#c9922e', '#f6f3ea', '#7a4f34'],
+    FRAME: '#f6f3ea', PAVE: '#e6dccb', BASE: '#cfc3a8', FENCE: '#b98a5e', HEDGE: PAL.leaf, BAL: '#efe6d2', RUBBER: '#c9734a', GLASS: BK.SHOPGL
+  };
+  const gdWin = (p, x, y, z, w, h, ry) => { const o = ry ? { ry } : {}, s = ry ? Math.sin(ry) : 0, c = ry ? Math.cos(ry) : 1;   // frame + glass, 4 triangles
+    P(p, w + 0.3, h + 0.3, GD.FRAME, x, y - 0.15, z, o); P(p, w, h, winAt(x, y, z), x + s * 0.03, y, z + c * 0.03, o); };
+  const gdShut = (p, x, y, z, w, h) => [-1, 1].forEach(s => P(p, w * 0.42, h, PAL.shutter, x + s * (w * 0.71 + 0.2), y, z + 0.05));
+  const gdDoor = (p, x, y, z, D, glass) => { P(p, 1.3, 2.35, GD.FRAME, x, y, z); P(p, 1.0, 2.15, D, x, y, z + 0.03); if (glass) P(p, 0.5, 0.5, glass, x, y + 1.4, z + 0.05); };
+  const gdTree = (p, x, y, z, s, c) => { s = s || 1; CYL(p, 0.15 * s, 0.22 * s, 2 * s, 5, PAL.wood, x, y, z, { edge: false, open: true });
+    ICO(p, 1.5 * s, 0, c || PAL.leaf, x, y + 2.9 * s, z); ICO(p, 1.0 * s, 0, PAL.leaf2, x + 0.7 * s, y + 3.5 * s, z + 0.3 * s, NE); };
+  const gdBench = (p, x, z, ry) => { const b = grp(p, x, 0.2, z, ry); B(b, 1.8, 0.45, 0.5, PAL.wood, 0, 0, 0, NE); B(b, 1.8, 0.5, 0.1, PAL.wood, 0, 0.45, -0.22, NE); };
+  const gdLamp = (p, x, z) => { B(p, 0.12, 3.6, 0.12, CP.IRON, x, 0.2, z, FLAT); B(p, 0.4, 0.4, 0.4, CP.LAMP, x, 3.8, z, NE); };
+  const gdNames = (o, i) => (o.names && o.names[i] ? [o.names[i]] : null);
+  const gdOpts = { wall: colours('Walls', GD.walls), roof: colours('Roof', GD.roofs), door: colours('Door', GD.doors) };
+
+  // 1. gdDetached: a plain 2-storey detached house, 8 x 9 m on a 10 x 14 m plot (3 m front garden, small back garden),
+  //    low hedge + little gate, side fences, a bin, one tree. 1 home.
+  def({ key: 'gdDetached', name: 'Detached house (1 home)', cat: 'Garden District', part: 2, budget: 500, size: '8 × 9 m house · 10 × 14 m plot · 2 floors · 1 home', night: true,
+    opts: gdOpts,
+    make(o) {
+      const g = new THREE.Group(), W = slot('wall', o.wall || GD.walls[0]), R = slot('roof', o.roof || GD.roofs[0]), D = slot('door', o.door || GD.doors[0]);
+      const zc = -0.5, zf = 4, FH = 2.8, y0 = 0.2, top = y0 + 2 * FH + 0.2;
+      B(g, 10, 0.2, 14, PAL.grass, 0, 0, 0, { shadow: false }); B(g, 1.2, 0.04, 3, GD.PAVE, 1.9, 0.2, 5.5, FLAT);    // plot + path
+      B(g, 8, 2 * FH + 0.2, 9, W, 0, y0, zc); B(g, 8.1, 0.35, 9.1, GD.BASE, 0, y0, zc, NE);                        // house + plinth
+      GABLE(g, 9.8, 2.5, 8.6, R, 0, top, zc, { ry: Math.PI / 2 }); B(g, 0.7, 1.6, 0.7, GD.BASE, -2.6, top + 1.0, zc - 1.5);   // roof + chimney
+      gdDoor(g, 1.9, y0 + 0.1, zf + 0.02, D, winAt(1.9, 1, zf)); B(g, 1.8, 0.12, 1.0, R, 1.9, y0 + 2.55, zf + 0.5, NE); B(g, 1.6, 0.15, 0.8, GD.BASE, 1.9, y0, zf + 0.4, NE);
+      gdWin(g, -1.8, y0 + 0.9, zf + 0.02, 1.8, 1.4); gdShut(g, -1.8, y0 + 0.9, zf + 0.02, 1.8, 1.4);              // ground: big window + green shutters
+      [-2.2, 1.9].forEach(x => gdWin(g, x, y0 + FH + 0.7, zf + 0.02, 1.3, 1.3));                                 // first floor
+      [-1, 1].forEach(s => { gdWin(g, s * 4.02, y0 + 0.9, zc + 1.2, 1.1, 1.3, s * Math.PI / 2); gdWin(g, s * 4.02, y0 + FH + 0.7, zc - 1.6, 1.1, 1.2, s * Math.PI / 2); });
+      [-2.4, 0.6, 2.6].forEach((x, i) => gdWin(g, x, y0 + (i === 1 ? FH + 0.7 : 0.9), zc - 4.52, 1.3, 1.3, Math.PI));
+      B(g, 6.2, 0.8, 0.5, GD.HEDGE, -1.9, 0.2, 6.7); B(g, 2.4, 0.8, 0.5, GD.HEDGE, 3.8, 0.2, 6.7); B(g, 1.2, 0.9, 0.06, GD.FRAME, 1.9, 0.2, 6.85, NE);   // hedge + gate
+      [-1, 1].forEach(s => B(g, 0.08, 1.0, 13.4, GD.FENCE, s * 4.96, 0.2, -0.2, NE)); B(g, 10, 1.4, 0.08, GD.FENCE, 0, 0.2, -6.96, NE);   // side + back fences
+      B(g, 0.6, 1.0, 0.6, '#3f5e42', 4.2, 0.2, 4.6, NE); plates(g, gdNames(o, 0), 1, 3.0, 0.75, 6.98, 0);          // wheelie bin, name plate
+      gdTree(g, -3.7, 0.2, 5.0, 0.75); [[-0.6, 4.6, PAL.pink], [3.4, 4.5, '#f2c14e'], [-3.2, 4.4, '#a084c8']].forEach(([x, z, c]) => plant(g, x, 0.2, z, c));
+      return g;
+    } });
+
+  // 2. gdSemi: semi-detached pair, mirrored halves, 14 x 9 m on a 16 x 14 m plot. Each half its own wall + door colour
+  //    (wall / wall2, door / door2), bay window, hedge, path, bin. 2 homes. o.names = ['@left', '@right'].
+  def({ key: 'gdSemi', name: 'Semi-detached pair (2 homes)', cat: 'Garden District', part: 2, budget: 700, size: '14 × 9 m · 16 × 14 m plot · 2 floors · 2 homes', night: true,
+    opts: { wall: colours('Left walls', GD.walls), wall2: colours('Right walls', GD.walls.slice(1).concat(GD.walls[0])), roof: colours('Roof', GD.roofs),
+      door: colours('Left door', GD.doors), door2: colours('Right door', GD.doors.slice(2).concat(GD.doors.slice(0, 2))) },
+    make(o) {
+      const g = new THREE.Group(), R = slot('roof', o.roof || GD.roofs[1]), zc = -0.5, zf = 4, FH = 2.8, y0 = 0.2, top = y0 + 2 * FH + 0.2;
+      const half = [[slot('wall', o.wall || GD.walls[0]), slot('door', o.door || GD.doors[0])], [slot('wall2', o.wall2 || GD.walls[1]), slot('door2', o.door2 || GD.doors[2])]];
+      B(g, 16, 0.2, 14, PAL.grass, 0, 0, 0, { shadow: false }); B(g, 14.1, 0.35, 9.1, GD.BASE, 0, y0, zc, NE);
+      HIP(g, 15.4, 2.8, 10.2, R, 0, top, zc); B(g, 1.0, 1.4, 0.8, GD.BASE, 0, top + 1.8, zc);                      // one roof, shared chimney on the party wall
+      [-1, 1].forEach((s, i) => { const [W, D] = half[i], xd = s * 5.6, xb = s * 2.3;
+        B(g, 7, 2 * FH + 0.2, 9, W, s * 3.5, y0, zc);
+        gdDoor(g, xd, y0 + 0.1, zf + 0.02, D, winAt(xd, 1, zf)); B(g, 1.8, 0.12, 1.0, R, xd, y0 + 2.55, zf + 0.5, NE);
+        B(g, 2.8, 2.5, 0.8, W, xb, y0, zf + 0.4); B(g, 3.0, 0.15, 1.0, R, xb, y0 + 2.5, zf + 0.42, NE); gdWin(g, xb, y0 + 0.8, zf + 0.82, 2.2, 1.4);   // bay window
+        gdWin(g, xb, y0 + FH + 0.7, zf + 0.02, 1.6, 1.3); gdWin(g, xd, y0 + FH + 0.8, zf + 0.02, 0.9, 1.1);
+        gdWin(g, s * 7.02, y0 + FH + 0.7, zc, 1.0, 1.2, s * Math.PI / 2); [s * 1.8, s * 5.0].forEach((x, k) => gdWin(g, x, y0 + (k ? FH + 0.7 : 0.9), zc - 4.52, 1.4, 1.3, Math.PI));
+        B(g, 1.2, 0.04, 2.6, GD.PAVE, xd, 0.2, 5.6, FLAT); B(g, 4.8, 0.8, 0.5, GD.HEDGE, s * 2.6, 0.2, 6.7); B(g, 1.4, 0.8, 0.5, GD.HEDGE, s * 7.3, 0.2, 6.7);
+        B(g, 0.08, 1.0, 13.4, GD.FENCE, s * 7.96, 0.2, -0.2, NE); B(g, 0.55, 0.95, 0.55, '#3f5e42', s * 7.2, 0.2, 4.7, NE);
+        plates(g, gdNames(o, i), 1, s * 6.6, 0.75, 6.98, 0); plant(g, s * 4.4, 0.2, 5.0, i ? '#f2c14e' : PAL.pink); });
+      B(g, 0.4, 0.8, 2.4, GD.HEDGE, 0, 0.2, 5.5); B(g, 16, 1.4, 0.08, GD.FENCE, 0, 0.2, -6.96, NE); B(g, 0.08, 1.4, 2.0, GD.FENCE, 0, 0.2, -6, NE);   // garden divide, back fence
+      return g;
+    } });
+
+  // 3. gdTerrace: a row of 6 terraced townhouses, 5.5 m each, 2 storeys (33 x 9 m on 36 x 13 m). Small front gardens with a
+  //    low wall, different doors (door / door2 / door3), walls in 3 shades (wall / wall2 / wall3), a small step in the roof line.
+  def({ key: 'gdTerrace', name: 'Terraced row (6 homes)', cat: 'Garden District', part: 2, budget: 1200, size: '33 × 9 m · 36 × 13 m plot · 2 floors · 6 homes', night: true,
+    opts: { wall: colours('Walls 1', GD.walls), wall2: colours('Walls 2', GD.walls.slice(1).concat(GD.walls[0])), wall3: colours('Walls 3', GD.walls.slice(2).concat(GD.walls.slice(0, 2))),
+      roof: colours('Roof', GD.roofs), door: colours('Doors 1', GD.doors), door2: colours('Doors 2', GD.doors.slice(1).concat(GD.doors[0])), door3: colours('Doors 3', GD.doors.slice(2).concat(GD.doors.slice(0, 2))) },
+    make(o) {
+      const g = new THREE.Group(), R = slot('roof', o.roof || GD.roofs[0]), zc = -1, zf = 3.5, FH = 2.8, y0 = 0.2;
+      const WS = [slot('wall', o.wall || GD.walls[0]), slot('wall2', o.wall2 || GD.walls[2]), slot('wall3', o.wall3 || GD.walls[3])];
+      const DS = [slot('door', o.door || GD.doors[0]), slot('door2', o.door2 || GD.doors[2]), slot('door3', o.door3 || GD.doors[1])];
+      const STEP = [0, 0, 0.35, 0.35, 0.35, 0];
+      B(g, 36, 0.2, 13, PAL.grass, 0, 0, 0, { shadow: false }); B(g, 33.1, 0.35, 9.1, GD.BASE, 0, y0, zc, NE); B(g, 36, 1.2, 0.08, GD.FENCE, 0, 0.2, -6.46, NE);
+      for (let i = 0; i < 6; i++) { const x = -13.75 + 5.5 * i, m = i % 2 ? 1 : -1, H = 2 * FH + 0.2 + STEP[i], W = WS[i % 3], D = DS[[0, 1, 2, 1, 0, 2][i]], xd = x + m * 1.6, xw = x - m * 0.9;
+        B(g, 5.5, H, 9, W, x, y0, zc); GABLE(g, 9.8, 2.3, 5.5, R, x, y0 + H, zc, { ry: Math.PI / 2 });
+        gdDoor(g, xd, y0 + 0.1, zf + 0.02, D, winAt(xd, 1, zf)); B(g, 1.6, 0.12, 0.8, GD.FRAME, xd, y0 + 2.55, zf + 0.4, NE);
+        gdWin(g, xw, y0 + 0.9, zf + 0.02, 2.0, 1.4); if (i === 1 || i === 4) gdShut(g, xw, y0 + 0.9, zf + 0.02, 2.0, 1.4);
+        [-1.2, 1.2].forEach(dx => gdWin(g, x + dx, y0 + FH + 0.7, zf + 0.02, 1.1, 1.3)); [-1.2, 1.2].forEach((dx, k) => gdWin(g, x + dx, y0 + (k ? 0.9 : FH + 0.7), zc - 4.52, 1.2, 1.3, Math.PI));
+        B(g, 1.1, 0.04, 2.9, GD.PAVE, xd, 0.2, 4.95, FLAT);
+        const a = x - 2.75, b = xd - 0.6, c = xd + 0.6, e = x + 2.75;                                               // low front wall with a gap for the path
+        B(g, b - a, 0.6, 0.3, GD.BASE, (a + b) / 2, 0.2, 6.3, NE); B(g, e - c, 0.6, 0.3, GD.BASE, (c + e) / 2, 0.2, 6.3, NE);
+        if (i < 5) B(g, 0.12, 0.8, 2.8, GD.FENCE, x + 2.75, 0.2, 4.95, NE);
+        if (i % 2) B(g, 0.8, 1.3, 1.2, GD.BASE, x + 2.75, y0 + 2 * FH + 1.4, zc - 0.6);                             // chimney on the party wall
+        plates(g, gdNames(o, i), 1, xd + m * 0.95, 0.4, 6.47, 0); plant(g, xw, 0.2, 5.2, [PAL.pink, '#f2c14e', '#a084c8'][i % 3]); }
+      [-1, 1].forEach(s => [0.9, FH + 0.7].forEach(y => gdWin(g, s * 16.52, y0 + y, zc + 1, 1.0, 1.2, s * Math.PI / 2)));   // end-house side windows
+      return g;
+    } });
+
+  // 4. gdApartment: a practical block of flats, 30 x 14 m, 4 / 5 / 6 floors, 4 flats a floor (ground floor too, either side of
+  //    the hall). Stone ground floor, simple solid-front balconies, stair window column, entrance canopy, bins, bikes, 2 trees.
+  def({ key: 'gdApartment', name: 'Apartment block', cat: 'Garden District', part: 2, budget: 1500, size: '30 × 14 m · 4–6 floors · 4 flats a floor', night: true,
+    opts: { floors: choices('Floors', ['5', '4', '6']), wall: colours('Walls', GD.walls), roof: colours('Roof', GD.roofs) },
+    make(o) {
+      const g = new THREE.Group(), W = slot('wall', o.wall || GD.walls[2]), R = slot('roof', o.roof || GD.roofs[0]), F = +(o.floors || 5), FH = 3, y0 = 0.2;
+      const zc = -2, zf = 5, zb = -9, H = F * FH + 0.4, FX = [-11.25, -3.75, 3.75, 11.25];
+      B(g, 34, 0.2, 22, PAL.grass, 0, 0, 0, { shadow: false }); B(g, 34, 0.05, 4, GD.PAVE, 0, 0.2, 9, FLAT); B(g, 3.6, 0.05, 4, GD.PAVE, 0, 0.2, 7, FLAT);
+      B(g, 30.1, FH, 14.1, GD.BASE, 0, y0, zc); B(g, 30, H - FH, 14, W, 0, y0 + FH, zc); B(g, 30.6, 0.35, 14.6, GD.FRAME, 0, y0 + H - 0.3, zc, NE);
+      HIP(g, 31.2, 3.2, 15.2, R, 0, y0 + H, zc);
+      // entrance: glass doors, canopy, house number
+      P(g, 3.4, 2.6, GD.FRAME, 0, y0, zf + 0.02); P(g, 3.0, 2.4, GD.GLASS, 0, y0, zf + 0.05); B(g, 5, 0.25, 2.4, GD.FRAME, 0, y0 + 2.9, zf + 1.2);
+      B(g, 0.9, 0.6, 0.06, '#3f5866', 2.4, y0 + 2.1, zf + 0.04, NE);
+      for (let f = 0; f < F; f++) { const y = y0 + f * FH;
+        if (f) gdWin(g, 0, y + 0.6, zf + 0.02, 1.0, 1.9);                                                          // stairwell
+        FX.forEach(x => {
+          if (!f) { [-1.6, 1.6].forEach(dx => gdWin(g, x + dx, y + 0.9, zf + 0.02, 1.6, 1.4)); }
+          else { gdWin(g, x - 2.0, y + 0.9, zf + 0.02, 1.5, 1.5); P(g, 1.0, 2.1, winAt(x + 1.5, y, zf), x + 1.5, y + 0.1, zf + 0.03);   // window + balcony door
+            B(g, 3.2, 1.05, 1.3, GD.BAL, x + 1.4, y, zf + 0.65); }                                                  // balcony
+          [-1.8, 1.8].forEach(dx => gdWin(g, x + dx, y + 0.9, zb - 0.02, 1.4, 1.4, Math.PI)); });
+        [-1, 1].forEach(s => [-2.5, 2.5].forEach(dz => gdWin(g, s * 15.02, y + 0.9, zc + dz, 1.3, 1.4, s * Math.PI / 2))); }
+      B(g, 3.6, 1.4, 1.4, GD.BASE, -12, 0.2, 8.4, NE); [-1, 0, 1].forEach(k => B(g, 0.08, 0.8, 0.9, CP.IRON, 9 + k * 0.9, 0.2, 7.8, FLAT));   // bin store, bike rack
+      gdTree(g, -6, 0.2, 7.6, 0.8); gdTree(g, 6, 0.2, 7.6, 0.8);
+      return g;
+    } });
+
+  // 5. gdShopParade: 4 small shops on the ground floor (awnings, shop windows, sign panels) with 2 floors of flats above (8 flats).
+  //    32 x 12 m + a 5 m pavement. o.signs = ['BAKERY', ...] (made-up names only); blank panels if not given, so copies batch.
+  def({ key: 'gdShopParade', name: 'Shop parade + flats', cat: 'Garden District', part: 2, budget: 1200, size: '32 × 12 m · 4 shops + 8 flats · 3 floors', night: true,
+    opts: { wall: colours('Walls', GD.walls), roof: colours('Roof', GD.roofs), awnings: choices('Awnings', Object.keys(CP.awnings)), signs: choices('Signs', ['blank', 'sample']) },
+    make(o) {
+      const g = new THREE.Group(), W = slot('wall', o.wall || GD.walls[1]), R = slot('roof', o.roof || GD.roofs[0]), aw = CP.awnings[o.awnings] || CP.awnings.mix;
+      const signs = o.signs === 'sample' ? ['BAKERY', 'FLORIST', 'BOOKS', 'CAF\u00c9'] : Array.isArray(o.signs) ? o.signs : [];
+      const zc = -2, zf = 4, y0 = 0.2, GF = 4.2, FH = 3;
+      B(g, 32, 0.2, 12, '#d8c7a0', 0, 0, zc, { shadow: false }); B(g, 32, 0.25, 5, GD.PAVE, 0, 0, 6.5, { shadow: false });
+      B(g, 32, GF, 12, '#efe6d2', 0, y0, zc); B(g, 32, 2 * FH + 0.2, 12, W, 0, y0 + GF, zc); B(g, 32.4, 0.3, 12.4, GD.FRAME, 0, y0 + GF - 0.1, zc, NE);
+      GABLE(g, 13, 2.8, 32.6, R, 0, y0 + GF + 2 * FH + 0.2, zc, { ry: Math.PI / 2 }); [-9, 9].forEach(x => B(g, 0.9, 1.4, 1.2, GD.BASE, x, y0 + GF + 2 * FH + 1.6, zc - 2));
+      B(g, 32.2, 0.9, 0.3, '#3f5866', 0, y0 + 3.2, zf + 0.15, NE);                                                   // fascia
+      for (let i = 0; i < 4; i++) { const x = -12 + 8 * i, s = signs[i];
+        P(g, 5.4, 2.7, GD.FRAME, x - 0.8, y0 + 0.4, zf + 0.02); P(g, 5.0, 2.4, GD.GLASS, x - 0.8, y0 + 0.55, zf + 0.05);
+        P(g, 1.2, 2.5, GD.GLASS, x + 2.6, y0 + 0.1, zf + 0.05); P(g, 1.5, 2.7, GD.FRAME, x + 2.6, y0, zf + 0.02);
+        P(g, 6.4, 0.7, s ? textMat(s, aw[i], '#f6f3ea') : '#efe6d2', x, y0 + 3.3, zf + 0.32);                          // sign panel
+        awning(g, 6.6, aw[i], x, y0 + 2.75, zf + 0.75);
+        [-2, 2].forEach((dx, k) => [0, 1].forEach(f => gdWin(g, x + dx, y0 + GF + f * FH + 0.7, zf + 0.02, 1.4, 1.5)));
+        [-2, 2].forEach(dx => [0, 1].forEach(f => gdWin(g, x + dx, y0 + GF + f * FH + 0.7, zc - 6.02, 1.3, 1.4, Math.PI)));
+        [-2, 2].forEach(dx => bar(g, 1.6, x + dx, y0 + GF + FH + 1.2, zf + 0.12)); }
+      for (let i = 0; i <= 4; i++) B(g, 0.5, GF, 0.3, GD.FRAME, -16 + 8 * i, y0, zf + 0.15, NE);                    // pilasters
+      [-1, 1].forEach(s => { const sd = grp(g, s * 16.02, y0, zc + 2, s * Math.PI / 2); gdDoor(sd, 0, 0, 0, '#3f5866'); });   // side doors up to the flats
+      [-1, 1].forEach(s => gdLamp(g, s * 13, 8.4)); gdBench(g, -4, 8.3, Math.PI); [-1, 1].forEach(s => { B(g, 1.2, 0.6, 0.6, GD.BASE, s * 7, 0.25, 8.5, NE); plant(g, s * 7, 0.85, 8.5, PAL.pink); });
+      return g;
+    } });
+
+  // 6. gdSchool: a small primary school. U-shaped 2-storey building 40 x 24 m (main block + two wings round a paved courtyard),
+  //    a fenced playground (slide tower, swings, sandpit) and a little sports court behind, on a 60 x 60 m block. o.name = the sign.
+  def({ key: 'gdSchool', name: 'Primary school', cat: 'Garden District', part: 2, budget: 2000, size: '40 × 24 m building · 60 × 60 m block · 2 floors', night: true,
+    opts: { wall: colours('Walls', GD.walls), roof: colours('Roof', GD.roofs) },
+    make(o) {
+      const g = new THREE.Group(), W = slot('wall', o.wall || GD.walls[0]), R = slot('roof', o.roof || GD.roofs[0]), y0 = 0.2, FH = 3.2, H = 2 * FH + 0.2;
+      B(g, 60, 0.2, 60, PAL.grass, 0, 0, 0, { shadow: false }); B(g, 4, 0.05, 6, GD.PAVE, 0, 0.2, 27.5, FLAT); B(g, 20, 0.05, 12, GD.PAVE, 0, 0.2, 8, FLAT);
+      // building: main block (z 14..26) + two wings (z 2..14)
+      B(g, 40, H, 12, W, 0, y0, 20); B(g, 40.2, 0.4, 12.2, GD.BASE, 0, y0, 20, NE); HIP(g, 41.2, 2.6, 13.2, R, 0, y0 + H, 20);
+      [-1, 1].forEach(s => { B(g, 10, H, 12, W, s * 15, y0, 8); B(g, 10.2, 0.4, 12.2, GD.BASE, s * 15, y0, 8, NE); GABLE(g, 10.8, 2.2, 12.4, R, s * 15, y0 + H, 7.6); });
+      // entrance: glass doors, canopy on posts, school sign
+      P(g, 4.4, 2.9, GD.FRAME, 0, y0, 26.02); P(g, 4.0, 2.7, GD.GLASS, 0, y0, 26.05); B(g, 7, 0.3, 2.6, GD.FRAME, 0, y0 + 3.0, 27.3);
+      [-3.2, 3.2].forEach(x => B(g, 0.2, 3.0, 0.2, GD.FRAME, x, y0, 28.4, NE)); P(g, 9, 1.0, textMat(o.name || 'PRIMARY SCHOOL', '#3f5866', '#f6f3ea'), 0, y0 + 3.6, 26.05);
+      gdWin(g, 0, y0 + FH + 0.9, 26.02, 2.4, 1.6);
+      [-17, -13, -9, -5, 5, 9, 13, 17].forEach(x => [0, 1].forEach(f => gdWin(g, x, y0 + f * FH + 0.8, 26.02, 2.6, 1.7)));          // front
+      [-7.5, -2.5, 2.5, 7.5].forEach(x => [0, 1].forEach(f => gdWin(g, x, y0 + f * FH + 0.8, 13.98, 2.6, 1.7, Math.PI)));          // courtyard side
+      [-1, 1].forEach(s => { [4, 8, 12, 17, 21, 25].forEach(z => [0, 1].forEach(f => gdWin(g, s * 20.02, y0 + f * FH + 0.8, z - 0.6, 2.2, 1.7, s * Math.PI / 2)));
+        [5, 10].forEach(z => [0, 1].forEach(f => gdWin(g, s * 9.98, y0 + f * FH + 0.8, z, 2.2, 1.7, -s * Math.PI / 2)));
+        [0, 1].forEach(f => gdWin(g, s * 15, y0 + f * FH + 0.8, 1.98, 2.6, 1.7, Math.PI)); });
+      // sports court (left, behind)
+      B(g, 15, 0.08, 23, '#3f7fbf', -19, 0.2, -14, { shadow: false }); B(g, 13, 0.1, 21, '#4f9a86', -19, 0.2, -14, { shadow: false }); B(g, 13, 0.12, 0.15, GD.FRAME, -19, 0.2, -14, FLAT);
+      [-1, 1].forEach(s => { B(g, 0.2, 3.2, 0.2, CP.IRON, -19, 0.2, -14 + s * 11.2, NE); B(g, 1.8, 1.1, 0.1, GD.FRAME, -19, 3.0, -14 + s * 10.9, NE); });
+      // playground (right, behind): soft surface, slide tower, swings, sandpit
+      B(g, 18, 0.06, 14, GD.RUBBER, 14, 0.2, -18, { shadow: false });
+      B(g, 2, 1.8, 2, '#c9922e', 10, 0.2, -20); HIP(g, 2.6, 1.2, 2.6, PAL.terra, 10, 2.0, -20); TAPER(g, 0.9, 1.8, 3.4, '#3f7fbf', 10, 0.2, -17.3, { tw: 1, td: 0.06, tz: -0.47 });
+      B(g, 0.8, 1.8, 0.2, PAL.wood, 10, 0.2, -21.1, NE);
+      const sw = grp(g, 17, 0.2, -21); [-1.8, 1.8].forEach(x => TAPER(sw, 0.2, 2.4, 1.6, '#c8603f', x, 0, 0, { tw: 1, td: 0.1 })); B(sw, 3.8, 0.12, 0.12, '#c8603f', 0, 2.35, 0, NE);
+      [-0.8, 0.8].forEach(x => { B(sw, 0.04, 1.8, 0.04, CP.IRON, x, 0.55, 0, FLAT); B(sw, 0.5, 0.06, 0.25, '#2f2b28', x, 0.5, 0, NE); });
+      B(g, 4, 0.3, 4, PAL.wood, 18, 0.2, -14, NE); B(g, 3.6, 0.32, 3.6, PAL.sand, 18, 0.2, -14, FLAT);
+      [[6, -10], [22, -10], [-10, -4]].forEach(([x, z]) => gdBench(g, x, z, Math.PI));
+      // trees, bike shelter, fence with a front gate
+      [[-27, 24], [27, 24], [-27, -27], [27, -27], [3, -6], [-6, 5], [6, 5]].forEach(([x, z]) => gdTree(g, x, 0.2, z, 0.9));
+      B(g, 6, 0.15, 2.4, '#5b5f66', 25, 2.3, 6, NE); [-2.8, 2.8].forEach(x => B(g, 0.12, 2.1, 0.12, CP.IRON, 25 + x, 0.2, 6, FLAT));
+      [[-29.9, 0, 0.2, 60], [29.9, 0, 0.2, 60], [0, -29.9, 60, 0.2], [-16, 29.9, 28, 0.2], [16, 29.9, 28, 0.2]].forEach(([x, z, w, d]) => {
+        B(g, w || 0.2, 0.5, d || 0.2, GD.BASE, x, 0.2, z, NE); B(g, w || 0.06, 1.0, d || 0.06, '#47684a', x, 0.7, z, FLAT); });
+      [-2, 2].forEach(x => B(g, 0.4, 1.8, 0.4, GD.BASE, x, 0.2, 29.9, NE));
+      return g;
+    } });
+
+  // 7. gdCommunity: a community centre, 24 x 16 m: a 2-storey block with a glass entrance box + a single-storey hall with
+  //    a gable to the street. Small paved forecourt with benches, planters, a notice board, bikes and lamps.
+  def({ key: 'gdCommunity', name: 'Community centre', cat: 'Garden District', part: 2, budget: 1000, size: '24 × 16 m · 1–2 floors · forecourt', night: true,
+    opts: { wall: colours('Walls', GD.walls), roof: colours('Roof', GD.roofs) },
+    make(o) {
+      const g = new THREE.Group(), W = slot('wall', o.wall || GD.walls[3]), R = slot('roof', o.roof || GD.roofs[1]), y0 = 0.2, zc = -3, zf = 5;
+      B(g, 28, 0.2, 26, PAL.grass, 0, 0, 1, { shadow: false }); B(g, 28, 0.05, 8, GD.PAVE, 0, 0.2, 9, FLAT);
+      B(g, 14, 6.8, 16, W, -5, y0, zc); B(g, 14.3, 0.6, 16.3, GD.FRAME, -5, y0 + 6.6, zc, NE); B(g, 13.4, 0.05, 15.4, '#9a948a', -5, y0 + 7.2, zc, FLAT);   // 2-storey block
+      B(g, 10, 5, 16, W, 7, y0, zc); GABLE(g, 10.6, 2.4, 16.6, R, 7, y0 + 5, zc);                                    // hall
+      B(g, 5, 4, 2.4, GD.GLASS, -5, y0, zf + 1.2); B(g, 5.4, 0.4, 2.8, GD.FRAME, -5, y0 + 4, zf + 1.2, NE);         // glass entrance
+      P(g, 9, 0.9, textMat(o.name || 'COMMUNITY CENTRE', '#47684a', '#f6f3ea'), -5, y0 + 4.9, zf + 0.04);
+      [-10.5, 0.5].forEach(x => gdWin(g, x, y0 + 0.9, zf + 0.02, 1.6, 1.6)); [-10, -6.5, -3.5, 0].forEach(x => gdWin(g, x, y0 + 3.9, zf + 0.02, 1.6, 1.5));
+      [4.6, 7, 9.4].forEach(x => gdWin(g, x, y0 + 0.8, zf + 0.02, 1.2, 3.0)); gdWin(g, 7, y0 + 5.5, zf + 0.02, 1.0, 1.0);
+      [-1, 0, 1].forEach(k => { gdWin(g, -12.02, y0 + 0.9, zc + k * 5, 1.6, 1.6, -Math.PI / 2); gdWin(g, -12.02, y0 + 3.9, zc + k * 5, 1.6, 1.5, -Math.PI / 2);
+        gdWin(g, 12.02, y0 + 0.8, zc + k * 5, 1.2, 3.0, Math.PI / 2); gdWin(g, -5 + k * 4, y0 + 0.9, zc - 8.02, 1.6, 1.6, Math.PI); gdWin(g, 7 + k * 3, y0 + 0.8, zc - 8.02, 1.2, 3.0, Math.PI); });
+      [-1, 1].forEach(s => gdWin(g, -5 + s * 3, y0 + 3.9, zc - 8.02, 1.6, 1.5, Math.PI));
+      gdBench(g, -9, 11.5, Math.PI); gdBench(g, 2, 11.5, Math.PI); gdBench(g, 9, 11.5, Math.PI);
+      [-1, 1].forEach(s => { B(g, 1.6, 0.6, 1.6, GD.BASE, s * 11.5, 0.25, 8.4, NE); plant(g, s * 11.5, 0.85, 8.4, PAL.pink); gdLamp(g, s * 13, 12.5); });
+      B(g, 1.6, 1.1, 0.1, '#47684a', 3.6, 1.0, 6.2, NE); B(g, 0.1, 1.0, 0.1, PAL.wood, 3.6, 0.2, 6.2, FLAT); P(g, 1.4, 0.9, '#f6f3ea', 3.6, 1.1, 6.26);   // notice board
+      [-1, 0, 1].forEach(k => B(g, 0.08, 0.8, 0.9, CP.IRON, 6 + k * 0.9, 0.2, 7.6, FLAT));
+      gdTree(g, -12.5, 0.2, 12, 0.8); gdTree(g, 12.5, 0.2, -2, 0.8);
+      return g;
+    } });
+
+  // 8. gdPocketPark: a 24 x 24 m pocket park: crossing paths, hedge edge, a playground (swings, slide), sandpit,
+  //    benches, 3 trees, a lamp and a bin.
+  def({ key: 'gdPocketPark', name: 'Pocket park', cat: 'Garden District', part: 2, budget: 600, size: '24 × 24 m', night: true, opts: {},
+    make() {
+      const g = new THREE.Group();
+      B(g, 24, 0.2, 24, PAL.grass, 0, 0, 0, { shadow: false }); B(g, 24, 0.05, 2, GD.PAVE, 0, 0.2, 0, FLAT); B(g, 2, 0.05, 24, GD.PAVE, 0, 0.2, 0, FLAT);
+      [[-6.5, 11.6, 9, 0.6], [6.5, 11.6, 9, 0.6], [-6.5, -11.6, 9, 0.6], [6.5, -11.6, 9, 0.6], [-11.6, -6.5, 0.6, 9], [-11.6, 6.5, 0.6, 9], [11.6, -6.5, 0.6, 9], [11.6, 6.5, 0.6, 9]]
+        .forEach(([x, z, w, d]) => B(g, w, 0.8, d, GD.HEDGE, x, 0.2, z));
+      B(g, 8.4, 0.06, 8.4, GD.RUBBER, 6, 0.2, -6, { shadow: false });                                              // playground corner
+      const sw = grp(g, 4.6, 0.2, -6, Math.PI / 2); [-1.8, 1.8].forEach(x => TAPER(sw, 0.2, 2.4, 1.6, '#c8603f', x, 0, 0, { tw: 1, td: 0.1 }));
+      B(sw, 3.8, 0.12, 0.12, '#c8603f', 0, 2.35, 0, NE); [-0.8, 0.8].forEach(x => { B(sw, 0.04, 1.8, 0.04, CP.IRON, x, 0.55, 0, FLAT); B(sw, 0.5, 0.06, 0.25, '#2f2b28', x, 0.5, 0, NE); });
+      B(g, 1.6, 1.6, 1.6, '#c9922e', 8.4, 0.2, -8.4); HIP(g, 2.1, 1.0, 2.1, PAL.terra, 8.4, 1.8, -8.4); TAPER(g, 0.8, 1.6, 3.0, '#3f7fbf', 8.4, 0.2, -6.1, { tw: 1, td: 0.06, tz: -0.47 });
+      B(g, 3.2, 0.3, 3.2, PAL.wood, -6.5, 0.2, -6.5, NE); B(g, 2.8, 0.32, 2.8, PAL.sand, -6.5, 0.2, -6.5, FLAT);   // sandpit
+      gdBench(g, -6, 2.2, Math.PI); gdBench(g, 6, 2.2, Math.PI); gdBench(g, 2.2, -4, -Math.PI / 2);
+      gdTree(g, -7, 0.2, 7, 1); gdTree(g, 7, 0.2, 7.5, 0.9, PAL.pink); gdTree(g, -8, 0.2, -2.6, 0.8);
+      gdLamp(g, 1.6, 1.6); B(g, 0.5, 0.8, 0.5, '#47684a', -1.6, 0.2, 1.6, NE);
+      return g;
+    } });
 
   // ---------- tools ----------
   // how many triangles an asset has (outline lines are not counted)

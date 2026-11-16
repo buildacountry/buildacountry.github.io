@@ -434,10 +434,10 @@ function frameTime(ms) { if (judged || !PHONE || qs.get('view') || LS.get('vin_m
   if (med > 50) { LS.set('vin_map_auto', '2d'); setMode('2d'); toast('3D is slow on this phone, so here is the quick 2D map. Tap 3D any time.'); } else LS.set('vin_map_auto', '3d'); }
 
 // ---------- 2D plan ----------
-const B = { x0: -480, z0: -900, x1: 1140, z1: 680 };   // the part of the world Maps mode shows, in metres
+const B = { x0: -1100, z0: -900, x1: 1140, z1: 720 };   // the part of the world Maps mode shows, in metres
 const V = { el: $('#v2d'), cv: $('#plan'), ctx: null, s: 1, cx: 300, cz: -100, W: 0, H: 0, dpr: 1, homes: [], blds: new Map(), byUser: new Map(), sel: null, me: null, dirty: false, ready: false, labels: [] };
 const MD = window.VIN_MAPDATA || null;   // roads, water, parks, big buildings, shop spots (tools/export_mapdata.py)
-const AREA = { F: 'Founder Square', M: 'Middle', E: 'East', W: 'West', NE: 'North-east', NW: 'North-west', S: 'South', SG: 'South, Garden Lane', SE: 'South-east', SW: 'South-west', NSE: 'North Shore east', NSW: 'North Shore west' };
+const AREA = { F: 'Founder Square', M: 'Middle', E: 'East', W: 'West', NE: 'North-east', NW: 'North-west', S: 'South', SG: 'South, Garden Lane', SE: 'South-east', SW: 'South-west', NSE: 'North Shore east', NSW: 'North Shore west', L: 'New District' };
 const PL = ST ? ST.plots.split('\n').map(l => { const a = l.split(','); if (a.length > 7) a.splice(5, a.length - 6, a.slice(5, a.length - 1).join(', ').replace(/,\s+/g, ', '));   // a label may hold a comma ("Beach Lane, Flat 1")
   return { x: +a[0], z: +a[1], a: a[2], block: +a[3] || 0, bid: +a[4] || 0, label: a[5] || '', floor: +a[6] || 0 }; }) : [];
 function parseCSV(text) { const rows = []; let row = [], cell = '', q = false;
@@ -456,7 +456,7 @@ function build2D(text) {
     .forEach(r => { const k = r.user.toLowerCase(); if (!r.user && r.status !== 'hidden') return; if (never.includes(k)) return; if (k && seen.has(k)) return; if (k) seen.add(k);
       if (ST.villas[k] && r.status === 'active') { villas.push(r); return; } if (r.n > 0 && !byNum.has(r.n)) byNum.set(r.n, r); else noNum.push(r); });
   let free = 1; noNum.forEach(r => { while (byNum.has(free)) free++; r.n = free; byNum.set(free, r); });
-  V.homes = [...byNum.values()].filter(r => r.n <= PL.length).sort((a, b) => a.n - b.n).map(r => { const p = PL[r.n - 1]; return Object.assign(r, p, { district: p.a === 'R' ? 'Riverside' : 'Central', area: p.a === 'R' ? 'Block ' + p.block : AREA[p.a] || '' }); });
+  V.homes = [...byNum.values()].filter(r => r.n <= PL.length).sort((a, b) => a.n - b.n).map(r => { const p = PL[r.n - 1]; return Object.assign(r, p, { district: p.a === 'R' ? 'Riverside' : p.a === 'L' ? 'New District' : 'Central', area: p.a === 'R' ? 'Block ' + p.block : AREA[p.a] || '' }); });
   villas.forEach(r => { const lot = ST.villas[r.user.toLowerCase()], L = (ST.lots || {})[lot]; if (L) V.homes.push(Object.assign(r, { n: 10000 + lot, villa: lot, a: 'V', x: L[0], z: L[1], district: 'Central', area: 'Villa Lane, plot ' + lot })); });
   V.homes.forEach(h => { h.shown = h.status === 'hidden' ? 'Citizen #' + h.n : '@' + h.user; h.gold = (ST.support[h.user.toLowerCase()] || 0) >= 2; });
   V.blds = new Map(); V.homes.filter(h => h.bid).forEach(h => { let b = V.blds.get(h.bid); if (!b) V.blds.set(h.bid, b = { bid: h.bid, x: h.x, z: h.z, block: h.block, list: [] }); b.list.push(h); });
@@ -465,7 +465,7 @@ function build2D(text) {
   const cen = f => { const l = PL.filter(f); return l.length ? [l.reduce((a, p) => a + p.x, 0) / l.length, l.reduce((a, p) => a + p.z, 0) / l.length] : null; };
   if (!V.labels.length) {   // names by zoom level. ONLY names that exist today: districts, areas (the same words as in addresses), named lanes and places. No street is named until citizens vote.
     const L = V.labels, add = (t, c, lv) => { if (c) L.push([t, c[0], c[1], lv]); };
-    add('Central', cen(p => p.a !== 'R'), 0); add('Riverside', cen(p => p.a === 'R'), 0); if (ST.coast) L.push(['Vinland Beach', 0, (ST.coast.shore + ST.coast.beach0) / 2, 0]);
+    add('Central', cen(p => p.a !== 'R' && p.a !== 'L'), 0); add('Riverside', cen(p => p.a === 'R'), 0); add('New District', cen(p => p.a === 'L'), 0); if (ST.coast) L.push(['Vinland Beach', 0, (ST.coast.shore + ST.coast.beach0) / 2, 0]);
     Object.keys(AREA).forEach(k => add(k === 'SG' ? 'Garden Lane' : k === 'F' ? 'Founder Square' : AREA[k], cen(p => p.a === k), 1));
     [...new Set(PL.filter(p => p.a === 'R' && !/^Beach Lane/.test(p.label)).map(p => p.block))].forEach(b => add('Block ' + b, cen(p => p.a === 'R' && p.block === b && !/^Beach Lane/.test(p.label)), 1));
     add('Beach Lane', cen(p => /^Beach Lane/.test(p.label)), 1);
@@ -599,7 +599,7 @@ function shopCard(i) { const q = MD.slots[i], n = i + 1, grp = q[2] === 'm' ? 'M
     ${o ? `<div class="row"><a class="push p" href="../?pp=${encodeURIComponent(o.user)}">Open passport</a><button class="push" data-c="pick" data-n="${o.n}">Their home</button></div>${socRows(o)}` : ''}`;
   c2.hidden = false; }
 // ---------- PENALTY SHOOTOUT launcher (16 Nov), shared by Maps mode and 3D. Loads the 3D engine + kit + game only on tap. ----------
-const PEN_TEAMS = { F: 'Middle', M: 'Middle', V: 'Middle', E: 'East', W: 'West', NE: 'North', NW: 'North', NSE: 'North', NSW: 'North', S: 'South', SG: 'South', SE: 'South', SW: 'South', R: 'Riverside' };
+const PEN_TEAMS = { F: 'Middle', M: 'Middle', V: 'Middle', E: 'East', W: 'West', NE: 'North', NW: 'North', NSE: 'North', NSW: 'North', S: 'South', SG: 'South', SE: 'South', SW: 'South', R: 'Riverside', L: 'New District' };
 const penTeamOf = u => { const h = V.byUser ? V.byUser.get(String(u || '').toLowerCase()) : null; return h ? PEN_TEAMS[h.a] || null : null; };
 const penJS = src => new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
 window.VinPenStart = async (game = 'pen') => { if (window.PEN_ON) return; const G = game === 'cricket' ? ['VinCricket', 'cricket.js?v=16nov'] : ['VinPenalty', 'penalty.js?v=16nov'];
@@ -689,7 +689,7 @@ scene.background = new THREE.Color('#e8e4d8');
 scene.fog = new THREE.Fog('#e8e4d8', 20, 850);   // the original haze colour. near = haze starts this far outside the built land (full at 16x); far = north edge of the built land
 // Haze that starts where the built land ends: every fragment measures how far it is outside the built box
 // (town, districts, Government Row, north districts, beach) and fades into the haze colour from there.
-window.BUILT = { x0: -322, x1: 1200, z0: -850, z1: 588 };   // x1: District 2 (Downtown) east of the river
+window.BUILT = { x0: -1080, x1: 1200, z0: -850, z1: 680 };   // x0: the New District (16 Nov)   // x1: District 2 (Downtown) east of the river
 THREE.ShaderChunk.fog_pars_vertex = '#ifdef USE_FOG\n varying float fogDepth; varying vec3 vFogWorld;\n#endif';
 THREE.ShaderChunk.fog_vertex = '#ifdef USE_FOG\n fogDepth = - mvPosition.z;\n vec4 fw = vec4( transformed, 1.0 );\n #ifdef USE_INSTANCING\n fw = instanceMatrix * fw;\n #endif\n vFogWorld = ( modelMatrix * fw ).xyz;\n#endif';
 THREE.ShaderChunk.fog_pars_fragment = '#ifdef USE_FOG\n uniform vec3 fogColor; varying float fogDepth; varying vec3 vFogWorld;\n uniform float fogNear; uniform float fogFar;\n uniform vec4 builtBox;\n#endif';
@@ -1620,6 +1620,7 @@ function makeHome() {
 }
 
 
+
 const homes = [];
 const homeLabels = document.getElementById('labels');
 let openRoadsTo = 3;
@@ -1636,21 +1637,53 @@ function joinedDay(v) { v = String(v || '').trim(); if (/^\d+$/.test(v)) return 
 // Every home has the same design, so the whole town is drawn in one go:
 // one batch per colour (instancing) + one batch for all ink outlines + invisible tap boxes.
 // 500 homes cost about the same as 1 home.
-let homeTemplate = null;
+let homeTemplate = null; const homeTemplates = {};
+const ND_WALLS = ['#f3e3b5', '#f6f0e2', '#f2cfb3', '#f3d88a', '#e8d5b0', '#f0dcc0'], ND_ROOFS = ['#c8603f', '#b5543a', '#d06a45', '#c25a3c'];
 function makeTemplate(make) {
   (make || makeHome)(); const a = assets.pop(), g = a.g; g.updateMatrixWorld(true);
   const parts = new Map(), lines = [];
   g.traverse(o => {
-    if (o.isMesh) { const isWall = o.material === a.walls[0]; const key = (isWall ? 'WALL' : o.material.uuid) + (o.castShadow ? 's' : 'n');
-      if (!parts.has(key)) parts.set(key, { wall: isWall, color: o.material.color.clone(), shadow: o.castShadow, pos: [], nor: [] });
+    if (o.isMesh) { const sl = (o.material.userData && o.material.userData.slot) || null, isWall = o.material === a.walls[0], isRoof = !isWall && sl === 'roof'; const key = (isWall ? 'WALL' : sl ? 'SL_' + sl : o.material.uuid) + (o.castShadow ? 's' : 'n');
+      if (!parts.has(key)) parts.set(key, { wall: isWall, slot: isWall ? null : sl, roofSlot: isRoof, color: o.material.color.clone(), shadow: o.castShadow, pos: [], nor: [] });
       const geo = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone()); geo.applyMatrix4(o.matrixWorld);
       if (!geo.attributes.normal) geo.computeVertexNormals();
       const P = parts.get(key); P.pos.push(geo.attributes.position.array); P.nor.push(geo.attributes.normal.array); }
     else if (o.isLineSegments) { const geo = o.geometry.clone(); geo.applyMatrix4(o.matrixWorld); lines.push(geo.attributes.position.array); }
   });
   const cat = arrs => { const n = arrs.reduce((t, x) => t + x.length, 0), out = new Float32Array(n); let k = 0; arrs.forEach(x => { out.set(x, k); k += x.length; }); return out; };
-  const list = [...parts.values()].map(P => { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(cat(P.pos), 3)); geo.setAttribute('normal', new THREE.BufferAttribute(cat(P.nor), 3)); geo.computeBoundingSphere(); return { wall: P.wall, color: P.color, shadow: P.shadow, geo }; });
+  const list = [...parts.values()].map(P => { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(cat(P.pos), 3)); geo.setAttribute('normal', new THREE.BufferAttribute(cat(P.nor), 3)); geo.computeBoundingSphere(); return { wall: P.wall, slot: P.slot, roofSlot: P.roofSlot, color: P.color, shadow: P.shadow, geo }; });
   return { list, lines: cat(lines) };
+}
+// load map/kit.js once, then run every waiting job
+function whenKit(cb) { if (window.VinlandKit) return cb(); (window.__kitCbs = window.__kitCbs || []).push(cb);
+  if (!window.__kitLoading) { window.__kitLoading = true; const sc = document.createElement('script'); sc.src = 'kit.js'; sc.onload = () => (window.__kitCbs || []).splice(0).forEach(f => { try { f(); } catch (e) { console.error(e); } }); document.head.appendChild(sc); } }
+window.whenKit = whenKit;
+// GARDEN DISTRICT buildings (16 Nov): one template per kind (kit gd* pieces), every building drawn once, each in its own shades of the
+// kit colour sets (walls, roof, doors); a detached house takes its owner's chosen colours. Ink outlines go into the shared outline piece.
+const GD_COL = { wall: ['#f3e6cc', '#f3e2a0', '#f2cfb3', '#e3d8c4', '#efd9b4', '#e9e2d0'], roof: ['#c8603f', '#5b5f66', '#b5543a', '#8a5a3a'], door: ['#47684a', '#3f5866', '#b5543a', '#c9922e', '#f6f3ea', '#7a4f34'] };
+const gdTemplates = {};
+function drawGardenBuildings(hs, lineParts) {
+  if (typeof GD === 'undefined' || !GD.blds.length) return;
+  const K = window.VinlandKit, byB = new Map(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1), col = new THREE.Color(), v = new THREE.Vector3();
+  hs.forEach(h => { if (h.fp && /^L/.test(h.kind || '') && !byB.has(h.fp.bid)) byB.set(h.fp.bid, h); });
+  const groups = {}; GD.blds.forEach(b => (groups[b.t] = groups[b.t] || []).push(b));
+  Object.keys(groups).forEach(t => { const list = groups[t];
+    const TPL = gdTemplates[t] || (gdTemplates[t] = makeTemplate(() => { const g = K.make(GD.TPL[t], GD.OPT[t] || {}); assets.push({ key: t, g, walls: [null] }); }));
+    const M = list.map(b => new THREE.Matrix4().compose(new THREE.Vector3(b.x, 0, b.z), q.clone().setFromAxisAngle(up, b.ry), one));
+    TPL.list.forEach(part => {
+      const im = new THREE.InstancedMesh(part.geo, new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: grad }), list.length);
+      list.forEach((b, j) => { im.setMatrixAt(j, M[j]);
+        if (part.slot) { const r0 = Math.sin((b.i + 1) * 12.9898) * 43758.5453, rr = r0 - Math.floor(r0), kind = part.slot.replace(/\d$/, ''), n = +((part.slot.match(/\d$/) || [1])[0]), pal = GD_COL[kind] || GD_COL.wall;
+          let base = pal[(Math.floor(rr * 997) + (n - 1) * 2) % pal.length];
+          if (t === 'LD') { const h = byB.get(b.i), st = h && h.status !== 'abandoned' ? styleOf(h.user) : null; if (st && kind === 'wall' && st.wall) base = st.wall; if (st && kind === 'roof' && st.roof) base = st.roof; }
+          col.set(base); col.offsetHSL((rr - 0.5) * 0.02, 0, (((rr * 7 + n * 0.37) % 1) - 0.5) * 0.05); }
+        else col.copy(part.color);
+        im.setColorAt(j, col); });
+      im.castShadow = part.shadow; im.receiveShadow = true; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true;
+      im.frustumCulled = false; scene.add(im); homeBatches.push(im); });
+    const L = TPL.lines, out = new Float32Array(L.length * list.length);
+    M.forEach((m, j) => { const o = j * L.length; for (let k = 0; k < L.length; k += 3) { v.set(L[k], L[k + 1], L[k + 2]).applyMatrix4(m); out[o + k] = v.x; out[o + k + 1] = v.y; out[o + k + 2] = v.z; } });
+    lineParts.push(out); });
 }
 const homeBatches = []; let homeLines = null, homePick = null;
 let pioneerMesh = null; const PIONEERS = 1000, PLATE = { x: -0.25, y: 2.1, z: 3.1 };
@@ -1663,19 +1696,36 @@ function drawHomes(hs) {
   if (homePick) { scene.remove(homePick); const i = pickables.indexOf(homePick); if (i >= 0) pickables.splice(i, 1); homePick = null; }
   if (!hs.length) return;
   if (!homeTemplate) homeTemplate = makeTemplate();
+  // New District (16 Nov): cottages + fourplexes are kit designs (map/kit.js), loaded the first time someone lives there
+  const KITT = { LC: 'sbCottage', LH: 'sbHouse', LF: 'ndFourplex' };   // (New District v3 kinds: not used any more, kept harmless)
+  if (!window.VinlandKit) whenKit(() => drawHomes(homes.length ? homes : hs));
+  else Object.entries(KITT).forEach(([k, key]) => { if (!homeTemplates[k] && hs.some(h => h.kind === k)) homeTemplates[k] = makeTemplate(() => { const g = window.VinlandKit.make(key, {}); let wall = null;
+    g.traverse(o => { if (o.isMesh && o.material && o.material.userData && o.material.userData.slot === 'wall') wall = o.material; }); assets.push({ key, g, walls: [wall] }); }); });
   const N = hs.length, M = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(0.92, 0.92, 0.92), up = new THREE.Vector3(0, 1, 0), grey = new THREE.Color('#9a958c'), col = new THREE.Color();
   const mats = hs.map(h => new THREE.Matrix4().compose(new THREE.Vector3(h.x, 0, h.z), q.clone().setFromAxisAngle(up, h.ry), sc));
-  homeTemplate.list.forEach(part => {
-    const im = new THREE.InstancedMesh(part.geo, new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: grad }), N);
-    hs.forEach((h, i) => { im.setMatrixAt(i, mats[i]);
+  const lineParts = [];
+  const seenB = new Set(), bmat = h => new THREE.Matrix4().compose(new THREE.Vector3(h.fp.bx, 0, h.fp.bz), q.clone().setFromAxisAngle(up, h.ry), sc);
+  [[homeTemplate, i => !KITT[hs[i].kind] && !/^L[DSTAP]$/.test(hs[i].kind || '')], [homeTemplates.LC, i => hs[i].kind === 'LC'], [homeTemplates.LH, i => hs[i].kind === 'LH'], [homeTemplates.LF, i => hs[i].kind === 'LF' && !seenB.has(hs[i].fp.bid) && seenB.add(hs[i].fp.bid)]].forEach(([TPL, keep]) => { if (!TPL) return;
+  const idx = hs.map((h, i) => i).filter(keep); if (!idx.length) return;
+  const M = hs[idx[0]].fp ? idx.map(i => bmat(hs[i])) : null;   // a fourplex is drawn once, at the building
+  TPL.list.forEach(part => {
+    const im = new THREE.InstancedMesh(part.geo, new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: grad }), idx.length);
+    idx.forEach((i, j) => { const h = hs[i]; im.setMatrixAt(j, M ? M[j] : mats[i]);
       const st = h.status === 'abandoned' ? null : styleOf(h.user), roof = !part.wall && part.color.getHexString() === new THREE.Color(C.terra).getHexString();
-      col.copy(h.status === 'abandoned' ? grey : part.wall ? new THREE.Color(st && st.wall || WALLS[(h.n - 1) % 5]) : roof && st && st.roof ? new THREE.Color(st.roof) : part.color); im.setColorAt(i, col); });
+      if (KITT[h.kind] && h.status !== 'abandoned') {   // New District: a few base colours, each home a slightly different shade (16 Nov)
+        const v = Math.sin(h.n * 12.9898) * 43758.5453, rr = v - Math.floor(v), base = part.wall ? (st && st.wall) || ND_WALLS[Math.floor(rr * ND_WALLS.length)] : part.roofSlot ? (st && st.roof) || ND_ROOFS[Math.floor(rr * 7) % ND_ROOFS.length] : null;
+        if (base) { col.set(base); if (!(st && (part.wall ? st.wall : st.roof))) col.offsetHSL((rr - 0.5) * 0.02, (rr - 0.5) * 0.08, ((rr * 7) % 1 - 0.5) * 0.06); } else col.copy(part.color); im.setColorAt(j, col); return; }
+      col.copy(h.status === 'abandoned' ? grey : part.wall ? new THREE.Color(st && st.wall || WALLS[(h.n - 1) % 5]) : roof && st && st.roof ? new THREE.Color(st.roof) : part.color); im.setColorAt(j, col); });
     im.castShadow = part.shadow; im.receiveShadow = true; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true;
     im.frustumCulled = false; scene.add(im); homeBatches.push(im);
   });
+  // outlines
+  const L = TPL.lines, out = new Float32Array(L.length * idx.length), v = new THREE.Vector3();
+  idx.forEach((i, j) => { const m = M ? M[j] : mats[i], o = j * L.length; for (let k = 0; k < L.length; k += 3) { v.set(L[k], L[k + 1], L[k + 2]).applyMatrix4(m); out[o + k] = v.x; out[o + k + 1] = v.y; out[o + k + 2] = v.z; } });
+  lineParts.push(out); });
+  if (window.VinlandKit) drawGardenBuildings(hs, lineParts);   // Garden District: every building, lived in or not
   // all outlines in one piece
-  const L = homeTemplate.lines, out = new Float32Array(L.length * N), v = new THREE.Vector3();
-  hs.forEach((h, i) => { const m = mats[i], o = i * L.length; for (let k = 0; k < L.length; k += 3) { v.set(L[k], L[k + 1], L[k + 2]).applyMatrix4(m); out[o + k] = v.x; out[o + k + 1] = v.y; out[o + k + 2] = v.z; } });
+  const out = new Float32Array(lineParts.reduce((t, a) => t + a.length, 0)); { let k = 0; lineParts.forEach(a => { out.set(a, k); k += a.length; }); }
   const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(out, 3)); lg.computeBoundingSphere();
   homeLines = new THREE.LineSegments(lg, ink); scene.add(homeLines);
   // golden Pioneer plates by the front door: the first 1,000 citizens keep theirs forever
@@ -2104,12 +2154,12 @@ function buildHomes(rows) {
   rows.forEach(r => {
     const pl = AVAIL[r.n - 1], x = pl[0], z = pl[1];
     if (pl[2] === undefined) ensureRoads(Math.max(Math.abs(x), Math.abs(z)) / S);
-    const h = { ...r, x, z, flat: pl[4] || null, founder: r.n <= 20, ry: pl[2] !== undefined ? pl[2] : (Math.abs(z) >= Math.abs(x) ? (z > 0 ? 0 : Math.PI) : (x > 0 ? Math.PI / 2 : -Math.PI / 2)) };
+    const h = { ...r, x, z, flat: pl[4] || null, kind: pl[3] || null, fp: pl[5] || null, founder: r.n <= 20, ry: pl[2] !== undefined ? pl[2] : (Math.abs(z) >= Math.abs(x) ? (z > 0 ? 0 : Math.PI) : (x > 0 ? Math.PI / 2 : -Math.PI / 2)) };
     h.shown = r.status === 'hidden' ? 'Citizen #' + r.n : '@' + r.user;
     const el = document.createElement('div'); const gold = r.status === 'active' && supRank(r.user) >= 2; h.gold = gold;
     el.className = 'lbl home' + (r.status === 'abandoned' ? ' gone' : '') + (gold ? ' gold' : '');
     el.innerHTML = `<b>#${r.n}</b> ${r.status === 'hidden' ? 'Citizen' : esc(h.shown)}${gold ? ' <i>⭐</i>' : ''}`;
-    homeLabels.appendChild(el); h.el = el; h.lp = h.flat ? new THREE.Vector3(x, 1 + h.flat.floor * h.flat.fh * RS.SCALE, z + (h.flat.k - (h.flat.per - 1) / 2) * 6.4) : new THREE.Vector3(x, 11, z);
+    homeLabels.appendChild(el); h.el = el; h.lp = h.fp ? new THREE.Vector3(x, h.fp.ly || (h.fp.up ? 13 : 9.5), z) : h.flat ? new THREE.Vector3(x, 1 + h.flat.floor * h.flat.fh * RS.SCALE, z + (h.flat.k - (h.flat.per - 1) / 2) * 6.4) : new THREE.Vector3(x, 11, z);
     homes.push(h);
   });
   villaRows.forEach(r => { const lot = VILLAS[r.user.toLowerCase()], L = LOTS[lot]; if (!L) return;
@@ -3263,6 +3313,72 @@ RS.B1_AT = 456;
 RS.BEACH_FROM = 1867;
 { const bf = RS.flats.filter(f => f[4].beach).sort((a, c) => a[0] - c[0] || a[1] - c[1] || a[4].floor - c[4].floor || a[4].k - c[4].k), rest = RS.flats.filter(f => !f[4].beach), k = Math.max(0, RS.BEACH_FROM - 1 - PLOTS.length); RS.flats = [...rest.slice(0, k), ...bf, ...rest.slice(k)]; RS.BEACH_N = bf.length; }
 PLOTS.push(...RS.flats);
+// ---- GARDEN DISTRICT (Dev's OK'd blueprint, 16 Nov): an affordable middle-class European suburb west of the town, past a natural
+// green belt (x -382..-290). Four neighbourhoods round a lake park; arterial boulevard (z 0) and spine (x GD.SX) with roundabouts on
+// the park ring; collectors and local streets; detached, semi-detached and terraced homes (kit gdDetached / gdSemi / gdTerrace),
+// apartment blocks of 4-6 floors in four clusters (gdApartment), a high street with flats over the shops (gdShopParade), two
+// schools, a community centre, a sports ground and pocket parks. Every building stands from day one (homes waiting for citizens);
+// the name tag goes up when someone moves in. Appended after every existing home: nobody's number or home changes. Area code 'L'.
+const GD = { XW: -897, XE: -386, SX: -641.5, RZ: 130, ZE: 477, BELT: -290, ST: 28, n: 9, blds: [], kit: [], parks: [], roads: [] };
+GD.cols = [[-893.5, -773.5], [-766.5, -646.5], [-636.5, -516.5], [-509.5, -389.5]];              // the four housing columns (120 m)
+GD.bands = [[-893.5, -751.5], [-531.5, -389.5]];                                                   // middle band, west and east of the park ring
+GD.CORR = (GD.ZE - 3.5 - GD.RZ - 3.5 - 3 - GD.ST * GD.n) / (GD.n - 1);                             // street corridor between two rows of homes
+GD.TPL = { LD: 'gdDetached', LS: 'gdSemi', LT: 'gdTerrace', LA4: 'gdApartment', LA5: 'gdApartment', LA6: 'gdApartment', LP: 'gdShopParade' };
+GD.OPT = { LA4: { floors: '4' }, LA5: { floors: '5' }, LA6: { floors: '6' } };
+GD.gate = [GD.XE, 0];
+{ const B = GD.blds, rd = (w, d, x, z) => GD.roads.push([w, d, x, z]);
+  // one building: units are the homes inside it, [local x, local z, label height]
+  const put = (t, x, z, ry, units) => { const c = Math.cos(ry), s = Math.sin(ry), i = B.length;
+    B.push({ i, t, x, z, ry, units: units.map(([ux, uz, ly], u) => [x + c * ux + s * uz, z - s * ux + c * uz, ly, u]) }); };
+  const UNITS = {
+    LD: [[0, 0, 10.5]],
+    LS: [[-3.5, 0, 10.5], [3.5, 0, 10.5]],
+    LT: [0, 1, 2, 3, 4, 5].map(i => [-13.75 + 5.5 * i, -1, 10]),
+    LP: [0, 1, 2, 3].flatMap(i => [0, 1].map(f => [-12 + 8 * i, -2, 5.6 + f * 3])) };
+  const apt = F => Array.from({ length: F }, (_, f) => [-11.25, -3.75, 3.75, 11.25].map(x => [x, 3, 2.4 + f * 3])).flat();
+  // homes along one side of a row: from a to b (x), facing ry, centre line z
+  const W = { LD: 10, LS: 16, LT: 36 };
+  const side = (t, a, b, z, ry) => { const L = b - a, n = Math.floor((L + 0.6) / (W[t] + 0.6)); if (n < 1) return; const p = L / n;
+    for (let i = 0; i < n; i++) put(t, a + p * (i + 0.5), z, ry, UNITS[t]); };
+  const PAT = ['LS', 'LD', 'LT', 'LS', 'LD', 'LS', 'LT', 'LD'];
+  // ---- the two housing halves (north z < 0, south z > 0), four columns each
+  [-1, 1].forEach((hs, hi) => GD.cols.forEach(([x0, x1], ci) => {
+    const school = ci === 2;                                                             // a school on the outer rows of column C, on the spine
+    for (let j = 0; j < GD.n; j++) {
+      const e = hs * (GD.RZ + 3.5 + 1.5 + j * (GD.ST + GD.CORR)), zi = e + hs * 7, zo = e + hs * 21, ryIn = hs < 0 ? 0 : Math.PI, ryOut = hs < 0 ? Math.PI : 0;
+      const tIn = j === 0 ? 'LD' : PAT[(j - 1 + ci * 3 + hi * 5) % PAT.length], tOut = j === GD.n - 1 ? 'LD' : PAT[(j + ci * 3 + hi * 5) % PAT.length];
+      let a = x0 + 2, b = x1 - 2;
+      if (j === 4) { const px = ci % 2 ? x0 + 14 : x1 - 14; GD.parks.push([px, e + hs * 14]); if (ci % 2) a = x0 + 28; else b = x1 - 28; }   // a pocket park by the spine / collector
+      if (school && j >= GD.n - 2) a = x0 + 62;
+      side(tIn, a, b, zi, ryIn); side(tOut, a, b, zo, ryOut);
+      if (j < GD.n - 1) { const zc = e + hs * (GD.ST + GD.CORR / 2); if (school && j === GD.n - 2) rd(x1 - x0 - 60, 5.5, (x0 + 60 + x1) / 2, zc); else rd(x1 - x0, 5.5, (x0 + x1) / 2, zc); }
+    }
+    if (school) { const zs = hs * (GD.RZ + 3.5 + 1.5 + (GD.n - 2) * (GD.ST + GD.CORR) + (2 * GD.ST + GD.CORR) / 2); GD.kit.push(['gdSchool', { name: hs < 0 ? 'NORTH PRIMARY' : 'SOUTH PRIMARY' }, x0 + 31, zs, -Math.PI / 2]); }
+  }));
+  // ---- the middle band: apartment clusters (2 rows of 4 in each corner), high street, community centre, pocket parks, sports ground
+  const FL = [[5, 6, 6, 5], [4, 5, 5, 4]];
+  [-1, 1].forEach(hs => GD.bands.forEach(([x0, x1]) => {
+    [0, 1].forEach(r => { const z = hs * (r ? 90 : 114.5), ry = (hs < 0) === !r ? Math.PI : 0;
+      [0, 1, 2, 3].forEach(k => { const F = FL[r][k]; put('LA' + F, x0 + 20 + 34 * k, z, ry, apt(F)); }); });
+    rd(x1 - x0, 6, (x0 + x1) / 2, hs * 74);                                              // the lane in front of the second row
+  }));
+  { const [x0, x1] = GD.bands[1], cx = (x0 + x1) / 2;                                    // HIGH STREET: 3 shop parades facing the boulevard
+    [-36, 0, 36].forEach(dx => put('LP', cx + dx, -15, 0, UNITS.LP)); }
+  GD.kit.push(['gdCommunity', {}, GD.bands[1][0] + 16, 21, Math.PI]);
+  [[GD.bands[1][0] + 52, 19], [GD.bands[1][0] + 82, 19], [GD.bands[1][0] + 112, 19], [GD.bands[0][0] + 33, -38], [GD.bands[0][0] + 71, -38], [GD.bands[0][0] + 109, -38]].forEach(p => GD.parks.push(p));
+  // ---- roads: perimeter + collectors (7 m), boulevard, spine and park ring (10 m), corridors (5.5 m) added above
+  const ZE = GD.ZE, XW = GD.XW, XE = GD.XE, R = GD.RZ, RW = GD.SX - 105, RE = GD.SX + 105;
+  rd(7, 2 * ZE + 7, XW, 0); rd(7, 2 * ZE + 7, XE, 0); rd(XE - XW + 7, 7, (XW + XE) / 2, -ZE); rd(XE - XW + 7, 7, (XW + XE) / 2, ZE);
+  [-1, 1].forEach(hs => { rd(RW - 5 - (XW + 3.5), 7, (XW + 3.5 + RW - 5) / 2, hs * R); rd(RE - RW + 10, 10, GD.SX, hs * R); rd(XE - 3.5 - (RE + 5), 7, (RE + 5 + XE - 3.5) / 2, hs * R);
+    rd(10, ZE - R - 7, GD.SX, hs * (R + ZE) / 2); [-770, -513].forEach(x => rd(7, ZE - R - 7, x, hs * (R + ZE) / 2)); });
+  [RW, RE].forEach(x => rd(10, 2 * R - 7, x, 0));
+  rd(RW - 5 - (XW + 3.5), 10, (XW + 3.5 + RW - 5) / 2, 0); rd(XE - 3.5 - (RE + 5), 10, (RE + 5 + XE - 3.5) / 2, 0); rd(GD.BELT - XE - 3.5, 10, (XE + 3.5 + GD.BELT) / 2, 0);
+  GD.round = [[GD.SX, -R], [GD.SX, R], [RW, 0], [RE, 0]];
+  // ---- homes: the ones nearest the gate fill first; the homes of one building stay together (flats from the ground floor up)
+  const dist = b => Math.hypot(b.x - GD.gate[0], b.z - GD.gate[1]), out = [];
+  B.slice().sort((a, b) => dist(a) - dist(b)).forEach(b => b.units.slice().sort((p, q) => p[2] - q[2] || p[3] - q[3]).forEach(([x, z, ly, u], k) =>
+    out.push([+x.toFixed(2), +(z + (ly > 6 ? (ly | 0) * 0.01 : 0)).toFixed(2), b.ry, b.t.slice(0, 2), null, { bid: b.i, u, ly }])));
+  GD.n0 = PLOTS.length; GD.homes = out.length; PLOTS.push(...out); }
 (function drawRiverside() {
   const N = { edge: false, shadow: false }, RAILC = '#2f2b28', hide = new THREE.Matrix4().makeScale(0, 0, 0), g = new THREE.Group();
   spots.forEach(([x, z], i) => { if (x > 294 && x < 1212 && z > -800 && z < 640) { cr.setMatrixAt(i, hide); tk.setMatrixAt(i, hide); } });
@@ -3447,6 +3563,69 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
         const tz = z - up * (2.3 + Math.min(4, (D / 2 - A) * 0.8)); if (Math.abs(tz - cz) < D / 2 - 1.5) tree(g, x + 3, 0.1, tz, Math.round(x) % 3 === 0 ? 'pink' : 'canopy', 0.8);
         const fz = z + up * (5.2); if (Math.abs(fz - cz) < D / 2 - 1.8) { if (Math.round(x) % 16 < 8) bench(g, x + 4, fz - up * 1.2, up > 0 ? Math.PI : 0); else flowerBed(g, x + 4, fz, Math.round(x) % 2 ? C.pink : C.purple); } } }); });
   window.RSX_OBJ = bakeKeep(g, 'riverside');
+})();
+
+// ---- NEW DISTRICT ground (v3, 16 Nov): natural green belt (trees, rocks, bushes on the map's own grass), the street grid, one road on
+// z 0 with the gate, the lake park (natural lake, trees, rocks, no houses), shop street + big-building lots (later), a small
+// transport area (kit bus bay + buses) beside the school grounds ----
+(function drawGardenDistrict() {
+  const N = { edge: false, shadow: false }, g = new THREE.Group(), hide = new THREE.Matrix4().makeScale(0, 0, 0), ZE = GD.ZE, R = GD.RZ, SX = GD.SX;
+  spots.forEach(([x, z], i) => { if (x > GD.XW - 8 && x < GD.XE + 3 && Math.abs(z) < ZE + 8) { cr.setMatrixAt(i, hide); tk.setMatrixAt(i, hide); } });
+  cr.instanceMatrix.needsUpdate = true; tk.instanceMatrix.needsUpdate = true;
+  let sd = 43; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  GD.roads.forEach(([w, d, x, z]) => { ROADS.push([w, d, x, z]); B(g, w, 0.1, d, ROAD, x, 0.04, z, N); });
+  const rock = (x, z, sc) => { const m = add(g, new THREE.DodecahedronGeometry(1, 0), rnd() < 0.5 ? '#b9b2a4' : '#a39c8e', x, 0.25 * sc, z, { edge: false }); m.scale.set(sc * (1 + rnd() * 0.6), sc * 0.65, sc); m.rotation.set(rnd(), rnd() * 6, 0); };
+  const bush = (x, z) => add(g, new THREE.IcosahedronGeometry(1.1, 0), rnd() < 0.5 ? '#4f8a42' : '#5e9a4e', x, 0.6, z, { edge: false });
+  // roundabouts on the park ring: asphalt circle, kerb, grass island with a tree and flowers
+  GD.round.forEach(([x, z]) => { add(g, new THREE.CylinderGeometry(15, 15, 0.1, 32), ROAD, x, 0.06, z, N); add(g, new THREE.CylinderGeometry(7.6, 7.6, 0.3, 28), '#e6dccb', x, 0.15, z, N);
+    add(g, new THREE.CylinderGeometry(7, 7, 0.34, 28), '#8cc06a', x, 0.17, z, N); tree(g, x, 0.3, z, 'canopy', 1.2); [0, 1, 2, 3].forEach(k => flowerBed(g, x + 4.2 * Math.cos(k * 1.57 + 0.78), z + 4.2 * Math.sin(k * 1.57 + 0.78), k % 2 ? C.pink : C.purple)); });
+  // the gate on the boulevard, where it leaves the green belt
+  { const gx = GD.XE + 7; [-8, 8].forEach(z => { B(g, 2.2, 7, 2.2, '#e3d2ae', gx, 0, z); B(g, 2.8, 0.6, 2.8, '#c8603f', gx, 7, z); }); B(g, 1.4, 1.2, 18, '#e3d2ae', gx, 6.2, 0); signBoard(g, 'NEW DISTRICT', gx + 0.8, 5.3, 0, 9, 1.5, '#1f2f5a', '#e2b04a', Math.PI / 2); }
+  // GREEN BELT between the district and the town: dense trees, rocks and bushes, nothing built
+  for (let k = 0; k < 1000; k++) { const x = GD.XE + 6 + rnd() * (GD.BELT - GD.XE - 10), z = -ZE - 18 + rnd() * (2 * ZE + 36); if (Math.abs(z) < 9) continue; const t = rnd();
+    if (t < 0.7) tree(g, x, 0.1, z, t < 0.06 ? 'pink' : t < 0.2 ? 'cypress' : 'canopy', 0.9 + rnd() * 0.9); else if (t < 0.85) rock(x, z, 0.6 + rnd() * 1.6); else bush(x, z); }
+  // THE LAKE PARK inside the ring: lawn, a natural lake with a beach edge, a walk round it, lamps, a jetty, trees and rocks
+  const P = { x0: SX - 100, x1: SX + 100, z0: -R + 5, z1: R - 5 };
+  B(g, P.x1 - P.x0, 0.12, P.z1 - P.z0, '#a9cf78', SX, 0.03, 0, N);
+  const rad = t => 1 + 0.14 * Math.sin(2 * t + 0.7) + 0.08 * Math.sin(3 * t + 2.1) + 0.05 * Math.sin(5 * t + 0.3);
+  const shape = (rx, rz) => { const sh = new THREE.Shape(); for (let i = 0; i <= 96; i++) { const t = i / 96 * Math.PI * 2, r = rad(t), X = Math.cos(t) * rx * r, Z = Math.sin(t) * rz * r; i ? sh.lineTo(X, Z) : sh.moveTo(X, Z); } return sh; };
+  const flat = (sh, col, y) => { const m = new THREE.Mesh(new THREE.ShapeGeometry(sh, 2), mat(col)); m.rotation.x = -Math.PI / 2; m.position.set(SX, y, 0); m.receiveShadow = true; g.add(m); };
+  flat(shape(62, 98), '#e9dcc0', 0.2); flat(shape(57, 92), '#a9cf78', 0.3); flat(shape(50, 84), '#e2d0a6', 0.42); flat(shape(47, 80), '#4aa3cf', 0.54); flat(shape(26, 46), '#3a8fc2', 0.66);
+  B(g, 2.4, 0.4, 14, C.wood, SX + 47, 0.5, 0, N); B(g, 5, 0.4, 3, C.wood, SX + 40, 0.5, 6, N);   // jetty
+  for (let i = 0; i < 24; i++) { const t = i / 24 * Math.PI * 2, r = rad(t); lamp(g, SX + Math.cos(t) * 64 * r, Math.sin(t) * 100 * r); }
+  for (let i = 0; i < 10; i++) { const t = i / 10 * Math.PI * 2 + 0.3, r = rad(t); bench(g, SX + Math.cos(t) * 56 * r, Math.sin(t) * 89 * r, Math.atan2(-Math.cos(t), -Math.sin(t))); }
+  for (let k = 0; k < 420; k++) { const x = P.x0 + 6 + rnd() * (P.x1 - P.x0 - 12), z = P.z0 + 6 + rnd() * (P.z1 - P.z0 - 12), t = Math.atan2(z / 100, (x - SX) / 64), r = rad(t);
+    if (Math.hypot((x - SX) / (66 * r), z / (103 * r)) < 1) continue; const q = rnd();
+    if (q < 0.72) tree(g, x, 0.1, z, q < 0.14 ? 'pink' : q < 0.22 ? 'cypress' : 'canopy', 0.9 + rnd() * 0.7); else if (q < 0.88) rock(x, z, 0.5 + rnd() * 1.4); else flowerBed(g, x, z, q < 0.94 ? C.pink : C.purple); }
+  // MIDDLE BAND greens: lawn under the apartment clusters, the high street green, the west garden and the sports ground
+  GD.bands.forEach(([x0, x1]) => [-1, 1].forEach(hs => { B(g, x1 - x0, 0.1, 54, '#a9cf78', (x0 + x1) / 2, 0.02, hs * 101, N);
+    for (let k = 0; k < 4; k++) [0, 1].forEach(r => { const x = x0 + 3 + 34 * k + (k ? 0 : 0), z = hs * (r ? 90 : 114.5); if (k) tree(g, x, 0.1, z + hs * (r ? 6 : -6), 'cypress', 0.9); }); }));
+  { const [x0, x1] = GD.bands[1], cx = (x0 + x1) / 2;
+    B(g, x1 - x0, 0.06, 4, '#e6dccb', cx, 0.03, -5, N);                                                        // high street pavement
+    B(g, x1 - x0, 0.12, 44, '#a9cf78', cx, 0.03, -48, N); B(g, x1 - x0, 0.14, 3, '#e6dccb', cx, 0.04, -48, N); B(g, 3, 0.14, 44, '#e6dccb', cx, 0.04, -48, N);   // the green behind the shops
+    add(g, new THREE.CylinderGeometry(4.2, 4.6, 0.8, 20), '#e9e1cf', cx, 0.4, -48, { edge: false }); add(g, new THREE.CylinderGeometry(3.6, 3.6, 0.2, 20), '#4aa3cf', cx, 0.82, -48, N); add(g, new THREE.CylinderGeometry(0.4, 0.6, 2.6, 10), '#e9e1cf', cx, 1.5, -48, { edge: false });
+    [-56, -40, -24, 24, 40, 56].forEach((dx, k) => { tree(g, cx + dx, 0.1, -60, k % 3 ? 'canopy' : 'pink', 1); tree(g, cx + dx, 0.1, -36, k % 3 ? 'pink' : 'canopy', 0.95); });
+    [-30, 30].forEach(dx => { bench(g, cx + dx, -45.8, Math.PI); bench(g, cx + dx, -50.2, 0); flowerBed(g, cx + dx * 0.5, -48, C.pink); });
+    B(g, x1 - x0, 0.12, 62, '#a9cf78', cx, 0.03, 38, N);                                                        // lawn round the community centre
+    for (let k = 0; k < 18; k++) tree(g, x0 + 8 + (k % 9) * 15.5, 0.1, 50 + ((k / 9) | 0) * 14, k % 4 ? 'canopy' : 'pink', 0.9 + (k % 3) * 0.1); }
+  { const [x0, x1] = GD.bands[0], cx = (x0 + x1) / 2;
+    B(g, x1 - x0, 0.12, 62, '#a9cf78', cx, 0.03, -38, N); for (let k = 0; k < 9; k++) tree(g, x0 + 10 + k * 15.3, 0.1, -64 + (k % 2) * 3, k % 3 ? 'canopy' : 'pink', 0.95);
+    for (let k = 0; k < 9; k++) tree(g, x0 + 10 + k * 15.3, 0.1, -12 - (k % 2) * 2, k % 3 ? 'cypress' : 'canopy', 0.9);
+    // SPORTS GROUND: running track, football pitch, a small stand, trees
+    const sz = 38; B(g, x1 - x0, 0.1, 62, '#a9cf78', cx, 0.02, sz, N); B(g, 126, 0.14, 52, '#c8603f', cx, 0.03, sz, N); B(g, 112, 0.18, 40, '#5a9a4a', cx, 0.04, sz, N);
+    [[100, 0.2, 0.3, 0, -17], [100, 0.2, 0.3, 0, 17], [0.3, 0.2, 34, -50, 0], [0.3, 0.2, 34, 50, 0], [0.3, 0.2, 34, 0, 0]].forEach(([w, h, d, dx, dz]) => B(g, w, h, d, '#f6f3ea', cx + dx, 0.12, sz + dz, N));
+    add(g, new THREE.TorusGeometry(7, 0.15, 4, 28), '#f6f3ea', cx, 0.24, sz, { rx: Math.PI / 2, edge: false });
+    [-1, 1].forEach(s => { B(g, 0.2, 2.4, 0.2, '#f6f3ea', cx + s * 50, 0.2, sz - 3.6); B(g, 0.2, 2.4, 0.2, '#f6f3ea', cx + s * 50, 0.2, sz + 3.6); B(g, 0.2, 0.2, 7.4, '#f6f3ea', cx + s * 50, 2.5, sz); });
+    for (let r = 0; r < 4; r++) B(g, 40, 0.5, 1.2, r % 2 ? '#3f5866' : '#c9922e', cx, 0.2 + r * 0.5, sz + 27.5 + r * 1.2);   // little stand on the south side
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => tree(g, cx + a * 66, 0.1, sz + b * 26, 'canopy', 1.1)); }
+  // the edge of the district: hedge-and-tree line outside the perimeter road, so the suburb has a clean border
+  for (let x = GD.XW; x <= GD.XE; x += 13) [-1, 1].forEach(hs => tree(g, x, 0.1, hs * (ZE + 7), ((x / 13) | 0) % 3 ? 'canopy' : 'cypress', 0.95));
+  for (let z = -ZE; z <= ZE; z += 13) tree(g, GD.XW - 7, 0.1, z, ((z / 13) | 0) % 3 ? 'canopy' : 'cypress', 0.95);
+  window.GD_OBJ = bakeKeep(g, 'gardendistrict');
+  // kit pieces that are not homes: schools, the community centre, pocket parks (one bake)
+  whenKit(() => { const K = window.VinlandKit, T = new THREE.Group(), place = (key, o, x, z, ry) => { const m = K.make(key, o || {}); m.position.set(x, 0, z); m.rotation.y = ry || 0; T.add(m); };
+    GD.kit.forEach(([k, o, x, z, ry]) => place(k, o, x, z, ry)); GD.parks.forEach(([x, z], i) => place('gdPocketPark', {}, x, z, (i % 4) * Math.PI / 2));
+    scene.add(bakeGroup(T)); });
 })();
 
 // ---- the Library, next to the school (Education District) ----
