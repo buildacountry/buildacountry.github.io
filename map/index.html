@@ -473,7 +473,8 @@ function build2D(text) {
     Object.keys(AREA).forEach(k => add(k === 'SG' ? 'Garden Lane' : k === 'F' ? 'Founder Square' : AREA[k], cen(p => p.a === k), 1));
     [...new Set(PL.filter(p => p.a === 'R' && !/^Beach Lane/.test(p.label)).map(p => p.block))].forEach(b => add('Block ' + b, cen(p => p.a === 'R' && p.block === b && !/^Beach Lane/.test(p.label)), 1));
     add('Beach Lane', cen(p => /^Beach Lane/.test(p.label)), 1);
-    if (ST.lots) { const l = Object.values(ST.lots); add('Villa Lane', [l.reduce((a, p) => a + p[0], 0) / l.length, l.reduce((a, p) => a + p[1], 0) / l.length], 1); }
+    if (ST.lots) { const ctr = l => [l.reduce((a, p) => a + p[0], 0) / l.length, l.reduce((a, p) => a + p[1], 0) / l.length], E = Object.entries(ST.lots), vl = E.filter(e => +e[0] < 101).map(e => e[1]), ml = E.filter(e => +e[0] >= 101).map(e => e[1]);
+      if (vl.length) add('Villa Lane', ctr(vl), 1); if (ml.length) add('Mansion Lane', ctr(ml), 1); }
     if (MD) { [['m', 'Market'], ['se', 'New Market'], ['beach', 'Beach shops']].forEach(([k, t]) => { const l = MD.slots.filter(q => q[2] === k); if (l.length) add(t, [l.reduce((a, q) => a + q[0], 0) / l.length, l.reduce((a, q) => a + q[1], 0) / l.length], 1); });
       const gv = MD.places.filter(q => /Parliament|Embassy|Police|Fire/.test(q[0])); if (gv.length) add('Government Row', [0, Math.max(...gv.map(q => q[2] + q[4])) + 14], 1);
       MD.places.forEach(q => { if (q[0]) L.push([q[0], q[1] + q[3] / 2, q[2] + q[4] / 2, 2]); }); }
@@ -586,7 +587,7 @@ window.VIN2D = { show: u => { const h = V.byUser.get(String(u).toLowerCase()); i
 const c2 = $('#c2'); socLoad();
 window.VLOOKS = {}; const looksLoad = () => socApi({ action: 'looks' }).then(r => { if (r && r.ok && r.looks) { window.VLOOKS = r.looks; if (window.VIN3D_API && window.VIN3D_API.looks) window.VIN3D_API.looks(); } }).catch(() => {}); looksLoad(); window.VLOOKS_LOAD = looksLoad;
 function card(h) { V.sel = h; wake(); if (!h) { c2.hidden = true; return; }
-  const b = h.bid ? V.blds.get(h.bid) : null, where = h.villa ? 'Villa Lane, Central' : h.area + ', ' + h.district, live = h.status !== 'abandoned';
+  const b = h.bid ? V.blds.get(h.bid) : null, where = h.villa ? (h.villa >= 101 ? 'Mansion Lane, Vinland Beach' : 'Villa Lane, Central') : h.area + ', ' + h.district, live = h.status !== 'abandoned';
   const others = b ? b.list.filter(o => o !== h && o.status !== 'abandoned') : [];
   c2.innerHTML = `<button class="x" data-c="close" aria-label="Close">×</button><div class="k">${esc(where)}${h.label ? ' · ' + esc(h.label) + ', building R' + h.bid : ''}</div>
     <div class="t">${h.villa ? 'Villa, plot ' + h.villa : 'Home № ' + h.n.toLocaleString('en-IN')}</div>
@@ -1433,9 +1434,9 @@ function plazaSlots() {   // every brick place on the plaza, ring by ring
 }
 const PLAZA_COL = [['#e4a27c', '#d6906a', '#c98360'], ['#efe0c2', '#e6d3b0', '#dccaa4']];
 // ⭐ SUPPORTERS: only people who really supported (their own money). Add them here by hand: 'username': 'wall' | 'supporter' | 'patron' | 'villa' | 'landmark'
-const SUPPORT = { '_aman.sriva_': 'villa', 'devsinghbuilds': 'villa' };   // 11 Nov: first villa owner (Dev's friend, his own money) · 16 Nov: devsinghbuilds, villa (first-5 villas are pay-what-you-want, Dev)
+const SUPPORT = { '_aman.sriva_': 'villa', 'devsinghbuilds': 'villa', 'amorydsmt': 'mansion' };   // 11 Nov: first villa owner (Dev's friend, his own money) · 16 Nov: devsinghbuilds, villa (first-5 villas are pay-what-you-want, Dev)
 // 🏡 VILLAS (Home upgrade 'Villa', a real support): 'username': Villa Lane plot number. The citizen MOVES into the villa; their old plot goes to the next new citizen.
-const VILLAS = { '_aman.sriva_': 6, 'devsinghbuilds': 5 };   // keep them in the order they bought (the first one is 'Villa Lane's first owner')
+const VILLAS = { '_aman.sriva_': 6, 'devsinghbuilds': 5, 'amorydsmt': 101 };   // 101+ = MANSION LANE (beachfront, 16 Nov): amorydsmt = first mansion (€10, Spanish style)   // keep them in the order they bought (the first one is 'Villa Lane's first owner')
 const villaRank = u => Object.keys(VILLAS).indexOf(String(u || '').toLowerCase()) + 1;
 // 🎨 STYLE (Supporter perk "your style"): your citizen's outfit and your home's colours. Add by hand after a real support:
 //   'username': { shirt: '#hex', pants: '#hex', hair: '#hex', wall: '#hex', roof: '#hex' }   (any field can be left out)
@@ -1447,7 +1448,7 @@ const lookOf = u => { const l = window.VLOOKS && window.VLOOKS[String(u || '').t
 // STEP 8: a citizen's saved look (My look + Vinland Shop, checked by Supabase) sits on top of the hand-made STYLE table
 const styleOf = u => { const s = STYLE[String(u || '').toLowerCase()] || null, l = lookOf(u); if (!l) return s; const o = Object.assign({}, s), hs = l.home && KITSET.homes[l.home];
   if (l.top !== undefined) o.shirt = KITSET.tops[l.top]; if (l.bottom !== undefined) o.pants = KITSET.bottoms[l.bottom]; if (l.hair !== undefined) o.hair = KITSET.hairs[l.hair]; if (l.skin !== undefined) o.skin = KITSET.skins[l.skin]; if (hs) { o.wall = hs[0]; o.roof = hs[1]; } return o; };
-const SUP_RANK = { wall: 1, supporter: 2, patron: 3, villa: 4, landmark: 5 };   // a key starting with '~' (e.g. '~1': 'wall') = a supporter who asked to stay anonymous: shown as "A kind citizen"
+const SUP_RANK = { wall: 1, supporter: 2, patron: 3, villa: 4, mansion: 4, landmark: 5 };   // a key starting with '~' (e.g. '~1': 'wall') = a supporter who asked to stay anonymous: shown as "A kind citizen"
 const supRank = u => SUP_RANK[SUPPORT[String(u || '').toLowerCase()]] || 0;   // 1 = name on the Wall (gold brick), 2+ = gold home tag too
 function plazaPaint(ctx, x0, z0, ppu, slots, names, minFont) {   // draw bricks (and names) for slots in a rect starting at (x0, z0)
   ctx.lineJoin = 'round';
@@ -2188,7 +2189,7 @@ function buildHomes(rows) {
   });
   villaRows.forEach(r => { const lot = VILLAS[r.user.toLowerCase()], L = LOTS[lot]; if (!L) return;
     const h = { ...r, n: 10000 + lot, x: L.x, z: L.z, ry: L.ry, flat: null, founder: false, villa: lot, shown: '@' + r.user }; h.gold = supRank(r.user) >= 2;
-    const el = document.createElement('div'); el.className = 'lbl home villa'; el.innerHTML = `<b>✨ VILLA</b> ${esc(h.shown)} <i>⭐</i>`;
+    const el = document.createElement('div'); el.className = 'lbl home villa'; el.innerHTML = `<b>✨ ${isMansion(lot) ? 'MANSION' : 'VILLA'}</b> ${esc(h.shown)} <i>⭐</i>`;
     homeLabels.appendChild(el); h.el = el; h.lp = new THREE.Vector3(L.x, 10, L.z); homes.push(h); });
   drawHomes(homes.filter(h => !h.flat && !h.villa));   // Riverside flats live inside their apartment buildings; villas are drawn on Villa Lane
   rsDrawBlds(new Set(homes.filter(h => h.flat).map(h => h.flat.bid)));
@@ -2270,13 +2271,13 @@ function selectHome(h) {
   track('tap-home');
   selected = h; try { history.replaceState(null, '', '#home-' + h.n); } catch (e) {}
   flyTo(new THREE.Vector3(h.x, 4, h.z), new THREE.Vector3(h.x >= 0 ? 24 : -24, 22, h.z >= 0 ? 32 : -32));
-  const where = h.villa ? 'Villa Lane · Plot ' + h.villa : h.flat ? 'Riverside · Block ' + h.flat.block : h.founder ? 'Founder home · around the flag' : h.z < NORTH.zTop - 4 ? (h.x > 0 ? 'North Shore · east' : 'North Shore · west') : (h.z > SOUTH.z0 - 6 && Math.abs(h.x) > SOUTH.x + 20) ? (h.x > 0 ? 'South-east district' : 'South-west district') : h.z > SOUTH.z0 - 6 ? (LANES.home.includes(Math.abs(h.x)) ? 'Garden Lane · South district' : 'South district') : h.z < NORTH.zBot + 4 ? (h.x > 0 ? 'North-east district' : 'North-west district') : Math.abs(h.x) > DIST.roadIn + 4 ? (h.x > 0 ? 'East district' : 'West district') : 'Middle district'; stopTour();
+  const where = h.villa ? (isMansion(h.villa) ? 'Mansion Lane · Plot ' + (h.villa - 100) : 'Villa Lane · Plot ' + h.villa) : h.flat ? 'Riverside · Block ' + h.flat.block : h.founder ? 'Founder home · around the flag' : h.z < NORTH.zTop - 4 ? (h.x > 0 ? 'North Shore · east' : 'North Shore · west') : (h.z > SOUTH.z0 - 6 && Math.abs(h.x) > SOUTH.x + 20) ? (h.x > 0 ? 'South-east district' : 'South-west district') : h.z > SOUTH.z0 - 6 ? (LANES.home.includes(Math.abs(h.x)) ? 'Garden Lane · South district' : 'South district') : h.z < NORTH.zBot + 4 ? (h.x > 0 ? 'North-east district' : 'North-west district') : Math.abs(h.x) > DIST.roadIn + 4 ? (h.x > 0 ? 'East district' : 'West district') : 'Middle district'; stopTour();
   if (h.status === 'abandoned') {
     show(`Home #${h.n} · ${where}`, 'Abandoned home', `<p class="p">The citizen who lived here left the country. This home will go to someone new.</p>`); return;
   }
   const link = h.status === 'hidden' ? '' : `<a class="ig" href="https://www.instagram.com/${encodeURIComponent(h.user)}/" target="_blank" rel="noopener">View @${esc(h.user)} on Instagram</a>`;
   show(h.villa ? `Villa owner · ${where}` : `Citizen #${h.n} · ${where}`, h.shown,
-    `${h.villa ? `<div class="vip">🏡 Villa owner${villaRank(h.user) === 1 ? " · Villa Lane's first owner" : ''} ⭐</div>` : ''}<dl class="facts"><dt>Home</dt><dd>${h.villa ? '🏡 Villa · Villa Lane, plot ' + h.villa : h.flat ? esc(h.flat.label) + ' · Building R' + h.flat.bid + ' · #' + h.n : (h.founder ? 'Founder home' : 'Home') + ' #' + h.n}</dd>${isPioneer(h) ? '<dt>Pioneer</dt><dd>🏅 One of the first 1,000 citizens</dd>' : ''}${h.status !== 'hidden' && supRank(h.user) ? `<dt>Supporter</dt><dd>⭐ ${supRank(h.user) >= 2 ? 'Supporter of Vinland' : "Name on the Supporters' Wall"}</dd>` : ''}${h.job ? `<dt>Profession</dt><dd>${esc(h.job)}</dd>` : ''}${h.staffOf ? `<dt>Works at</dt><dd>@${esc(h.staffOf.owner.user)}'s ${esc(h.staffOf.job.toLowerCase().replace(/\s*(owner|landlord)$/, ''))} · ${h.staffOf.area === 'se' ? 'New Market' : 'Market'} shop ${h.staffOf.n}</dd>` : ''}<dt>Joined</dt><dd>Day ${h.joined}</dd></dl>
+    `${h.villa ? (isMansion(h.villa) ? `<div class="vip">🏰 Mansion owner${h.villa === 101 ? " · Mansion Lane's first owner" : ''} ⭐</div>` : `<div class="vip">🏡 Villa owner${villaRank(h.user) === 1 ? " · Villa Lane's first owner" : ''} ⭐</div>`) : ''}<dl class="facts"><dt>Home</dt><dd>${h.villa ? '🏡 Villa · Villa Lane, plot ' + h.villa : h.flat ? esc(h.flat.label) + ' · Building R' + h.flat.bid + ' · #' + h.n : (h.founder ? 'Founder home' : 'Home') + ' #' + h.n}</dd>${isPioneer(h) ? '<dt>Pioneer</dt><dd>🏅 One of the first 1,000 citizens</dd>' : ''}${h.status !== 'hidden' && supRank(h.user) ? `<dt>Supporter</dt><dd>⭐ ${supRank(h.user) >= 2 ? 'Supporter of Vinland' : "Name on the Supporters' Wall"}</dd>` : ''}${h.job ? `<dt>Profession</dt><dd>${esc(h.job)}</dd>` : ''}${h.staffOf ? `<dt>Works at</dt><dd>@${esc(h.staffOf.owner.user)}'s ${esc(h.staffOf.job.toLowerCase().replace(/\s*(owner|landlord)$/, ''))} · ${h.staffOf.area === 'se' ? 'New Market' : 'Market'} shop ${h.staffOf.n}</dd>` : ''}<dt>Joined</dt><dd>Day ${h.joined}</dd></dl>
      <div class="row2"><button class="btn ghost" id="shareHome">Copy link to this home</button>${h.shopRef || h.staffOf ? `<button class="btn ghost" id="visitShop">${h.shopRef ? 'Visit their shop' : 'Visit their workplace'}</button>` : ''}${link}</div>`);
   const vs = document.getElementById('visitShop'); if (vs) vs.onclick = () => selectShop(h.shopRef || h.staffOf);
   { const row = cardBody.querySelector('.row2'); if (row && h.status !== 'hidden') { const pb = document.createElement('button'); pb.className = 'btn'; pb.textContent = (window.VSOC && window.VSOC.user && h.user && h.user.toLowerCase() === window.VSOC.user) ? '🛂 My passport' : '🛂 Passport'; pb.onclick = () => openPassport(h, where); row.prepend(pb); } }
@@ -2495,6 +2496,9 @@ function formalGarden(p, x, z, w, d) {
 }
 let govBuilt = null, govSites = null;
 const LOTS = {};   // Villa Lane plots (old Commercial Lane) by number: position, facing, and the 'Villa plot' sign
+const MLANE = { lots: [[105.5, -719.6], [156.5, -719.6], [212, -719.6], [262, -719.6]], deep: 1.166, mz: -725.5 };   // the mansion piece runs from local z -30.9 (gate) to +21 (pool): placed so the gate sits at the back road (z -689.5) and the pool side reaches the beach road (z -750)   // MANSION ROW (Dev, 17 Nov): the 2 east beach-shop blocks on the beach road, 4 plots, lot 101 next to Beach Square; gate on the back road, pool facing the beach
+MLANE.lots.forEach(([x, z], k) => { LOTS[101 + k] = { x, z, ry: Math.PI, sg: 1, mansion: true }; });
+const isMansion = lot => lot >= 101;
 (function drawNorth() {
   const hide = new THREE.Matrix4().makeScale(0, 0, 0);
   spots.forEach(([x, z], i) => {
@@ -3604,6 +3608,36 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
 // ---- NEW DISTRICT ground (v3, 16 Nov): natural green belt (trees, rocks, bushes on the map's own grass), the street grid, one road on
 // z 0 with the gate, the lake park (natural lake, trees, rocks, no houses), shop street + big-building lots (later), a small
 // transport area (kit bus bay + buses) beside the school grounds ----
+// ---- MANSION LANE (Dev, 16 Nov): the beachfront strip between the beach flats' road (z -690) and the sand, x 650..1066. A promenade
+// with lamps along the sand, trees between the lots, and a small 'Mansion plot' sign on every lot nobody owns yet (hidden when one is built).
+(function drawMansionLane() {
+  const N = { edge: false, shadow: false }, g = new THREE.Group(), palms = [];
+  // MANSION ROW plots: lawn over the old shop blocks, then per plot a sand pad, white outline and a sign by the back road (hidden once built)
+  [[80.5, 181.5], [186.5, 287.5]].forEach(([a, b]) => B(g, b - a, 0.12, 62, '#a9cf78', (a + b) / 2, 0.03, -719.5, N));
+  Object.keys(LOTS).filter(k => +k >= 101).forEach(k => { const L = LOTS[k], sg = new THREE.Group();
+    B(sg, 48, 0.14, 57, '#f3e3bd', L.x, 0.05, L.z, { edge: false });
+    [[0, -29.3, 49, 0.4], [0, 29.3, 49, 0.4], [-24.5, 0, 0.4, 58.6], [24.5, 0, 0.4, 58.6]].forEach(([dx, dz, w, d]) => B(sg, w, 0.5, d, '#f6f3ea', L.x + dx, 0.05, L.z + dz, { edge: false }));
+    signBoard(sg, 'MANSION PLOT ' + (k - 100), L.x, 1.6, -692, 6.4, 1.1, '#3a2a20', '#f6d27a', 0); scene.add(sg); L.sign = sg; });
+  // natural edge in front of the row: palms and bushes along the beach-road pavement, flowering shrubs at the block corners
+  for (let x = 84; x <= 286; x += 11) if (Math.abs(x - 184) > 5) palms.push([x, -752.6]);
+  [[83, -690.5], [179, -690.5], [189, -690.5], [285, -690.5]].forEach(([x, z]) => { tree(g, x, 0.1, z, 'pink', 0.85); });
+  for (let x = 88; x <= 284; x += 22) if (Math.abs(x - 184) > 8) add(g, new THREE.IcosahedronGeometry(1.1, 0), (x / 22 | 0) % 2 ? '#4f8a42' : '#5e9a4e', x + 5, 0.6, -753.4, { edge: false });
+  // THE CLUB (the square block at the river end, x 556..637, z -770..-693): 2 clay tennis courts on the sea side, a fountain square
+  // with palms, hedges, flower beds and benches on the street side
+  const CL = { x0: 556, x1: 637, z0: -770, z1: -693 }, cxc = (CL.x0 + CL.x1) / 2, czc = -712;
+  B(g, CL.x1 - CL.x0, 0.1, CL.z1 - CL.z0, '#a9cf78', cxc, 0.04, (CL.z0 + CL.z1) / 2, N);
+  add(g, new THREE.CylinderGeometry(13, 13, 0.12, 40), '#efe6d2', cxc, 0.07, czc, { edge: false }); B(g, CL.x1 - CL.x0 - 6, 0.12, 4, '#efe6d2', cxc, 0.06, czc, N); B(g, 4, 0.12, CL.z1 - czc, '#efe6d2', cxc, 0.06, (CL.z1 + czc) / 2, N);
+  [[CL.x0 + 1.5, (CL.z0 + CL.z1) / 2, 1.2, CL.z1 - CL.z0 - 4], [CL.x1 - 1.5, (CL.z0 + CL.z1) / 2, 1.2, CL.z1 - CL.z0 - 4], [cxc, CL.z1 - 1.5, CL.x1 - CL.x0 - 4, 1.2]].forEach(([x, z, w, d]) => B(g, w, 0.9, d, '#4f8a42', x, 0.1, z, { edge: false }));
+  for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + 0.39; palms.push([cxc + Math.cos(a) * 17, czc + Math.sin(a) * 17]); }
+  [[-1, 1], [1, 1]].forEach(([a, b]) => { flowerBed(g, cxc + a * 28, czc + b * 10, a > 0 ? C.pink : C.purple); bench(g, cxc + a * 10, czc + b * 8, Math.atan2(-a, -b)); });
+  [[-1], [1]].forEach(([a]) => bench(g, cxc + a * 10, czc - 8, Math.atan2(-a, 1)));
+  bakeKeep(g, 'mansionlane');
+  whenKit(() => { const K = window.VinlandKit, T = new THREE.Group(), put = (key, o, x, z, ry, sc) => { const m = K.make(key, o || {}); m.position.set(x, 0, z); m.rotation.y = ry || 0; if (sc) m.scale.setScalar(sc); T.add(m); };
+    palms.forEach(([x, z], i) => put('palmTree', {}, x, z, i * 1.7));
+    put('grandFountain', {}, cxc, czc, 0, 1.3);
+    put('court', { sport: 'tennis', floor: '#c8603f' }, cxc - 12, -752, 0); put('court', { sport: 'tennis', floor: '#c8603f' }, cxc + 12, -752, 0);
+    scene.add(bakeGroup(T)); });
+})();
 (function drawGardenDistrict() {
   const N = { edge: false, shadow: false }, g = new THREE.Group(), hide = new THREE.Matrix4().makeScale(0, 0, 0), ZN = GD.ZN, ZS = GD.ZS, R = GD.RZ, SX = GD.SX;
   spots.forEach(([x, z], i) => { if (x > GD.XW - 8 && x < GD.XE + 3 && z > -ZN - 8 && z < ZS + 8) { cr.setMatrixAt(i, hide); tk.setMatrixAt(i, hide); } });
@@ -3780,9 +3814,9 @@ for (const [a, b] of [[-178, -84], [84, 178], [190, 284]]) for (let x = a + 6; x
     const aw = B(sg, 9.2, 0.18, 2.8, AW[k % AW.length], 0, 3.6, -5.1, N); aw.rotation.x = -0.32;
     for (let a = -3.9; a <= 3.9; a += 1.95) B(sg, 0.9, 0.2, 2.82, '#fbf6ec', a, 3.61, -5.1, N).rotation.x = -0.32;
     B(sg, 7, 0.9, 0.2, AW[(k + 2) % AW.length], 0, 4.3, -4.12, N); };
-  for (const [a, b] of [[-178, -84], [84, 178], [190, 284]]) for (let x = a + 6; x <= b - 4; x += 11) shop(x);
+  for (const [a, b] of [[-178, -84]]) for (let x = a + 6; x <= b - 4; x += 11) shop(x);   // (17 Nov) the 2 east blocks are Mansion Row now
   // parking behind the shops, palms between
-  for (const [a, b] of [[-178, -84], [84, 178], [190, 284]]) { const cx = (a + b) / 2; B(g, b - a - 4, 0.12, 22, '#4f5259', cx, 0.03, SHORE.zEnd - 18, N);
+  for (const [a, b] of [[-178, -84]]) { const cx = (a + b) / 2; B(g, b - a - 4, 0.12, 22, '#4f5259', cx, 0.03, SHORE.zEnd - 18, N);
     for (let x = a + 4; x <= b - 6; x += 2.9) { B(g, 0.12, 0.02, 5, '#f1eee6', x, 0.16, SHORE.zEnd - 13, N); B(g, 0.12, 0.02, 5, '#f1eee6', x, 0.16, SHORE.zEnd - 23, N);
       if ((x * 13 | 0) % 3) { const c = new THREE.Group(); c.position.set(x + 1.45, 0.14, SHORE.zEnd - ((x * 7 | 0) % 2 ? 13 : 23)); g.add(c); const col = ['#c8603f', '#3d6be0', '#f4efe4', '#2f5d4a', '#e0a33a'][(x | 0) % 5 < 0 ? 0 : (x | 0) % 5];
         B(c, 1.9, 0.75, 4, col, 0, 0.25, 0); B(c, 1.7, 0.6, 2.1, col, 0, 1.0, -0.2); B(c, 1.75, 0.45, 2, C.glass, 0, 1.05, -0.2, N); } }
@@ -3868,7 +3902,7 @@ for (const [a, b] of [[-178, -84], [84, 178], [190, 284]]) for (let x = a + 6; x
       B(v, 8, 0.4, 8, '#b08055', 0, 0.8, 0, N); B(v, 6, 3, 5.5, '#f3e3c6', 0, 1.2, -0.5); hip(v, 7, 2, 6.5, C.terra, 0, 4.2, -0.5); B(v, 0.45, 2, 0.22, C.shutter, -2.4, 1.6, 2.3, N); B(v, 0.45, 2, 0.22, C.shutter, 2.4, 1.6, 2.3, N); B(v, 4, 2, 0.2, C.glass, 0, 1.6, 2.3, N);
       B(v, Math.abs(dx) - 1.5, 0.3, 1.2, '#b08055', -Math.sign(dx) * (Math.abs(dx) / 2 + 0.8), 0.8, 0, N); }
     window.RESORT_OBJ = bakeKeep(R, 'resort'); }
-  BEACH.shops = shopsAt.length;
+  BEACH.shops = 24;   // shop numbers 45-68 stay reserved (53-68 = Mansion Row land since 17 Nov)
   window.BEACH_OBJ = bakeKeep(g, 'beachtown');
 })();
 function beachCard() {
@@ -4146,6 +4180,7 @@ function drawVillas(hs) {
   villaObjs.forEach(o => { scene.remove(o); o.traverse(m => { const k = pickables.indexOf(m); if (k >= 0) pickables.splice(k, 1); }); }); villaObjs = [];
   hs.filter(h => h.villa).forEach(h => { const L = LOTS[h.villa]; if (!L) return;
     if (bigLots.has(h.villa)) console.warn('Villa Lane plot ' + h.villa + ' is also a business lot');
+    if (L.mansion) { if (L.sign) L.sign.visible = false; whenKit(() => { const g = new THREE.Group(), m = window.VinlandKit.make('mnSpanish', { name: h.user }); m.scale.set(1, 1.05, MLANE.deep); g.add(m); g.position.set(L.x, 0, MLANE.mz); g.rotation.y = L.ry; villaObjs.push(bakeKeep(g, 'mansion:' + h.villa)); }); return; }
     const g = villaModel(h.user); g.position.set(L.x, 0, L.z); g.rotation.y = L.ry; villaObjs.push(bakeKeep(g, 'villa:' + h.villa)); if (L.sign) L.sign.visible = false; });
 }
 let bigLotObjs = [], bigLotLbls = [];
@@ -5537,7 +5572,7 @@ function startWalk(from) {
     if (from && from.x !== undefined) { sx = from.x; sz = from.z; }
     const fb = from && from.flat && RS.blds.find(b => b.id === from.flat.bid);   // flat people: start on the pavement outside the front door, not inside the building (15 Nov)
     if (fb) { sx = fb.x + Math.sin(fb.ry) * 16; sz = fb.z + Math.cos(fb.ry) * 16; }
-    else if (from && from.ry !== undefined && from.x !== undefined) { const D = from.villa ? 15 : 9; sx += Math.sin(from.ry) * D; sz += Math.cos(from.ry) * D; }   // house + villa people: start out front by the door, never inside the house or its fenced yard (16 Nov)
+    else if (from && from.ry !== undefined && from.x !== undefined) { const D = from.villa ? (isMansion(from.villa) ? -30 : 15) : 9; sx += Math.sin(from.ry) * D; sz += Math.cos(from.ry) * D; }   // house + villa people: start out front by the door, never inside the house or its fenced yard (16 Nov)
     [WALK.x, WALK.z] = nearestFree(sx, sz);
     if (fb) { a = Math.atan2(fb.x - WALK.x, fb.z - WALK.z); }
     else if (from && from.x !== undefined) { const ox = WALK.x - from.x, oz = WALK.z - from.z, l = Math.hypot(ox, oz) || 1;   // step a few metres out, so you see your home

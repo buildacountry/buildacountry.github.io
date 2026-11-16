@@ -2181,6 +2181,8 @@
       CYL(g, 0.05, 1.3, 0.45, 8, PAL.cream, 0, 3.1, 0, { open: true }); oct(g, 0.1, CP.BULB, 0, 2.9, 0); B(g, 1.4, 0.3, 0.04, PAL.cream, 0, 0.75, 0.52, FLAT); return g; } });
 
   // 9. piazza: grand fountain + event stage
+  def({ key: 'palmTree', name: 'Palm tree', cat: 'Nature', part: 2, budget: 120, size: 'about 9 m tall', opts: {},   // the mansion's palm, on its own (16 Nov: Mansion Lane)
+    make() { const g = new THREE.Group(); palm(g, 0, 0, 0, 1.7, 0.15); return g; } });
   def({ key: 'grandFountain', name: 'Grand fountain', cat: 'Downtown', part: 2, budget: 450, size: '14 m across', night: true, opts: {},
     make() { const g = new THREE.Group(), ST = '#e8dcc2', WT = glowMat(PAL.water, '#3f8fb0'), SPR = glowMat('#cdeaf3', '#6ec3dc');
       CYL(g, 7, 7.3, 0.9, 16, ST, 0, 0, 0, { open: true }); CYL(g, 7.4, 7.4, 0.2, 16, ST, 0, 0.9, 0, { open: true, edge: false }); CYL(g, 6.9, 6.9, 0.6, 16, WT, 0, 0.05, 0, NE);
@@ -2960,6 +2962,119 @@
     }
     return g;
   }
+
+  // ================= MANSION LANE (Dev OK'd, 16 Nov) =================
+  // mnSpanish: a Spanish-style beach mansion, the first paid mansion on Mansion Lane (owner amorydsmt). 50 x 42 m lot, front (+z) faces the sea.
+  // v2 (Dev, 16 Nov evening): taller than the villa (4.2 m floors) + a corner mirador tower (open arches, tile hip roof, ~15.5 m), bright white walls
+  // (a soft day glow keeps the shaded street side white), and a real entrance on the street side: grand arched gate between thick pillars with
+  // lanterns, open iron double gates, the owner's name in gold above the arch, a sand-paved drive to an entrance court round a flower bed, an
+  // arched porch with 2 columns + 3 steps + a wooden double door + potted plants, a white open-top sports car (no brand) and a carport.
+  // Inside: back wing + 2 side wings round a courtyard (tiled fountain, garden), a 1-floor arched loggia on the sea side with a rooftop garden,
+  // wooden balconies with iron rails and flower boxes, bougainvillea, palms, pool + deck + loungers. Options: name, pool, fountain.
+  def({ key: 'mnSpanish', name: 'Spanish beach mansion', cat: 'Homes', part: 2, budget: 3400, size: 'Mansion Lane lot 50 × 51 m · house 30 × 22 m · 2 floors + mirador (15.5 m)', night: true,
+    opts: { name: { label: 'Name', choices: ['amorydsmt', 'Casa del Mar'] }, pool: choices('Pool', ['on', 'off']), fountain: choices('Fountain', ['on', 'off']) },
+    make(o) {
+      const g = new THREE.Group(), R = PAL.terra, TILE = '#d9a07a', SANDP = '#e6cfa2', WOOD = '#7a4a2c', IRON = '#2f2b28', OLIVE = '#8a9a5b';
+      const W = (() => { const m = glowMat('#fbfaf5', '#141210'); m.userData.dayGlow = '#5a564e'; m.emissive.set('#5a564e'); return m; })();   // bright white, also in shade
+      const BOUG = ['#d8508a', '#e86aa0', '#c9407a'], FLOW = ['#e05a8a', '#f2c14e', '#d8303a', '#a084c8', '#f08a3a'];
+      const blob = (p, x, y, z, a, b, c, m, op) => put(p, geo('octa1', () => new THREE.OctahedronGeometry(1, 0)), m, x, y, z, Object.assign({ s: [a, b, c], ry: (x * 3.7 + z * 1.3) % 1.5 }, op));   // 8-triangle plant blobs (lots of plants, low cost)
+      const win = (p, x, y, z, w, h, ry, shut) => { const op = ry ? { ry } : {}, s = Math.sin(ry || 0), cz = Math.cos(ry || 0);
+        P(p, w + 0.3, h + 0.3, W, x, y - 0.15, z, op); P(p, w, h, winAt(x, y, z), x + s * 0.03, y, z + cz * 0.03, op);
+        if (shut) [-1, 1].forEach(k => P(p, w * 0.46, h, WOOD, x + cz * k * (w * 0.73 + 0.12) + s * 0.05, y, z - s * k * (w * 0.73 + 0.12) + cz * 0.05, op)); };
+      const balc = (x, y, z, ry, i) => { const b = grp(g, x, y, z, ry || 0), w = 3.2;
+        B(b, w, 0.25, 1.2, WOOD, 0, 0, 0.6, NE); B(b, w, 0.9, 0.06, IRON, 0, 0.25, 1.17, FLAT);
+        B(b, w - 0.4, 0.4, 0.34, FLOW[i % 3], 0, 1.15, 1.3, NE); P(b, 1.2, 2.4, winAt(x, y, z), 0, 0.25, 0.03); };
+      const FH = 4.2, H = 2 * FH, Z = -3, ZS = -29.8, ZC = -22;                                        // floors 4.2 m; house where v1 had it; street wall ZS; turning circle ZC
+      // ---- lot + garden walls (gap for the gate on the street side)
+      B(g, 50, 0.2, 51, PAL.grass, 0, 0, -4.5, { shadow: false });
+      [-1, 1].forEach(s => { B(g, 21.1, 1.4, 0.4, W, s * 14.45, 0.2, ZS, NE); B(g, 0.4, 1.4, 50.6, W, s * 24.8, 0.2, -4.5, NE); B(g, 23.4, 1.0, 0.4, W, s * 13.3, 0.2, 20.8, NE); });
+      // ---- the grand gate (built facing +z, turned to face the street)
+      { const gt = grp(g, 0, 0.2, ZS, Math.PI);
+        [-3.3, 3.3].forEach(x => { B(gt, 1.4, 3.6, 1.4, W, x, 0, 0); B(gt, 1.7, 0.3, 1.7, R, x, 3.6, 0, NE); B(gt, 0.55, 0.75, 0.55, CP.LAMP, x, 3.9, 0, NE); HIP(gt, 0.9, 0.5, 0.9, IRON, x, 4.65, 0); });
+        SPAN(gt, 5.2, 2.7, W, 0, 2.6, 0.3); B(gt, 5.2, 1.2, 0.6, W, 0, 5.3, 0.3); B(gt, 8, 0.35, 1.6, R, 0, 6.5, 0.3, NE);
+        B(gt, 5.6, 1.3, 0.12, '#1a1714', 0, 5.2, 0.62, NE); P(gt, 5.3, 1.05, textMat(o.name === undefined ? 'amorydsmt' : (o.name || ' '), '#1a1714', '#ffcc2e'), 0, 5.33, 0.75);   // bright gold on dark
+        [-1, 1].forEach(s => { const lf = grp(gt, s * 2.55, 0, 0, s * -1.25);                                // iron double gates, swung open (inwards)
+          B(lf, 2.5, 0.08, 0.08, IRON, -s * 1.25, 2.2, 0, FLAT); B(lf, 2.5, 0.08, 0.08, IRON, -s * 1.25, 0.3, 0, FLAT);
+          [0.15, 2.35].forEach(d => B(lf, 0.06, 2.0, 0.06, IRON, -s * d, 0.3, 0, FLAT)); }); }
+      // ---- terracotta drive: straight from the gate to the front door, ending in a turning circle round a flower bed; carport + car at its side
+      const DRV = '#c8643a', DRV2 = '#b5543a';
+      B(g, 5, 0.06, ZC - ZS + 0.5, DRV2, 0, 0.19, (ZS + ZC) / 2, FLAT); B(g, 4.4, 0.07, ZC - ZS + 0.5, DRV, 0, 0.2, (ZS + ZC) / 2, FLAT);
+      const disc = (r2, m, y) => put(g, geo('disc14', () => new THREE.CircleGeometry(1, 14)), m, 0, y, ZC, { rx: -Math.PI / 2, s: [r2, r2, 1], edge: false, shadow: false });
+      disc(5.4, DRV2, 0.24); disc(5.2, DRV, 0.27);
+      B(g, 4.6, 0.06, 4, DRV, 0, 0.2, ZC + 4, FLAT);                                                                       // on to the porch steps
+      CYL(g, 1.7, 1.8, 0.45, 10, '#e9e2d0', 0, 0.2, ZC, { open: true }); CYL(g, 1.55, 1.55, 0.4, 10, '#6a4a30', 0, 0.25, ZC, NE);
+      [[0, 0, 0.7, OLIVE], [1.0, 0.4, 0.5, FLOW[0]], [-0.9, -0.5, 0.5, FLOW[1]], [-0.4, 0.9, 0.45, FLOW[2]], [0.7, -0.9, 0.45, FLOW[3]]].forEach(([x, z, r2, c], k) => blob(g, x, k ? 0.9 : 1.2, ZC + z, r2, k ? r2 * 0.6 : 1.0, r2, c));
+      B(g, 6, 0.06, 7.4, DRV, 8.8, 0.2, ZC, FLAT);                                                                          // carport pad off the circle
+      [[6.1, ZC - 3.4], [11.5, ZC - 3.4], [6.1, ZC + 3.4], [11.5, ZC + 3.4]].forEach(([x, z]) => B(g, 0.3, 2.8, 0.3, W, x, 0.2, z, NE));
+      B(g, 6.6, 0.35, 7.8, R, 8.8, 3.0, ZC, NE); put(g, geo('ico0', () => new THREE.IcosahedronGeometry(1, 0)), BOUG[1], 11.7, 2.4, ZC, { s: [0.4, 1.4, 2.8], edge: false });
+      { const c = grp(g, 8.8, 0.2, ZC, 0), CW = glowMat('#fbfaf5', '#141210');                                            // the white convertible, under the carport
+        TAPER(c, 2.1, 0.55, 4.7, CW, 0, 0.25, 0, { tw: 0.94, td: 0.96 }); TAPER(c, 1.8, 0.16, 1.5, CW, 0, 0.8, 1.45, { tw: 0.9, td: 0.8, tz: -0.1 });
+        put(c, geo('box', () => new THREE.BoxGeometry(1, 1, 1)), PAL.glass, 0, 1.12, 0.55, { rx: -0.5, s: [1.7, 0.55, 0.05], edge: false });
+        [-0.45, 0.45].forEach(x => { B(c, 0.6, 0.3, 0.7, '#a0522d', x, 0.8, -0.35, NE); B(c, 0.6, 0.6, 0.15, '#a0522d', x, 0.8, -0.75, NE); });
+        [-0.7, 0.7].forEach(x => { P(c, 0.46, 0.12, PAL.lampOn, x, 0.55, 2.36); P(c, 0.5, 0.12, PAL.tail, x, 0.6, -2.36, { ry: Math.PI }); });
+        [[-1, 1.5], [1, 1.5], [-1, -1.5], [1, -1.5]].forEach(([s2, z]) => WHEEL(c, 0.42, 0.36, s2 * 1.02, z, 6)); }
+      palm(g, -4.6, 0.2, ZS + 6.5, 2.0, 0.14); palm(g, 4.6, 0.2, ZS + 6.5, 2.0, 0.14);                                        // palms either side of the drive
+      [-1, 1].forEach(s => { B(g, 1.2, 0.35, 8, '#e05a8a', s * 4.4, 0.2, ZS + 9, NE); });                                  // flower strips along the drive
+      // ---- the house: back wing, side wings (2 tall floors), loggia wing (1 floor, rooftop garden), mirador
+      B(g, 30, H, 8, W, 0, 0.2, -6 + Z); HIP(g, 32, 2.2, 10, R, 0, H + 0.2, -6 + Z);
+      [-1, 1].forEach(s => { B(g, 6, H, 8, W, s * 12, 0.2, 2 + Z); HIP(g, 8, 2.2, 9.6, R, s * 12, H + 0.2, 1.6 + Z); });
+      B(g, 30.4, 0.3, 22.4, '#e9e2d0', 0, 0.2, 1 + Z, NE);
+      // mirador on the front (sea-side) right corner: square lookout, open arches on all 4 sides, tile hip roof
+      { const mx = 12.5, mz = 3.5 + Z, y = H + 0.2; B(g, 5, 1.2, 5, W, mx, y - 0.6, mz); B(g, 5.3, 0.25, 5.3, W, mx, y + 0.6, mz, NE);
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => B(g, 0.8, 3.0, 0.8, W, mx + a * 2.1, y + 0.85, mz + b * 2.1));
+        [0, 1, 2, 3].forEach(k => SPAN(grp(g, mx, 0, mz, k * Math.PI / 2), 3.4, 1.8, W, 0, y + 2.2, 2.5));
+        B(g, 5.4, 0.35, 5.4, W, mx, y + 3.95, mz, NE); HIP(g, 6.6, 2.4, 6.6, R, mx, y + 4.3, mz); }
+      // loggia: 6 piers, 5 round arches to the sea, terracotta floor, glazed arched doors to the courtyard
+      const yl = 5.2, zl = 9 + Z;
+      [-14.4, -8.64, -2.88, 2.88, 8.64, 14.4].forEach(x => B(g, 1.2, 2.6, 1.0, W, x, 0.2, zl + 2.5));
+      [-11.52, -5.76, 0, 5.76, 11.52].forEach(x => SPAN(g, 4.56, 2.4, W, x, 2.8, zl + 3.0));
+      B(g, 30.6, 0.5, 6.6, W, 0, yl, zl, NE); B(g, 30, 0.1, 6, '#c87850', 0, 0.25, zl, FLAT);
+      B(g, 18, yl, 0.4, W, 0, 0.2, zl - 2.8); [-5, 0, 5].forEach(x => { P(g, 1.8, 2.6, winAt(x, 1, 3), x, 0.3, zl - 2.57); ARCH(g, 1.8, winAt(x, 2, 3), x, 2.9, zl - 2.57); });
+      // rooftop garden on the loggia
+      const yt = yl + 0.5; B(g, 29, 0.08, 5.6, TILE, 0, yt, zl, FLAT); B(g, 30.6, 0.8, 0.3, W, 0, yt, zl + 3.15, NE); [-1, 1].forEach(s => B(g, 0.3, 0.8, 6.6, W, s * 15.15, yt, zl, NE));
+      [[-3.5, -2], [3.5, -2], [-3.5, 2], [3.5, 2]].forEach(([x, z]) => B(g, 0.25, 2.6, 0.25, WOOD, x, yt, zl + z, FLAT));
+      [-2, 0, 2].forEach(z => B(g, 7.6, 0.2, 0.2, WOOD, 0, yt + 2.6, zl + z, FLAT)); blob(g, -3.5, yt + 2.9, zl, 1.2, 0.4, 2.4, BOUG[0], NE);
+      [-10, -6.5, 6.5, 10].forEach((x, i) => { B(g, 2.6, 0.6, 1.0, R, x, yt, zl + 1.8, NE);
+        if (i % 3 === 0) { CYL(g, 0.1, 0.14, 1.2, 5, WOOD, x, yt + 0.6, zl + 1.8, { edge: false, open: true }); ICO(g, 0.9, 0, OLIVE, x, yt + 2.0, zl + 1.8); }
+        else blob(g, x, yt + 0.9, zl + 1.8, 1.1, 0.45, 0.4, FLOW[i]); });
+      [-8, 8].forEach((x, i) => plant(g, x, yt, zl - 1.8, FLOW[i + 2])); blob(g, -13, yt + 0.7, zl - 1.4, 0.9, 0.7, 0.9, OLIVE);
+      // street side: arched porch (2 columns, 3 steps, double door, pots), windows + balconies
+      { const pr = grp(g, 0, 0.2, -10 + Z, Math.PI);
+        B(pr, 5, 0.5, 2.8, '#e9e2d0', 0, 0, 1.4, NE); [0, 1, 2].forEach(k => B(pr, 4.6 - k * 0.2, 0.5 - k * 0.17, 0.5, '#e9e2d0', 0, 0, 3.05 + k * 0.5, NE));
+        [-1.9, 1.9].forEach(x => CYL(pr, 0.32, 0.38, 3.3, 8, W, x, 0.5, 2.5)); SPAN(pr, 3.2, 1.7, W, 0, 2.2, 2.85);
+        B(pr, 5, 0.45, 3.0, W, 0, 3.8, 1.4, NE); B(pr, 5.6, 0.3, 3.4, R, 0, 4.25, 1.4, NE);
+        P(pr, 2.6, 3.0, W, 0, 0.5, 0.02); [-0.6, 0.6].forEach(x => P(pr, 1.15, 2.7, WOOD, x, 0.55, 0.05)); ARCH(pr, 2.4, WOOD, 0, 3.25, 0.05);
+        [-1, 1].forEach(s => { B(pr, 0.8, 0.8, 0.8, R, s * 2.9, 0, 3.3, NE); blob(pr, s * 2.9, 1.4, 3.3, 0.7, 0.9, 0.7, PAL.leaf2); [0, 1, 2].forEach(k => plant(pr, s * (1.8 - k * 0.1), 0.5 - k * 0.17, 3.05 + k * 0.5, FLOW[(k + (s > 0 ? 1 : 3)) % 5])); }); }
+      [-12, -6, 6, 12].forEach((x, i) => { win(g, x, 1.4, -10 + Z - 0.02, 1.5, 1.9, Math.PI, true); if (i % 3) balc(x, FH + 0.2, -10 + Z, Math.PI, i); else win(g, x, FH + 1.2, -10 + Z - 0.02, 1.5, 1.8, Math.PI, true); });
+      win(g, 0, FH + 1.6, -10 + Z - 0.02, 1.4, 1.6, Math.PI, false);
+      balc(0, FH + 0.2, -2 + Z, 0, 2); [-9, 9].forEach(x => win(g, x, FH + 1.2, -2 + Z + 0.02, 1.5, 1.8, 0, false));
+      [-1, 1].forEach(s => { balc(s * 15, FH + 0.2, 2 + Z, s * Math.PI / 2, 1); win(g, s * 15.02, 1.4, 2 + Z, 1.5, 1.9, s * Math.PI / 2, true);
+        win(g, s * 15.02, 1.4, -7 + Z, 1.5, 1.9, s * Math.PI / 2, false); win(g, s * 15.02, FH + 1.2, -7 + Z, 1.5, 1.8, s * Math.PI / 2, false);
+        P(g, 2.4, 2.6, winAt(s, 5, 3), s * 12, yt + 0.1, 6.03 + Z); win(g, s * 9.02, 1.4, 2 + Z, 1.5, 1.9, -s * Math.PI / 2, false); });
+      [[-14.9, 5.4, -3 + Z, 0.3, 1.8, 1.8], [14.9, 5.6, -1 + Z, 0.3, 2.0, 1.6], [-15.1, 2.8, 9.5 + Z, 0.4, 1.9, 2.2], [15.1, 2.6, 8.5 + Z, 0.4, 1.7, 2.0],
+       [-9, 7.6, -10.1 + Z, 1.8, 1.4, 0.3], [9, 7.4, -10.1 + Z, 1.6, 1.2, 0.3], [-9, 7.4, -1.8 + Z, 1.6, 1.2, 0.3], [-5.6, 1.5, ZS + 0.5, 1.5, 1.3, 0.6], [5.6, 1.5, ZS + 0.5, 1.5, 1.3, 0.6]]
+        .forEach(([x, y, z, a, b, c], i) => put(g, geo('ico0', () => new THREE.IcosahedronGeometry(1, 0)), BOUG[i % 3], x, y, z, { s: [a, b, c], edge: false }));   // bougainvillea: rounder clumps
+      [[-9, -13.7 , 7, 0.9], [9, -13.7, 7, 0.9], [-15.7, -6, 0.9, 7], [15.7, -6, 0.9, 7], [-15.7, 5, 0.9, 6], [15.7, 3, 0.9, 6]].forEach(([x, z, w, d], k) => {
+        B(g, w, 0.35, d, '#6a4a30', x, 0.2, z, NE); blob(g, x - (w > 1 ? w / 4 : 0), 0.75, z - (d > 1 ? d / 4 : 0), w > 1 ? 1.4 : 0.5, 0.45, w > 1 ? 0.5 : 1.4, FLOW[k % 5]);
+        blob(g, x + (w > 1 ? w / 4 : 0), 0.75, z + (d > 1 ? d / 4 : 0), w > 1 ? 1.4 : 0.5, 0.45, w > 1 ? 0.5 : 1.4, k % 2 ? PAL.leaf2 : FLOW[(k + 2) % 5]); });   // flower beds along the walls
+      // ---- inner courtyard
+      const cz = 2 + Z; B(g, 18, 0.08, 7.8, TILE, 0, 0.5, cz, FLAT); B(g, 6, 0.1, 6, '#eef2f4', 0, 0.5, cz, FLAT); B(g, 4.6, 0.12, 4.6, '#3f6fa8', 0, 0.5, cz, { ry: Math.PI / 4, edge: false, shadow: false });
+      if (o.fountain !== 'off') { CYL(g, 1.9, 2.0, 0.7, 8, '#2f6fa8', 0, 0.5, cz, { open: true }); CYL(g, 1.8, 1.8, 0.5, 8, PAL.water, 0, 0.6, cz, NE);
+        CYL(g, 0.25, 0.35, 1.3, 6, W, 0, 1.0, cz); CYL(g, 0.9, 0.3, 0.35, 8, '#2f6fa8', 0, 2.3, cz); CYL(g, 0.05, 0.7, 0.9, 6, glowMat('#cdeaf3', '#6ec3dc'), 0, 2.6, cz, { open: true, edge: false }); }
+      [[-7, -2.6], [7, -2.6], [-7, 2.8], [7, 2.8]].forEach(([x, z], i) => { B(g, 3, 0.4, 1.6, WOOD, x, 0.5, cz + z, NE); blob(g, x - 0.6, 1.1, cz + z, 0.8, 0.45, 0.6, FLOW[i]); blob(g, x + 0.7, 1.05, cz + z, 0.7, 0.4, 0.55, FLOW[(i + 2) % 5]); });
+      [[-3.5, -3.4], [3.5, -3.4], [-3.5, 3.4], [3.5, 3.4]].forEach(([x, z], i) => plant(g, x, 0.55, cz + z, i % 2 ? PAL.leaf2 : FLOW[i]));
+      [[-8, -3.3], [8, 3.3]].forEach(([x, z]) => { CYL(g, 0.1, 0.14, 1.4, 5, WOOD, x, 0.55, cz + z, { edge: false, open: true }); ICO(g, 0.95, 0, PAL.leaf, x, 2.3, cz + z); oct(g, 0.2, '#f2a03a', x + 0.5, 2.4, cz + z + 0.6, NE); });
+      // ---- sea side (as v1, bigger): white deck + pool in front of the arches, open to the sea, 2 loungers + umbrella; flower beds, bushes, palms
+      B(g, 30, 0.25, 10.4, '#f6f3ea', 0, 0, 15.3, { shadow: false });
+      if (o.pool !== 'off') { B(g, 16, 0.06, 6, '#3fb6d8', 0, 0.25, 15.6, FLAT); B(g, 16.6, 0.12, 0.3, '#e9e2d0', 0, 0.25, 12.45, NE); B(g, 16.6, 0.12, 0.3, '#e9e2d0', 0, 0.25, 18.75, NE); }
+      [10.2, 12.0].forEach(x => { B(g, 0.8, 0.35, 1.6, '#f6f3ea', x, 0.25, 16.4, NE); put(g, geo('box', () => new THREE.BoxGeometry(1, 1, 1)), '#f6f3ea', x, 0.95, 15.4, { rx: -0.9, s: [0.8, 0.1, 0.9] }); });
+      B(g, 0.08, 2.4, 0.08, IRON, 11.1, 0.25, 13.8, FLAT); CYL(g, 0.02, 1.8, 0.6, 6, PAL.terra, 11.1, 2.3, 13.8);
+      [-12, -10].forEach(x => plant(g, x, 0.25, 19.6, FLOW[0])); [-12.5, 12.5].forEach(x => plant(g, x, 0.25, 11.6, FLOW[1]));
+      [[-20, 19.8], [20, 19.8]].forEach(([x, z]) => B(g, 8, 0.35, 1.4, '#e05a8a', x, 0.2, z, NE));
+      [[-20, 2], [20, -8], [-21, 12]].forEach(([x, z], k) => blob(g, x, 0.9, z, 1.4, 0.9, 1.2, k % 3 ? PAL.leaf : PAL.leaf2));
+      palm(g, -19.5, 0.2, 14.5, 2.3, 0.2); palm(g, 20, 0.2, 15.5, 2.4, 0.16);
+      return g;
+    } });
 
   // ---------- tools ----------
   // how many triangles an asset has (outline lines are not counted)
