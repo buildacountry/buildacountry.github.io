@@ -232,7 +232,7 @@ addEventListener('keydown', e => { if (!P.on || e.repeat || e.ctrlKey || e.metaK
 function start() { if (P.on) return; const me = S5 && S5.user ? homes.find(h => h.status === 'active' && h.user.toLowerCase() === S5.user) : null; if (!me) return;
   P.on = true; P.me = me; P.work = workOf(me); P.parked = null; hud.hidden = false; document.body.classList.add('playing'); PLAYHOOK.tick = PLAYHOOK_TICK; PLAYHOOK.onStop = cleanup;
   $('pWho').textContent = '@' + me.user; $('pJob').textContent = (me.job ? me.job + ' · ' : '') + (P.work ? 'works at ' + P.work.name : 'Home № ' + me.n); pTag.textContent = '@' + me.user;
-  driveRoads(); { const lk = lookOf(me.user) || {}, kind = lk.car && lk.car !== 'carHatch' && KIT && KIT[lk.car] && KMH[lk.car] ? lk.car : '', paint = lk.paint && KITSET.paints[lk.paint], key = kind + '|' + (paint || '');   // "the car you chose" (Vinland Shop) with its paint
+  driveRoads(); { const lk = lookOf(me.user) || {}, kind = lk.car && lk.car !== 'carHatch' && KIT && KIT[lk.car] && KMH[lk.car] ? lk.car : (me.villa && KIT && KIT.carSports ? 'carSports' : ''), paint = (lk.paint && KITSET.paints[lk.paint]) || (me.villa && !lk.car ? '#d8231f' : ''), key = kind + '|' + (paint || '');   // "the car you chose" (Vinland Shop) with its paint
     if (!P.own || P.ownKey !== key) { if (P.own) scene.remove(P.own.mesh); P.ownKey = key; const base = carLook(me.user);
       if (kind) { P.own = mkKitCar(kind, { body: paint || base.colour }); P.own.kind = 'own'; P.own.kmh = KMH[kind]; P.own.vmax = KMH[kind] / 3.6; } else P.own = mkCar('own', paint ? Object.assign({}, base, { colour: paint }) : base); } }
   P.cars = [P.own]; park(P.own, me.x, me.z);

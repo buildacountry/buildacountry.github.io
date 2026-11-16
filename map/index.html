@@ -5537,6 +5537,7 @@ function startWalk(from) {
     if (from && from.x !== undefined) { sx = from.x; sz = from.z; }
     const fb = from && from.flat && RS.blds.find(b => b.id === from.flat.bid);   // flat people: start on the pavement outside the front door, not inside the building (15 Nov)
     if (fb) { sx = fb.x + Math.sin(fb.ry) * 16; sz = fb.z + Math.cos(fb.ry) * 16; }
+    else if (from && from.ry !== undefined && from.x !== undefined) { const D = from.villa ? 15 : 9; sx += Math.sin(from.ry) * D; sz += Math.cos(from.ry) * D; }   // house + villa people: start out front by the door, never inside the house or its fenced yard (16 Nov)
     [WALK.x, WALK.z] = nearestFree(sx, sz);
     if (fb) { a = Math.atan2(fb.x - WALK.x, fb.z - WALK.z); }
     else if (from && from.x !== undefined) { const ox = WALK.x - from.x, oz = WALK.z - from.z, l = Math.hypot(ox, oz) || 1;   // step a few metres out, so you see your home
