@@ -1433,9 +1433,9 @@ function plazaSlots() {   // every brick place on the plaza, ring by ring
 }
 const PLAZA_COL = [['#e4a27c', '#d6906a', '#c98360'], ['#efe0c2', '#e6d3b0', '#dccaa4']];
 // ⭐ SUPPORTERS: only people who really supported (their own money). Add them here by hand: 'username': 'wall' | 'supporter' | 'patron' | 'villa' | 'landmark'
-const SUPPORT = { '_aman.sriva_': 'villa' };   // 11 Nov: first villa owner (Dev's friend, his own money)
+const SUPPORT = { '_aman.sriva_': 'villa', 'devsinghbuilds': 'villa' };   // 11 Nov: first villa owner (Dev's friend, his own money) · 16 Nov: devsinghbuilds, villa (first-5 villas are pay-what-you-want, Dev)
 // 🏡 VILLAS (Home upgrade 'Villa', a real support): 'username': Villa Lane plot number. The citizen MOVES into the villa; their old plot goes to the next new citizen.
-const VILLAS = { '_aman.sriva_': 6 };   // keep them in the order they bought (the first one is 'Villa Lane's first owner')
+const VILLAS = { '_aman.sriva_': 6, 'devsinghbuilds': 5 };   // keep them in the order they bought (the first one is 'Villa Lane's first owner')
 const villaRank = u => Object.keys(VILLAS).indexOf(String(u || '').toLowerCase()) + 1;
 // 🎨 STYLE (Supporter perk "your style"): your citizen's outfit and your home's colours. Add by hand after a real support:
 //   'username': { shirt: '#hex', pants: '#hex', hair: '#hex', wall: '#hex', roof: '#hex' }   (any field can be left out)
