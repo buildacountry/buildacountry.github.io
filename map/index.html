@@ -2126,7 +2126,8 @@ const SE = { x0: 182, x1: 290, z0: 184, z1: 268, cx: 236, cz: 226 };
 function buildMarket(hs) {
   shops.forEach(s => s.el.remove()); shops.length = 0; openSpots.length = 0;
   const hasCol = hs.some(h => h.shopCol !== undefined);
-  const owners = hs.filter(h => h.status !== 'abandoned' && h.status !== 'hidden' && h.job && (hasCol ? h.shopCol : SHOP_JOBS.test(h.job)));
+  const CLOSED = k => k >= 52 && k <= 67;   // shop spots 53-68 = Mansion Row land since 17 Nov: nobody is placed there (owners moved to the Mall / spot 48)
+  const owners = hs.filter(h => h.status !== 'abandoned' && h.status !== 'hidden' && h.job && (hasCol ? h.shopCol : SHOP_JOBS.test(h.job)) && !CLOSED(h.shopNum - 1));
   // a number in the shop column pins the shop to that Market spot; "yes" takes the first free spot
   const taken = new Map();
   owners.filter(h => !h.staff).forEach(h => { const k = h.shopNum - 1; if (k >= 0 && k < marketSlots.length && !taken.has(k)) taken.set(k, h); });
@@ -2135,7 +2136,7 @@ function buildMarket(hs) {
   owners.forEach(h => { const k = h.shopNum - 1; if (k >= 0 && taken.has(k) && taken.get(k) !== h) { if (!staffAt.has(k)) staffAt.set(k, []); staffAt.get(k).push(h); } });
   const isStaff = h => [...staffAt.values()].some(l => l.includes(h));
   owners.forEach(h => { if (h.staff || [...taken.values()].includes(h) || isStaff(h)) return;   // "staff N" never takes a shop of its own
-  let k = 0; while (taken.has(k)) k++; if (k < marketSlots.length) taken.set(k, h); });
+  let k = 0; while (taken.has(k) || CLOSED(k)) k++; if (k < marketSlots.length) taken.set(k, h); });
   [...taken.entries()].sort((a, b) => a[0] - b[0]).forEach(([i, h]) => { const sl = marketSlots[i];
     const s = { ...sl, owner: h, job: h.job, n: i + 1, color: AWNINGS[i % AWNINGS.length] };
     const el = document.createElement('div'); el.className = 'lbl shop'; el.innerHTML = `<b>${esc(h.job)}</b> <span>@${esc(h.user)}</span>`; homeLabels.appendChild(el); s.el = el; s.lp = new THREE.Vector3(sl.x, 8.2, sl.z);
@@ -4224,7 +4225,7 @@ function selectLot(n) {
 const MALL_SIDE = { x0: -290, x1: -182, z0: 184, z1: 268, cx: -236, cz: 226 };
 const HOSPITAL_INFO = { day: 6, wishedBy: 'hritu_raj_hajong', others: 5, doctors: ['larr.y057'], nurses: ['imvwnothere'], pharmacy: 'anantjain_pvtt' };
 const MALL_INFO = { day: 6, owner: 'avanti_ray', others: 4,
-  units: [['soft_cosmoss21', 'Opening soon'], ['_so_nglal_', 'Dairy shop'], ['julietprice140811', 'Café'], ['newfilehtml', 'Music studio'], ['vatsalya_mishra_86', 'Burger place'], ['', 'For rent'], ['', 'For rent'], ['', 'For rent']] };
+  units: [['soft_cosmoss21', 'Opening soon'], ['_so_nglal_', 'Dairy shop'], ['julietprice140811', 'Café'], ['newfilehtml', 'Music studio'], ['vatsalya_mishra_86', 'Burger place'], ['ser.ser010', 'Bakery'], ['lordofthepeachrings', 'Ice cream shop'], ['0csucsii0_', 'Dress shop']] };   // 17 Nov: moved from beach shops 53-55 (Mansion Row)
 const HOSP_POS = { x: -203, z: 216 };
 // the 4 Market corners: [sx, sz] of the corner, business name, what it is, owners, staff, awning colour
 const CORNER_SHOPS = [
