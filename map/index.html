@@ -2937,8 +2937,7 @@ function bankCard() {
 // ---------- NATIONAL STADIUM card + PENALTY SHOOTOUT (16 Nov). The game file loads only when someone taps Play. ----------
 const STAD = { x: 822, z: -128, rx: 47, rz: 34 };
 function stadiumAt(cx, cy) { const r = renderer.domElement.getBoundingClientRect(); m2.set((cx - r.left) / r.width * 2 - 1, -(cy - r.top) / r.height * 2 + 1); ray.setFromCamera(m2, camera);
-  const pt = new THREE.Vector3(); if (!ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), pt)) return false;
-  return ((pt.x - STAD.x) / STAD.rx) ** 2 + ((pt.z - STAD.z) / STAD.rz) ** 2 <= 1; }
+  const pt = new THREE.Vector3(); return [0, -10].some(h => ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), h), pt) && ((pt.x - STAD.x) / STAD.rx) ** 2 + ((pt.z - STAD.z) / STAD.rz) ** 2 <= 1); }   // ground or the top of the stands
 function stadiumCard() {
   return ['Riverside · next to the Business District', 'Vinland National Stadium',
     `<p class="p">Opened at 2,000 citizens. The home of Vinland football, with a training pitch, sports hall, pool and courts around it.</p>
@@ -4622,7 +4621,7 @@ renderer.domElement.addEventListener('pointermove', e => { if (e.pointerType !==
 renderer.domElement.addEventListener('pointerdown', e => { if (WALK.on || DRV.on) return; down = [e.clientX, e.clientY]; fly = null; stopTour(); });
 renderer.domElement.addEventListener('pointerup', e => { if (WALK.on || DRV.on) return; if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
   const p = pickAt(e.clientX, e.clientY);
-  if ((!p || p === 'downtown') && stadiumAt(e.clientX, e.clientY)) { selectStadium(); return; }
+  if ((!p || typeof p === 'string') && stadiumAt(e.clientX, e.clientY)) { selectStadium(); return; }   // (18 Nov) the ground under it picks as 'land', so check the stadium first
   if (!p) return;
   if (p.home) { selectHome(p.home); return; }
   if (p.bld) { selectBuilding(p.bld); return; }
