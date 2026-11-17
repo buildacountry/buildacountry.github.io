@@ -3271,6 +3271,74 @@
       return root;
     } });
 
+  // mnRiviera: the standard Mansion Row mansion (no custom request; Dev, 18 Nov: "with that aesthetic and premiumness"). A Vinland Riviera
+  // estate in the town's own colours: cream walls, terracotta hip roofs, green shutters, gold accents. A two-storey centre block with a
+  // double-height portico (4 columns, balustrade balcony) and an octagonal cupola, two 2-storey side pavilions, a palm-lined drive to a
+  // forecourt round a tiered fountain with a champagne sports car (no brand), urns + lanterns, hedges round the plot, the name in gold;
+  // behind: a balustraded terrace, a pool with a pool house, loungers + umbrellas, palms. Mansion Row lot frame (x -25..25, gate at -30.9).
+  def({ key: 'mnRiviera', name: 'Riviera mansion', cat: 'Homes', part: 2, budget: 3800, size: 'Mansion Row lot 50 × 52 m · 2 floors + cupola (15 m)', night: true,
+    opts: { name: { label: 'Name', choices: ['your name', 'Villa Vinland'] }, pool: choices('Pool', ['on', 'off']), wall: colours('Walls', ['#f3e6cc', '#f2cfb3', '#efe6d2']) },
+    make(o) {
+      const root = new THREE.Group(), g = grp(root, 0, 0, -17.9, Math.PI);                        // built facing +z (frame), turned so the entrance faces the gate
+      const y0 = 0.17, FH = 4.0, H = 2 * FH + 0.3, R = PAL.terra, STONE = '#efe6d2', GOLD = '#d9a83a', SH = '#3f6a52', IRON = '#2f2b28', PAVE = '#d9b48a', HEDGE = '#3f6a3a';
+      const W = slot('wall', o.wall || '#f3e6cc');
+      const blob = (x, y, z, a, b, c, m) => put(g, geo('octa1', () => new THREE.OctahedronGeometry(1, 0)), m, x, y, z, { s: [a, b, c], ry: (x * 3.7 + z * 1.3) % 1.5 });
+      const ico = (x, y, z, r, m) => put(g, geo('ico0', () => new THREE.IcosahedronGeometry(1, 0)), m, x, y, z, { s: [r, r, r], edge: false });
+      const win = (x, y, z, w, h, ry, sh) => { const op = ry ? { ry } : {}, s = Math.sin(ry || 0), c = Math.cos(ry || 0);
+        P(g, w + 0.3, h + 0.3, STONE, x, y - 0.15, z, op); P(g, w, h, winAt(x, y, z), x + s * 0.03, y, z + c * 0.03, op);
+        if (sh) [-1, 1].forEach(k => P(g, w * 0.48, h, SH, x + c * k * (w * 0.75 + 0.1) + s * 0.05, y, z - s * k * (w * 0.75 + 0.1) + c * 0.05, op)); };
+      const urn = (x, z, y) => { CYL(g, 0.25, 0.4, 0.5, 6, STONE, x, (y || y0) + 0, z); ico(x, (y || y0) + 1.0, z, 0.5, '#4f8a42'); };
+      const balus = (x0, x1, z, y) => { B(g, x1 - x0, 0.15, 0.35, STONE, (x0 + x1) / 2, y + 0.8, z, NE); B(g, x1 - x0, 0.6, 0.12, STONE, (x0 + x1) / 2, y + 0.2, z, NE); B(g, x1 - x0, 0.2, 0.35, STONE, (x0 + x1) / 2, y, z, NE); };
+      // ---- lot: lawn, hedges, gate pillars with urns + lanterns, iron gates (open), name in gold
+      B(g, 50, 0.05, 51.9, '#8fbf5f', 0, y0, -12.95, { shadow: false, edge: false });
+      [-1, 1].forEach(s => { B(g, 20.3, 1.6, 1.0, HEDGE, s * 14.85, y0, 12.5); B(g, 1.0, 1.6, 51.9, HEDGE, s * 24.5, y0, -12.95);
+        B(g, 1.4, 3.0, 1.4, W, s * 4.1, y0, 12.6); B(g, 1.7, 0.25, 1.7, STONE, s * 4.1, y0 + 3.0, 12.6, NE); urn(s * 4.1, 12.6, y0 + 3.25); B(g, 0.4, 0.6, 0.4, CP.LAMP, s * 3.2, y0 + 2.2, 12.9, NE);
+        const lf = grp(g, s * 3.35, y0, 12.6, -s * 1.1); B(lf, 3.2, 0.07, 0.06, IRON, -s * 1.6, 2.2, 0, FLAT); B(lf, 3.2, 0.07, 0.06, IRON, -s * 1.6, 0.25, 0, FLAT); B(lf, 0.06, 2.0, 0.06, IRON, -s * 3.1, 0.25, 0, FLAT); });
+      B(g, 50, 1.6, 1.0, HEDGE, 0, y0, -38.4);
+      B(g, 6, 1.4, 0.6, W, -10, y0, 13.3); B(g, 6.3, 0.15, 0.8, R, -10, y0 + 1.4, 13.3, NE); B(g, 5.2, 0.9, 0.08, '#1a1714', -10, y0 + 0.25, 13.62, NE);
+      P(g, 4.9, 0.75, textMat(o.name || 'your name', '#1a1714', '#ffcc2e'), -10, y0 + 0.32, 13.67);
+      // ---- palm-lined drive, forecourt round a tiered fountain, the car
+      const disc = (r, m, y) => put(g, geo('disc16', () => new THREE.CircleGeometry(1, 16)), m, 0, y, 6.4, { rx: -Math.PI / 2, s: [r, r, 1], edge: false, shadow: false });
+      B(g, 6, 0.06, 5, PAVE, 0, y0, 10.4, FLAT); disc(6.4, PAVE, y0 + 0.07); disc(2.6, '#8fbf5f', y0 + 0.09);
+      CYL(g, 2.2, 2.3, 0.55, 12, STONE, 0, y0, 6.4, { open: true }); CYL(g, 2.1, 2.1, 0.45, 12, PAL.water, 0, y0 + 0.05, 6.4, NE);
+      CYL(g, 0.3, 0.45, 1.6, 8, STONE, 0, y0, 6.4); CYL(g, 1.1, 0.4, 0.35, 8, STONE, 0, y0 + 1.6, 6.4); CYL(g, 0.18, 0.25, 0.8, 6, STONE, 0, y0 + 1.95, 6.4); CYL(g, 0.55, 0.2, 0.25, 8, STONE, 0, y0 + 2.75, 6.4);
+      CYL(g, 0.05, 0.4, 0.6, 5, glowMat('#cdeaf3', '#6ec3dc'), 0, y0 + 3.0, 6.4, { open: true, edge: false });
+      { const c = KIT.carSports({ body: '#d8c48e' }); c.position.set(4.5, y0 + 0.08, 6.4); c.rotation.y = Math.PI; g.add(c); }
+      [-1, 1].forEach(s => { palm(g, s * 5.4, y0, 11.2, 2.0, 0.1 * s); [3.0, 9.6].forEach(z => urn(s * 7.2, z));
+        B(g, 10, 0.35, 2.6, '#6a5a48', s * 13.5, y0, 3.2, NE); [[9.6, '#e05a8a'], [12, '#f2c14e'], [14.4, '#c86aa0'], [16.8, '#f08a3a']].forEach(([x, c], k) => blob(s * x, y0 + 0.75, 3.0 + (k % 2) * 0.5, 0.8, 0.6, 0.8, c));
+        for (let k = 0; k < 3; k++) { CYL(g, 0.12, 0.16, 0.8, 5, PAL.wood, s * (12 + k * 4), y0, 9.6, { edge: false, open: true }); put(g, geo('cone6', () => new THREE.ConeGeometry(1, 1, 6)), '#3f6a3a', s * (12 + k * 4), y0 + 3.2, 9.6, { s: [0.85, 5.2, 0.85] }); } });
+      // ---- the house: centre block, 2 side pavilions, terracotta hip roofs, cornices, chimneys, cupola
+      B(g, 16, H, 12, W, 0, y0, -6); B(g, 16.3, 0.4, 12.3, STONE, 0, y0, -6, NE); B(g, 16.2, 0.25, 12.2, STONE, 0, y0 + FH + 0.1, -6, NE); B(g, 16.8, 0.45, 12.8, STONE, 0, y0 + H - 0.3, -6, NE);
+      HIP(g, 18.2, 3.2, 14.2, R, 0, y0 + H + 0.15, -6);
+      CYL(g, 1.8, 1.8, 2.2, 8, W, 0, y0 + H + 2.4, -6); for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + Math.PI / 8; P(g, 0.8, 1.3, winAt(k, 14, 0), Math.sin(a) * 1.82, y0 + H + 2.8, -6 + Math.cos(a) * 1.82, { ry: a }); }
+      CYL(g, 0.01, 2.2, 1.8, 8, R, 0, y0 + H + 4.6, -6); BALL(g, 0.25, GOLD, 0, y0 + H + 6.5, -6, NE);
+      [-1, 1].forEach(s => { const x = s * 13;
+        B(g, 10, H - 0.4, 11, W, x, y0, -7); B(g, 10.3, 0.4, 11.3, STONE, x, y0, -7, NE); B(g, 10.2, 0.25, 11.2, STONE, x, y0 + FH + 0.1, -7, NE); B(g, 10.6, 0.4, 11.6, STONE, x, y0 + H - 0.7, -7, NE);
+        HIP(g, 11.8, 2.8, 12.8, R, x, y0 + H - 0.3, -7); B(g, 1.1, 2.6, 1.1, W, x + s * 2.5, y0 + H + 0.9, -9); B(g, 1.3, 0.2, 1.3, R, x + s * 2.5, y0 + H + 3.5, -9, NE);
+        [-2.6, 2.6].forEach(dx => { win(x + dx, y0 + 0.9, -1.48, 1.4, 2.3, 0, true); win(x + dx, y0 + FH + 0.8, -1.48, 1.4, 2.1, 0, true); B(g, 2.0, 0.6, 0.06, IRON, x + dx, y0 + FH + 0.7, -1.2, FLAT); });
+        [-10, -4].forEach(z => [0.9, FH + 0.8].forEach(y => win(s * 18.03, y0 + y, z, 1.4, 2.2, s * Math.PI / 2, true)));
+        [-2.6, 2.6].forEach(dx => [0.9, FH + 0.8].forEach(y => win(x + dx, y0 + y, -12.53, 1.4, 2.2, Math.PI, false))); });
+      // portico: 4 columns, entablature, balustrade balcony, door with fanlight, steps, lanterns
+      B(g, 10.4, 0.45, 4.4, STONE, 0, y0, 2.2); [0, 1, 2].forEach(k => B(g, 7 + k * 0.6, 0.15, 0.5, STONE, 0, y0 + 0.3 - k * 0.15, 4.65 + k * 0.5, NE));
+      [-4.2, -1.5, 1.5, 4.2].forEach(x => { CYL(g, 0.38, 0.45, 7.0, 10, STONE, x, y0 + 0.45, 3.9); B(g, 1.0, 0.3, 1.0, STONE, x, y0 + 7.45, 3.9, NE); });
+      B(g, 10.6, 0.8, 4.6, W, 0, y0 + 7.75, 2.1); B(g, 10.8, 0.12, 4.8, STONE, 0, y0 + 8.55, 2.1, NE); B(g, 10.9, 0.2, 0.12, GOLD, 0, y0 + 8.1, 4.42, NE); balus(-5.2, 5.2, 4.3, y0 + 8.7); [-1, 1].forEach(s => urn(s * 4.8, 4.0, y0 + 8.7));
+      P(g, 2.6, 3.4, STONE, 0, y0 + 0.45, 0.02); [-0.62, 0.62].forEach(dx => P(g, 1.15, 3.0, '#5a3a24', dx, y0 + 0.5, 0.05)); ARCH(g, 2.4, winAt(0, 3, 0), 0, y0 + 3.5, 0.05);
+      P(g, 2.2, 2.6, winAt(0, 5, 0), 0, y0 + FH + 0.6, 0.03); ARCH(g, 2.2, winAt(1, 6, 0), 0, y0 + FH + 3.2, 0.03);
+      [-1, 1].forEach(s => { B(g, 0.45, 0.8, 0.45, CP.LAMP, s * 2.0, y0 + 2.4, 0.3, NE); win(s * 5.6, y0 + 0.9, 0.02, 1.4, 2.4, 0, true); win(s * 5.6, y0 + FH + 0.8, 0.02, 1.4, 2.2, 0, true); });
+      [-5.5, -1.8, 1.8, 5.5].forEach(x => [0.9, FH + 0.8].forEach(y => win(x, y0 + y, -12.03, 1.4, 2.2, Math.PI, true)));
+      // ---- back: balustraded terrace with steps, pool + pool house, loungers, umbrellas, palms, flower beds
+      B(g, 36, 0.6, 6, STONE, 0, y0, -15.5); balus(-18, -3, -18.4, y0 + 0.6); balus(3, 18, -18.4, y0 + 0.6); [0, 1, 2].forEach(k => B(g, 6, 0.2, 0.6, STONE, 0, y0 + 0.4 - k * 0.2, -18.8 - k * 0.6, NE));
+      [-9, 9].forEach(x => { CYL(g, 0.8, 0.8, 0.75, 8, '#f6f3ea', x, y0 + 0.6, -15); [-1, 1].forEach(s => B(g, 0.5, 0.45, 0.5, '#7a4a2c', x + s * 1.2, y0 + 0.6, -15, NE)); B(g, 0.08, 2.4, 0.08, IRON, x, y0 + 0.6, -15, FLAT); CYL(g, 0.02, 1.8, 0.6, 6, '#3f6a52', x, y0 + 2.7, -15); });
+      B(g, 30, 0.25, 13, STONE, 0, y0, -28.5, { shadow: false });
+      if (o.pool !== 'off') { B(g, 18, 0.06, 7, '#3fb6d8', -2, y0 + 0.25, -28.5, FLAT); B(g, 18.6, 0.14, 0.35, '#e9e2d0', -2, y0 + 0.25, -24.85, NE); B(g, 18.6, 0.14, 0.35, '#e9e2d0', -2, y0 + 0.25, -32.15, NE); }
+      B(g, 6, 3.2, 5, W, 11.5, y0 + 0.25, -29); HIP(g, 7.2, 1.8, 6.2, R, 11.5, y0 + 3.45, -29); [-1.5, 1.5].forEach(dz => P(g, 1.4, 2.2, winAt(11, 1, dz), 8.47, y0 + 0.5, -29 + dz, { ry: -Math.PI / 2 }));
+      [-8, -5.5, -3, -0.5].forEach(x => { B(g, 0.8, 0.35, 1.7, '#f6f3ea', x, y0 + 0.25, -34.3, NE); put(g, geo('box', () => new THREE.BoxGeometry(1, 1, 1)), '#f6f3ea', x, y0 + 0.95, -33.3, { rx: 0.9, s: [0.8, 0.1, 0.9] }); });
+      [-6.8, -1.8].forEach(x => { B(g, 0.08, 2.4, 0.08, IRON, x, y0 + 0.25, -35.4, FLAT); CYL(g, 0.02, 1.8, 0.6, 6, PAL.terra, x, y0 + 2.3, -35.4); });
+      [[-21, -22], [21, -22], [-21, -35], [21, -36]].forEach(([x, z]) => palm(g, x, y0, z, 2.2, 0.1 * (x > 0 ? -1 : 1)));
+      [[-17, -24], [17, -24], [-15, -36]].forEach(([x, z], k) => blob(x, y0 + 0.6, z, 1.2, 0.7, 1.0, k % 2 ? '#e05a8a' : '#4f8a42'));
+      return root;
+    } });
+
   // ---------- tools ----------
   // how many triangles an asset has (outline lines are not counted)
   KIT.tris = function (g) { let n = 0; g.traverse(o => { if (o.isMesh) { const ge = o.geometry; n += (ge.index ? ge.index.count : ge.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1); } }); return Math.round(n); };

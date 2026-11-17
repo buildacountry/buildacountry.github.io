@@ -1434,12 +1434,12 @@ function plazaSlots() {   // every brick place on the plaza, ring by ring
 }
 const PLAZA_COL = [['#e4a27c', '#d6906a', '#c98360'], ['#efe0c2', '#e6d3b0', '#dccaa4']];
 // ⭐ SUPPORTERS: only people who really supported (their own money). Add them here by hand: 'username': 'wall' | 'supporter' | 'patron' | 'villa' | 'landmark'
-const SUPPORT = { '_aman.sriva_': 'villa', 'devsinghbuilds': 'villa', 'amorydsmt': 'mansion', 'tashfeenmichal': 'mansion', 'shannyreti': 'mansion' };   // 11 Nov: first villa owner (Dev's friend, his own money) · 16 Nov: devsinghbuilds, villa (first-5 villas are pay-what-you-want, Dev)
+const SUPPORT = { '_aman.sriva_': 'villa', 'devsinghbuilds': 'villa', 'amorydsmt': 'mansion', 'tashfeenmichal': 'mansion', 'shannyreti': 'mansion', 'adbar9929': 'villa', 'dblockkkfrl': 'villa', 'corn_en_le_cob': 'villa', 'nathanmaleh': 'mansion' };   // 17-18 Nov (Buy Me a Coffee): adbar9929 $1, dblockkkfrl $3, corn_en_le_cob $10 = villas 3-5 of the first-5 pay-what-you-want; nathanmaleh $10 = mansion   // 11 Nov: first villa owner (Dev's friend, his own money) · 16 Nov: devsinghbuilds, villa (first-5 villas are pay-what-you-want, Dev)
 // 🏡 VILLAS (Home upgrade 'Villa', a real support): 'username': Villa Lane plot number. The citizen MOVES into the villa; their old plot goes to the next new citizen.
-const VILLAS = { '_aman.sriva_': 6, 'devsinghbuilds': 5, 'amorydsmt': 101, 'tashfeenmichal': 102, 'shannyreti': 103 };   // 101+ = MANSION LANE (beachfront, 16 Nov): amorydsmt = first mansion (€10, Spanish style)   // keep them in the order they bought (the first one is 'Villa Lane's first owner')
+const VILLAS = { '_aman.sriva_': 6, 'devsinghbuilds': 5, 'amorydsmt': 101, 'tashfeenmichal': 102, 'shannyreti': 103, 'adbar9929': 4, 'dblockkkfrl': 12, 'corn_en_le_cob': 11, 'nathanmaleh': 104 };   // 101+ = MANSION LANE (beachfront, 16 Nov): amorydsmt = first mansion (€10, Spanish style)   // keep them in the order they bought (the first one is 'Villa Lane's first owner')
 // custom looks: villas use a kit piece instead of the standard villa (none yet); mansions pick their kit piece (default mnSpanish)
 const CUSTOM_VILLA = {};
-const MANSION_LOOK = { 'tashfeenmichal': 'mnMediterranean', 'shannyreti': 'mnModern' };   // 17 Nov: shannyreti ($15, modern single storey from her photo, plot 103)
+const MANSION_LOOK = { 'tashfeenmichal': 'mnMediterranean', 'shannyreti': 'mnModern', 'nathanmaleh': 'mnRiviera' };   // 17 Nov: shannyreti ($15, modern single storey from her photo, plot 103)
 //   // 17 Nov: tashfeenmichal ($20 custom home, Mediterranean, Mansion Row plot 102)
 const villaRank = u => Object.keys(VILLAS).indexOf(String(u || '').toLowerCase()) + 1;
 // 🎨 STYLE (Supporter perk "your style"): your citizen's outfit and your home's colours. Add by hand after a real support:
@@ -5879,7 +5879,7 @@ function walkSend(now) {   // 1 update a second while moving, 1 every 6 s while 
 document.addEventListener('visibilitychange', () => { if (document.hidden) walkDisconnect(); else if (WALK.on) walkConnect(); });
 
 // ================= DRIVE MODE (10 Nov): drive a car around Vinland on the roads =================
-// No crashes and no damage: the car can only be on a road, and a kerb just slides you along and slows you down.
+// No crashes and no damage: the car can only be on a road or its pavement; past the pavement it just slides along and slows down.
 // Stops at the level crossings (stop, look, go). Name tags on the homes you pass. Solo for now (live drivers come later).
 // The car look is per citizen: carLook(user) -> { model, colour }. Later the Coin Shop fills window.CAR_SHOP[user].
 const CAR_COLOURS = ['#c8603f', '#3d6be0', '#f4efe4', '#2f5d4a', '#e0a33a', '#6b6f78', '#a084c8', '#d23b2c', '#2a9d8f'];
@@ -5921,7 +5921,8 @@ let DRV_VMAX = 11.2; const PLAYHOOK = { tick: null, onStop: null }; const DRV_VR
 // ---- the roads, as rectangles in buckets: an exact check, no big grid, nothing heavy to build ----
 function driveRoads() {
   if (DRV.grid) return; const R = [];
-  ROADS.forEach(([w, d, x, z]) => R.push({ x0: x - w / 2, z0: z - d / 2, x1: x + w / 2, z1: z + d / 2 }));
+  const PV = 2.0;   // (Dev, 18 Nov) the pavement counts as drivable too: narrow roads no longer catch the car on the kerb; it stops only past the pavement
+  ROADS.forEach(([w, d, x, z]) => R.push({ x0: x - w / 2 - PV, z0: z - d / 2 - PV, x1: x + w / 2 + PV, z1: z + d / 2 + PV }));
   RAIL.CROSS.forEach(rz => R.push({ x0: RAIL.cx - 5.6, z0: rz - 3.8, x1: RAIL.cx + 5.6, z1: rz + 3.8 }));                     // the crossing decks
   DRV.bridges = RS.bridges.map(bz => ({ x0: RS.riverW(bz) - 18, x1: RS.riverE + 14, z0: bz - 4.4, z1: bz + 4.4, bz }));       // the humped bridge decks
   DRV.bridges.forEach(b => R.push(b));
