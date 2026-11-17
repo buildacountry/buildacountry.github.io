@@ -1688,13 +1688,13 @@ function drawGardenBuildings(hs, lineParts) {
   const lived = b => b.t === 'LP' || byB.has(b.i), groups = {}, empty = [];
   GD.blds.forEach(b => { if (b.gone) return; if (lived(b)) (groups[b.t] = groups[b.t] || []).push(b); else empty.push(b); });
   if (empty.length) { const LOT = { LD: [10, 14], LS: [16, 14], LT: [36, 13], LU: [12, 22], LW: [12, 22], LQ: [20, 22] }, unit = new THREE.BoxGeometry(1, 1, 1), loc = new THREE.Matrix4(), bm = new THREE.Matrix4();
-    const parts = [['#9fc86e', 1, (w, d) => [[w - 0.6, 0.12, d - 0.6, 0, 0.06, 0]]],
+    const parts = [['#9fc86e', 1, (w, d, b) => b.sb ? [] : [[w - 0.6, 0.12, d - 0.6, 0, 0.06, 0]]],   // suburb plots sit on normal grass: no light lawn slab
       ['#4f8a42', 2, (w, d) => [-1, 1].map(sx => [w / 2 - 1.1, 0.7, 0.5, sx * (w / 4 + 0.4), 0.35, d / 2 - 0.6])],
       ['#e6dccb', 1, (w, d) => [[1.2, 0.14, d / 2 - 0.6, 0, 0.07, d / 4 - 0.3]]]];
     parts.forEach(([c, per, f]) => { const im = new THREE.InstancedMesh(unit, mat(c), empty.length * per); let k = 0;
       empty.forEach(b => { const [w, d] = LOT[b.t] || [34, 22]; bm.compose(new THREE.Vector3(b.x, 0, b.z), q.clone().setFromAxisAngle(up, b.ry), one);
-        f(w, d).forEach(([sx, sy, sz, x, y, z]) => { loc.compose(v.set(x, y, z), new THREE.Quaternion(), new THREE.Vector3(sx, sy, sz)); im.setMatrixAt(k++, bm.clone().multiply(loc)); }); });
-      im.receiveShadow = true; im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; scene.add(im); homeBatches.push(im); }); }
+        f(w, d, b).forEach(([sx, sy, sz, x, y, z]) => { loc.compose(v.set(x, y, z), new THREE.Quaternion(), new THREE.Vector3(sx, sy, sz)); im.setMatrixAt(k++, bm.clone().multiply(loc)); }); });
+      im.count = k; im.receiveShadow = true; im.instanceMatrix.needsUpdate = true; im.frustumCulled = false; scene.add(im); homeBatches.push(im); }); }
   Object.keys(groups).forEach(t => { const list = groups[t];
     const TPL = gdTemplates[t] || (gdTemplates[t] = makeTemplate(() => { const g = K.make(GD.TPL[t], GD.OPT[t] || {}); assets.push({ key: t, g, walls: [null] }); }));
     const M = list.map(b => new THREE.Matrix4().compose(new THREE.Vector3(b.x, 0, b.z), q.clone().setFromAxisAngle(up, b.ry), one));
@@ -3429,14 +3429,16 @@ GD.gate = [GD.XE, 0];
 // backyards meeting in the middle; a few small blocks are pocket parks. Random mix (Dev) of single houses, duplexes, fourplexes, rows of 6.
 // Same building system as the Garden District (GD.blds): a building stands once someone lives in it. Appended after every existing home.
 // ON: false until Dev OKs the v4 preview (17 Nov night). Off = no homes added, nothing drawn.
-const SB = { ON: false, XW: -897, XE: 320, ZN: 625, ZS: 1175, ZB: 900, GX: [-343, -233], IN: [-770, -641.5, -386, 0], roads: [], pools: [], blocks: [], parks: [] };
+// v5 (Dev, 18 Nov): east edge on the last lane of the district above (x 290); the 2 roads that come down from the city (x -641.5 and 0) run
+// straight through as the MAIN roads (the near-by split roads are gone); the -770 and -386 links are removed; normal grass; Garden District homes.
+const SB = { ON: true, XW: -897, XE: 290, ZN: 625, ZS: 1175, ZB: 900, GX: [-343, -233], IN: [-641.5, 0], roads: [], pools: [], blocks: [], parks: [] };
 { GD.TPL.LU = 'sbHouse'; GD.TPL.LW = 'sbCottage'; GD.TPL.LQ = 'ndFourplex';
   let sd = 2027; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
   const rd = (w, d, x, z) => SB.roads.push([w, d, x, z]), B0 = GD.blds.length;
   const put = (t, x, z, ry, units) => { const c = Math.cos(ry), s2 = Math.sin(ry), i = GD.blds.length;
     GD.blds.push({ i, t, x, z, ry, sb: true, units: units.map(([ux, uz, ly], u) => [x + c * ux + s2 * uz, z - s2 * ux + c * uz, ly, u]) }); };
-  const U = { LU: [[0, 0, 10]], LW: [[0, 0, 9]], LS: [[-3.5, 0, 10.5], [3.5, 0, 10.5]], LT: [0, 1, 2, 3, 4, 5].map(i => [-13.75 + 5.5 * i, -1, 10]), LQ: [[-4.5, 0, 4.5], [4.5, 0, 4.5], [-4.5, 0, 7.5], [4.5, 0, 7.5]] };
-  const W = { LU: 14, LW: 14, LS: 18, LQ: 22, LT: 38 };
+  const U = { LD: [[0, 0, 10.5]], LU: [[0, 0, 10]], LW: [[0, 0, 9]], LS: [[-3.5, 0, 10.5], [3.5, 0, 10.5]], LT: [0, 1, 2, 3, 4, 5].map(i => [-13.75 + 5.5 * i, -1, 10]), LQ: [[-4.5, 0, 4.5], [4.5, 0, 4.5], [-4.5, 0, 7.5], [4.5, 0, 7.5]] };
+  const W = { LD: 12, LU: 14, LW: 14, LS: 17, LQ: 22, LT: 37 };
   const pick = () => { const r = rnd(); return r < 0.42 ? 'LU' : r < 0.64 ? 'LW' : r < 0.8 ? 'LS' : r < 0.9 ? 'LQ' : 'LT'; };
   const line = (axis, a, b, at, ry) => { const L = b - a; let p = a, list = [], used = 0;
     while (true) { let t = pick(), w = W[t]; if (used + w > L) { t = 'LU'; w = 14; } if (used + w > L) break; list.push([t, w]); used += w; }
@@ -3445,20 +3447,20 @@ const SB = { ON: false, XW: -897, XE: 320, ZN: 625, ZS: 1175, ZB: 900, GX: [-343
   // (Dev, 17 Nov night: "the randomness looks weird, make it like the west district") regular rows like the Garden District: east-west
   // streets, a row of homes on each side of every street, rows back to back between streets; one building type per row, the type changes
   // row by row in a fixed pattern; a north-south street splits each area into two columns.
-  const PAT = ['LU', 'LS', 'LW', 'LT', 'LU', 'LQ', 'LS', 'LW', 'LT', 'LU'];
+  const PAT = ['LS', 'LD', 'LT', 'LS', 'LD', 'LS', 'LT', 'LD', 'LD', 'LS'];   // Garden District homes (detached, semis, terraces)
   const rowOf = (t, a, b, z, ry, k) => { const w = W[t], n = Math.floor((b - a) / w), p0 = a + (b - a - n * w) / 2;
-    for (let i = 0; i < n; i++) { const c = p0 + w * (i + 0.5); put(t, c, z, ry, U[t]); if ((t === 'LU' || t === 'LW') && (i + k) % 4 === 0) SB.pools.push([c, z - Math.cos(ry) * 9.5]); } };
+    for (let i = 0; i < n; i++) { const c = p0 + w * (i + 0.5); put(t, c, z, ry, U[t]); } };
   const area = (x0, z0, x1, z1, ai) => { const xm = (x0 + x1) / 2, h = z1 - z0, n = Math.max(2, 2 * Math.floor((h - 24) / 52) + 2), sp = (h - 24) / (n - 1);
     rd(8, h, xm, (z0 + z1) / 2);
     for (let k = 0; k < n; k++) { const z = z0 + 12 + sp * k, ry = k % 2 ? 0 : Math.PI, t = PAT[(k + ai * 3) % PAT.length];
       rowOf(t, x0 + 2, xm - 6, z, ry, k); rowOf(t, xm + 6, x1 - 2, z, ry, k + 1);
       if (k % 2 === 1 && k < n - 1) rd(x1 - x0, 8, (x0 + x1) / 2, z + sp / 2); } };
-  const { XW, XE, ZN, ZS, ZB, GX } = SB, cols = [[XW, (XW + GX[0]) / 2], [(XW + GX[0]) / 2, GX[0]], [GX[1], (GX[1] + XE) / 2], [(GX[1] + XE) / 2, XE]];
+  const { XW, XE, ZN, ZS, ZB, GX } = SB, cols = [[XW, SB.IN[0]], [SB.IN[0], GX[0]], [GX[1], SB.IN[1]], [SB.IN[1], XE]];
   rd(XE - XW + 12, 12, (XW + XE) / 2, ZN); rd(XE - XW + 12, 12, (XW + XE) / 2, ZS); rd(12, ZS - ZN, XW, (ZN + ZS) / 2); rd(12, ZS - ZN, XE, (ZN + ZS) / 2);
   rd(XE - XW, 24, (XW + XE) / 2, ZB);                                                                 // THE BOULEVARD
-  GX.forEach(x => rd(12, ZS - ZN, x, (ZN + ZS) / 2)); [cols[0][1], cols[2][1]].forEach(x => rd(12, ZS - ZN, x, (ZN + ZS) / 2));
+  GX.forEach(x => rd(12, ZS - ZN, x, (ZN + ZS) / 2)); SB.IN.forEach(x => rd(14, ZS - ZN + 12, x, (ZN + ZS) / 2));   // the 2 main roads, straight on from the city
   SB.IN.forEach(x => rd(10, ZN - 572, x, (ZN + 572) / 2));
-  let ai = 0; cols.forEach(([x0, x1]) => [[ZN + 6, ZB - 12], [ZB + 12, ZS - 6]].forEach(([z0, z1]) => { SB.blocks.push([x0 + 6, z0, x1 - 6, z1]); area(x0 + 6, z0, x1 - 6, z1, ai++); }));
+  let ai = 0; cols.forEach(([x0, x1]) => [[ZN + 6, ZB - 12], [ZB + 12, ZS - 6]].forEach(([z0, z1]) => { SB.blocks.push([x0 + 7, z0, x1 - 7, z1]); area(x0 + 7, z0, x1 - 7, z1, ai++); }));
   SB.centre = [[GX[0] + 6, ZN + 6, GX[1] - 6, ZB - 12], [GX[0] + 6, ZB + 12, GX[1] - 6, ZS - 6]];
   const dist = b => Math.min(...SB.IN.map(x => Math.hypot(b.x - x, b.z - ZN))), out = [];
   GD.blds.slice(B0).sort((a, b) => dist(a) - dist(b)).forEach(b => b.units.slice().sort((p, q) => p[2] - q[2] || p[3] - q[3]).forEach(([x, z, ly, u]) =>
@@ -3840,16 +3842,16 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
 
 (function drawSuburb() {
   if (!SB.ON) return;
-  const N = { edge: false, shadow: false }, g = new THREE.Group(), hide = new THREE.Matrix4().makeScale(0, 0, 0), { XW, XE, ZN, ZS, ZB } = SB, GRASS = '#a9cf78', PAVE = '#e6dccb';
+  const N = { edge: false, shadow: false }, g = new THREE.Group(), hide = new THREE.Matrix4().makeScale(0, 0, 0), { XW, XE, ZN, ZS, ZB } = SB, GRASS = '#86ab5c', PAVE = '#e6dccb';   // normal grass (Dev, 18 Nov: not the light green)
   spots.forEach(([x, z], i) => { if ((x > XW - 14 && x < XE + 14 && z > ZN - 14 && z < ZS + 14) || SB.IN.some(cx => Math.abs(x - cx) < 10 && z > 560 && z < ZN)) { cr.setMatrixAt(i, hide); tk.setMatrixAt(i, hide); } });
   cr.instanceMatrix.needsUpdate = true; tk.instanceMatrix.needsUpdate = true;
   let sd = 91; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
-  B(g, XE - XW + 24, 0.06, ZS - ZN + 24, '#9fc86e', (XW + XE) / 2, 0.01, (ZN + ZS) / 2, N);
+  B(g, XE - XW + 24, 0.06, ZS - ZN + 24, GRASS, (XW + XE) / 2, 0.01, (ZN + ZS) / 2, N);
   const round = (w, d, r) => { const sh = new THREE.Shape(), x = -w / 2, y = -d / 2; sh.moveTo(x + r, y); sh.lineTo(x + w - r, y); sh.quadraticCurveTo(x + w, y, x + w, y + r); sh.lineTo(x + w, y + d - r); sh.quadraticCurveTo(x + w, y + d, x + w - r, y + d);
     sh.lineTo(x + r, y + d); sh.quadraticCurveTo(x, y + d, x, y + d - r); sh.lineTo(x, y + r); sh.quadraticCurveTo(x, y, x + r, y); return new THREE.ShapeGeometry(sh, 4); };
   const pad = ([x0, z0, x1, z1], c2) => { const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = x1 - x0, d = z1 - z0;
     [[w, d, PAVE, 0.05, 6], [w - 4, d - 4, c2 || GRASS, 0.09, 5]].forEach(([a, c, col, y, r]) => { const m = new THREE.Mesh(round(a, c, r), mat(col)); m.rotation.x = -Math.PI / 2; m.position.set(cx, y, cz); m.receiveShadow = true; g.add(m); }); };
-  SB.blocks.forEach(b => pad(b)); SB.centre.forEach(b => pad(b, '#9fc86e'));
+  SB.blocks.forEach(b => pad(b)); SB.centre.forEach(b => pad(b, GRASS));
   SB.roads.forEach(([w, d, x, z]) => { ROADS.push([w, d, x, z]); B(g, w, 0.1, d, ROAD, x, 0.07, z, N); });
   { const L = XE - XW; B(g, L, 0.2, 4, '#8cc06a', (XW + XE) / 2, 0.08, ZB, N); for (let x = XW + 10; x < XE - 6; x += 18) if (Math.abs(x - (SB.GX[0] + SB.GX[1]) / 2) > 60) { tree(g, x, 0.25, ZB, 'canopy', 0.9); lamp(g, x + 9, ZB); } }
   SB.parks.forEach(([x0, z0, x1, z1]) => { const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2; add(g, new THREE.CylinderGeometry(4, 4.4, 0.6, 18), '#e9e1cf', cx, 0.3, cz, { edge: false }); add(g, new THREE.CylinderGeometry(3.4, 3.4, 0.2, 18), '#4aa3cf', cx, 0.62, cz, N);
