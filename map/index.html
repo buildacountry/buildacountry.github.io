@@ -460,7 +460,7 @@ function build2D(text) {
     .forEach(r => { const k = r.user.toLowerCase(); if (!r.user && r.status !== 'hidden') return; if (never.includes(k)) return; if (k && seen.has(k)) return; if (k) seen.add(k);
       if (ST.villas[k] && r.status === 'active') { villas.push(r); return; } if (r.n > 0 && !byNum.has(r.n)) byNum.set(r.n, r); else noNum.push(r); });
   let free = 1; noNum.forEach(r => { while (byNum.has(free)) free++; r.n = free; byNum.set(free, r); });
-  V.homes = [...byNum.values()].filter(r => r.n <= PL.length).sort((a, b) => a.n - b.n).map(r => { const p = PL[r.n - 1]; return Object.assign(r, p, { district: p.a === 'R' ? 'Riverside' : p.a === 'L' ? 'New District' : 'Central', area: p.a === 'R' ? 'Block ' + p.block : AREA[p.a] || '' }); });
+  V.homes = [...byNum.values()].filter(r => r.n <= PL.length).sort((a, b) => a.n - b.n).map(r => { const p = PL[r.n - 1]; return Object.assign(r, p, { district: p.a === 'R' && p.bid > 20000 ? 'Business District' : p.a === 'R' ? 'Riverside' : p.a === 'L' ? 'New District' : p.a === 'U' ? 'Suburb' : 'Central', area: p.a === 'R' ? 'Block ' + p.block : AREA[p.a] || '' }); });
   villas.forEach(r => { const lot = ST.villas[r.user.toLowerCase()], L = (ST.lots || {})[lot]; if (L) V.homes.push(Object.assign(r, { n: 10000 + lot, villa: lot, a: 'V', x: L[0], z: L[1], district: 'Central', area: 'Villa Lane, plot ' + lot })); });
   V.homes.forEach(h => { h.shown = h.status === 'hidden' ? 'Citizen #' + h.n : '@' + h.user; h.gold = (ST.support[h.user.toLowerCase()] || 0) >= 2; });
   V.blds = new Map(); V.homes.filter(h => h.bid).forEach(h => { let b = V.blds.get(h.bid); if (!b) V.blds.set(h.bid, b = { bid: h.bid, x: h.x, z: h.z, block: h.block, list: [] }); b.list.push(h); });
@@ -469,9 +469,9 @@ function build2D(text) {
   const cen = f => { const l = PL.filter(f); return l.length ? [l.reduce((a, p) => a + p.x, 0) / l.length, l.reduce((a, p) => a + p.z, 0) / l.length] : null; };
   if (!V.labels.length) {   // names by zoom level. ONLY names that exist today: districts, areas (the same words as in addresses), named lanes and places. No street is named until citizens vote.
     const L = V.labels, add = (t, c, lv) => { if (c) L.push([t, c[0], c[1], lv]); };
-    add('Central', cen(p => p.a !== 'R' && p.a !== 'L'), 0); add('Riverside', cen(p => p.a === 'R'), 0); add('New District', cen(p => p.a === 'L'), 0); if (ST.coast) L.push(['Vinland Beach', 0, (ST.coast.shore + ST.coast.beach0) / 2, 0]);
+    add('Central', cen(p => p.a !== 'R' && p.a !== 'L' && p.a !== 'U'), 0); add('Suburb', cen(p => p.a === 'U'), 0); add('Riverside', cen(p => p.a === 'R' && p.bid < 20000), 0); add('New District', cen(p => p.a === 'L'), 0); add('Business District', cen(p => p.a === 'R' && p.bid > 20000), 0); if (ST.coast) L.push(['Vinland Beach', 0, (ST.coast.shore + ST.coast.beach0) / 2, 0]);
     Object.keys(AREA).forEach(k => add(k === 'SG' ? 'Garden Lane' : k === 'F' ? 'Founder Square' : AREA[k], cen(p => p.a === k), 1));
-    [...new Set(PL.filter(p => p.a === 'R' && !/^Beach Lane/.test(p.label)).map(p => p.block))].forEach(b => add('Block ' + b, cen(p => p.a === 'R' && p.block === b && !/^Beach Lane/.test(p.label)), 1));
+    [...new Set(PL.filter(p => p.a === 'R' && p.bid < 20000 && !/^Beach Lane/.test(p.label)).map(p => p.block))].forEach(b => add('Block ' + b, cen(p => p.a === 'R' && p.block === b && !/^Beach Lane/.test(p.label)), 1));
     add('Beach Lane', cen(p => /^Beach Lane/.test(p.label)), 1);
     if (ST.lots) { const ctr = l => [l.reduce((a, p) => a + p[0], 0) / l.length, l.reduce((a, p) => a + p[1], 0) / l.length], E = Object.entries(ST.lots), vl = E.filter(e => +e[0] < 101).map(e => e[1]), ml = E.filter(e => +e[0] >= 101).map(e => e[1]);
       if (vl.length) add('Villa Lane', ctr(vl), 1); if (ml.length) add('Mansion Lane', ctr(ml), 1); }
@@ -1434,9 +1434,13 @@ function plazaSlots() {   // every brick place on the plaza, ring by ring
 }
 const PLAZA_COL = [['#e4a27c', '#d6906a', '#c98360'], ['#efe0c2', '#e6d3b0', '#dccaa4']];
 // ⭐ SUPPORTERS: only people who really supported (their own money). Add them here by hand: 'username': 'wall' | 'supporter' | 'patron' | 'villa' | 'landmark'
-const SUPPORT = { '_aman.sriva_': 'villa', 'devsinghbuilds': 'villa', 'amorydsmt': 'mansion' };   // 11 Nov: first villa owner (Dev's friend, his own money) · 16 Nov: devsinghbuilds, villa (first-5 villas are pay-what-you-want, Dev)
+const SUPPORT = { '_aman.sriva_': 'villa', 'devsinghbuilds': 'villa', 'amorydsmt': 'mansion', 'tashfeenmichal': 'mansion', 'shannyreti': 'mansion' };   // 11 Nov: first villa owner (Dev's friend, his own money) · 16 Nov: devsinghbuilds, villa (first-5 villas are pay-what-you-want, Dev)
 // 🏡 VILLAS (Home upgrade 'Villa', a real support): 'username': Villa Lane plot number. The citizen MOVES into the villa; their old plot goes to the next new citizen.
-const VILLAS = { '_aman.sriva_': 6, 'devsinghbuilds': 5, 'amorydsmt': 101 };   // 101+ = MANSION LANE (beachfront, 16 Nov): amorydsmt = first mansion (€10, Spanish style)   // keep them in the order they bought (the first one is 'Villa Lane's first owner')
+const VILLAS = { '_aman.sriva_': 6, 'devsinghbuilds': 5, 'amorydsmt': 101, 'tashfeenmichal': 102, 'shannyreti': 103 };   // 101+ = MANSION LANE (beachfront, 16 Nov): amorydsmt = first mansion (€10, Spanish style)   // keep them in the order they bought (the first one is 'Villa Lane's first owner')
+// custom looks: villas use a kit piece instead of the standard villa (none yet); mansions pick their kit piece (default mnSpanish)
+const CUSTOM_VILLA = {};
+const MANSION_LOOK = { 'tashfeenmichal': 'mnMediterranean', 'shannyreti': 'mnModern' };   // 17 Nov: shannyreti ($15, modern single storey from her photo, plot 103)
+//   // 17 Nov: tashfeenmichal ($20 custom home, Mediterranean, Mansion Row plot 102)
 const villaRank = u => Object.keys(VILLAS).indexOf(String(u || '').toLowerCase()) + 1;
 // 🎨 STYLE (Supporter perk "your style"): your citizen's outfit and your home's colours. Add by hand after a real support:
 //   'username': { shirt: '#hex', pants: '#hex', hair: '#hex', wall: '#hex', roof: '#hex' }   (any field can be left out)
@@ -1683,7 +1687,7 @@ function drawGardenBuildings(hs, lineParts) {
   // An empty plot is a plain lawn with its front hedge and path (3 instanced batches for the whole district).
   const lived = b => b.t === 'LP' || byB.has(b.i), groups = {}, empty = [];
   GD.blds.forEach(b => { if (b.gone) return; if (lived(b)) (groups[b.t] = groups[b.t] || []).push(b); else empty.push(b); });
-  if (empty.length) { const LOT = { LD: [10, 14], LS: [16, 14], LT: [36, 13] }, unit = new THREE.BoxGeometry(1, 1, 1), loc = new THREE.Matrix4(), bm = new THREE.Matrix4();
+  if (empty.length) { const LOT = { LD: [10, 14], LS: [16, 14], LT: [36, 13], LU: [12, 22], LW: [12, 22], LQ: [20, 22] }, unit = new THREE.BoxGeometry(1, 1, 1), loc = new THREE.Matrix4(), bm = new THREE.Matrix4();
     const parts = [['#9fc86e', 1, (w, d) => [[w - 0.6, 0.12, d - 0.6, 0, 0.06, 0]]],
       ['#4f8a42', 2, (w, d) => [-1, 1].map(sx => [w / 2 - 1.1, 0.7, 0.5, sx * (w / 4 + 0.4), 0.35, d / 2 - 0.6])],
       ['#e6dccb', 1, (w, d) => [[1.2, 0.14, d / 2 - 0.6, 0, 0.07, d / 4 - 0.3]]]];
@@ -1729,7 +1733,7 @@ function drawHomes(hs) {
   const mats = hs.map(h => new THREE.Matrix4().compose(new THREE.Vector3(h.x, 0, h.z), q.clone().setFromAxisAngle(up, h.ry), sc));
   const lineParts = [];
   const seenB = new Set(), bmat = h => new THREE.Matrix4().compose(new THREE.Vector3(h.fp.bx, 0, h.fp.bz), q.clone().setFromAxisAngle(up, h.ry), sc);
-  [[homeTemplate, i => !KITT[hs[i].kind] && !/^L[DSTAP]$/.test(hs[i].kind || '')], [homeTemplates.LC, i => hs[i].kind === 'LC'], [homeTemplates.LH, i => hs[i].kind === 'LH'], [homeTemplates.LF, i => hs[i].kind === 'LF' && !seenB.has(hs[i].fp.bid) && seenB.add(hs[i].fp.bid)]].forEach(([TPL, keep]) => { if (!TPL) return;
+  [[homeTemplate, i => !KITT[hs[i].kind] && !/^L[DSTAPUWQ]$/.test(hs[i].kind || '')], [homeTemplates.LC, i => hs[i].kind === 'LC'], [homeTemplates.LH, i => hs[i].kind === 'LH'], [homeTemplates.LF, i => hs[i].kind === 'LF' && !seenB.has(hs[i].fp.bid) && seenB.add(hs[i].fp.bid)]].forEach(([TPL, keep]) => { if (!TPL) return;
   const idx = hs.map((h, i) => i).filter(keep); if (!idx.length) return;
   const M = hs[idx[0]].fp ? idx.map(i => bmat(hs[i])) : null;   // a fourplex is drawn once, at the building
   TPL.list.forEach(part => {
@@ -2252,7 +2256,7 @@ function rsDrawBlds(occupied) {
 }
 function selectBuilding(b) {   // a Riverside apartment building: who lives in which flat
   clearSelection(); stopTour(); const S2 = RS.SPEC[b.style], total = S2.floors * (b.per || S2.per), res = homes.filter(h => h.flat && h.flat.bid === b.id && h.status !== 'abandoned').sort((a, c) => a.n - c.n);
-  show(`Riverside · Block ${b.block}`, `Building R${b.id}`, `<p class="p">${b.style === 'beach' ? 'Beach Flats on Beach Lane, by the sea' : b.style === 'garden' ? 'Garden villa-apartments' : 'Terrace apartments'} on the waterfront · ${res.length} of ${total} flats taken.</p>
+  show(b.bd || /^bd/.test(b.style) ? `Business District · Block ${b.no}` : `Riverside · Block ${b.block}`, /^bd/.test(b.style) ? `${b.F} floors${b.shop ? ' · shop below' : ''}` : `Building R${b.id}`, `<p class="p">${/^bd/.test(b.style) ? 'City apartments in the Business District' : b.style === 'beach' ? 'Beach Flats on Beach Lane, by the sea' : b.style === 'garden' ? 'Garden villa-apartments' : 'Terrace apartments'} on the waterfront · ${res.length} of ${total} flats taken.</p>
     <div class="k" style="margin:8px 0 4px">Who lives here</div>
     <div class="flats">${res.map(h => { const u = h.status === 'active' ? h.user.toLowerCase() : '', me = window.VSOC && window.VSOC.user, kb = me && u && u !== me ? (window.VSOC.knocked.has(u) ? '<span class="pill">Knocked 👋</span>' : `<button class="btn kbtn" data-u="${esc(u)}">👋 Knock</button>`) : '';
       return `<div class="frow" style="display:flex;gap:6px;align-items:center"><button class="btn ghost flatbtn" style="flex:1" data-n="${h.n}">${esc(h.flat.label)} · ${h.status === 'hidden' ? 'Citizen #' + h.n : '@' + esc(h.user)}</button>${kb}</div>`; }).join('') || '<p class="p">No one has moved in yet.</p>'}</div>`);
@@ -2272,7 +2276,7 @@ function selectHome(h) {
   track('tap-home');
   selected = h; try { history.replaceState(null, '', '#home-' + h.n); } catch (e) {}
   flyTo(new THREE.Vector3(h.x, 4, h.z), new THREE.Vector3(h.x >= 0 ? 24 : -24, 22, h.z >= 0 ? 32 : -32));
-  const where = h.villa ? (isMansion(h.villa) ? 'Mansion Lane · Plot ' + (h.villa - 100) : 'Villa Lane · Plot ' + h.villa) : h.flat ? 'Riverside · Block ' + h.flat.block : h.founder ? 'Founder home · around the flag' : h.z < NORTH.zTop - 4 ? (h.x > 0 ? 'North Shore · east' : 'North Shore · west') : (h.z > SOUTH.z0 - 6 && Math.abs(h.x) > SOUTH.x + 20) ? (h.x > 0 ? 'South-east district' : 'South-west district') : h.z > SOUTH.z0 - 6 ? (LANES.home.includes(Math.abs(h.x)) ? 'Garden Lane · South district' : 'South district') : h.z < NORTH.zBot + 4 ? (h.x > 0 ? 'North-east district' : 'North-west district') : Math.abs(h.x) > DIST.roadIn + 4 ? (h.x > 0 ? 'East district' : 'West district') : 'Middle district'; stopTour();
+  const where = h.villa ? (isMansion(h.villa) ? 'Mansion Lane · Plot ' + (h.villa - 100) : 'Villa Lane · Plot ' + h.villa) : h.flat ? (h.flat.bd ? 'Business District · Block ' : 'Riverside · Block ') + h.flat.block : h.founder ? 'Founder home · around the flag' : h.z < NORTH.zTop - 4 ? (h.x > 0 ? 'North Shore · east' : 'North Shore · west') : (h.z > SOUTH.z0 - 6 && Math.abs(h.x) > SOUTH.x + 20) ? (h.x > 0 ? 'South-east district' : 'South-west district') : h.z > SOUTH.z0 - 6 ? (LANES.home.includes(Math.abs(h.x)) ? 'Garden Lane · South district' : 'South district') : h.z < NORTH.zBot + 4 ? (h.x > 0 ? 'North-east district' : 'North-west district') : Math.abs(h.x) > DIST.roadIn + 4 ? (h.x > 0 ? 'East district' : 'West district') : 'Middle district'; stopTour();
   if (h.status === 'abandoned') {
     show(`Home #${h.n} · ${where}`, 'Abandoned home', `<p class="p">The citizen who lived here left the country. This home will go to someone new.</p>`); return;
   }
@@ -3420,6 +3424,84 @@ GD.gate = [GD.XE, 0];
     // (Dev, 16 Nov night) the middle band stays open green: sports ground + pocket parks only, no buildings
     GD.bands.forEach(([x0]) => [-1, 1].forEach(hs => GD.parks.push([x0 + 71, hs * 92]))); }
   GD.n0 = PLOTS.length; GD.homes = out.length; PLOTS.push(...out); }
+// ---- THE SUBURB (Dev's sketch, 17 Nov night): box south of the city (x -897..320, z 625..1175). A wide boulevard east-west through the
+// middle; a green strip down the middle (x -343..-233) for the centre (plaza, shops, supermarket, sports, big-building lots); 8 housing
+// areas, each split into 4 by roads, and again, until the blocks are house-block size (~60 m): houses round the edge facing the streets,
+// backyards meeting in the middle; a few small blocks are pocket parks. Random mix (Dev) of single houses, duplexes, fourplexes, rows of 6.
+// Same building system as the Garden District (GD.blds): a building stands once someone lives in it. Appended after every existing home.
+// ON: false until Dev OKs the v4 preview (17 Nov night). Off = no homes added, nothing drawn.
+const SB = { ON: false, XW: -897, XE: 320, ZN: 625, ZS: 1175, ZB: 900, GX: [-343, -233], IN: [-770, -641.5, -386, 0], roads: [], pools: [], blocks: [], parks: [] };
+{ GD.TPL.LU = 'sbHouse'; GD.TPL.LW = 'sbCottage'; GD.TPL.LQ = 'ndFourplex';
+  let sd = 2027; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  const rd = (w, d, x, z) => SB.roads.push([w, d, x, z]), B0 = GD.blds.length;
+  const put = (t, x, z, ry, units) => { const c = Math.cos(ry), s2 = Math.sin(ry), i = GD.blds.length;
+    GD.blds.push({ i, t, x, z, ry, sb: true, units: units.map(([ux, uz, ly], u) => [x + c * ux + s2 * uz, z - s2 * ux + c * uz, ly, u]) }); };
+  const U = { LU: [[0, 0, 10]], LW: [[0, 0, 9]], LS: [[-3.5, 0, 10.5], [3.5, 0, 10.5]], LT: [0, 1, 2, 3, 4, 5].map(i => [-13.75 + 5.5 * i, -1, 10]), LQ: [[-4.5, 0, 4.5], [4.5, 0, 4.5], [-4.5, 0, 7.5], [4.5, 0, 7.5]] };
+  const W = { LU: 14, LW: 14, LS: 18, LQ: 22, LT: 38 };
+  const pick = () => { const r = rnd(); return r < 0.42 ? 'LU' : r < 0.64 ? 'LW' : r < 0.8 ? 'LS' : r < 0.9 ? 'LQ' : 'LT'; };
+  const line = (axis, a, b, at, ry) => { const L = b - a; let p = a, list = [], used = 0;
+    while (true) { let t = pick(), w = W[t]; if (used + w > L) { t = 'LU'; w = 14; } if (used + w > L) break; list.push([t, w]); used += w; }
+    p = a + (L - used) / 2; list.forEach(([t, w]) => { const c = p + w / 2; if (axis === 'x') put(t, c, at, ry, U[t]); else put(t, at, c, ry, U[t]);
+      if ((t === 'LU' || t === 'LW') && rnd() < 0.22) SB.pools.push(axis === 'x' ? [c, at - Math.cos(ry) * 9.5] : [at - Math.sin(ry) * 9.5, c]); p += w; }); };
+  // (Dev, 17 Nov night: "the randomness looks weird, make it like the west district") regular rows like the Garden District: east-west
+  // streets, a row of homes on each side of every street, rows back to back between streets; one building type per row, the type changes
+  // row by row in a fixed pattern; a north-south street splits each area into two columns.
+  const PAT = ['LU', 'LS', 'LW', 'LT', 'LU', 'LQ', 'LS', 'LW', 'LT', 'LU'];
+  const rowOf = (t, a, b, z, ry, k) => { const w = W[t], n = Math.floor((b - a) / w), p0 = a + (b - a - n * w) / 2;
+    for (let i = 0; i < n; i++) { const c = p0 + w * (i + 0.5); put(t, c, z, ry, U[t]); if ((t === 'LU' || t === 'LW') && (i + k) % 4 === 0) SB.pools.push([c, z - Math.cos(ry) * 9.5]); } };
+  const area = (x0, z0, x1, z1, ai) => { const xm = (x0 + x1) / 2, h = z1 - z0, n = Math.max(2, 2 * Math.floor((h - 24) / 52) + 2), sp = (h - 24) / (n - 1);
+    rd(8, h, xm, (z0 + z1) / 2);
+    for (let k = 0; k < n; k++) { const z = z0 + 12 + sp * k, ry = k % 2 ? 0 : Math.PI, t = PAT[(k + ai * 3) % PAT.length];
+      rowOf(t, x0 + 2, xm - 6, z, ry, k); rowOf(t, xm + 6, x1 - 2, z, ry, k + 1);
+      if (k % 2 === 1 && k < n - 1) rd(x1 - x0, 8, (x0 + x1) / 2, z + sp / 2); } };
+  const { XW, XE, ZN, ZS, ZB, GX } = SB, cols = [[XW, (XW + GX[0]) / 2], [(XW + GX[0]) / 2, GX[0]], [GX[1], (GX[1] + XE) / 2], [(GX[1] + XE) / 2, XE]];
+  rd(XE - XW + 12, 12, (XW + XE) / 2, ZN); rd(XE - XW + 12, 12, (XW + XE) / 2, ZS); rd(12, ZS - ZN, XW, (ZN + ZS) / 2); rd(12, ZS - ZN, XE, (ZN + ZS) / 2);
+  rd(XE - XW, 24, (XW + XE) / 2, ZB);                                                                 // THE BOULEVARD
+  GX.forEach(x => rd(12, ZS - ZN, x, (ZN + ZS) / 2)); [cols[0][1], cols[2][1]].forEach(x => rd(12, ZS - ZN, x, (ZN + ZS) / 2));
+  SB.IN.forEach(x => rd(10, ZN - 572, x, (ZN + 572) / 2));
+  let ai = 0; cols.forEach(([x0, x1]) => [[ZN + 6, ZB - 12], [ZB + 12, ZS - 6]].forEach(([z0, z1]) => { SB.blocks.push([x0 + 6, z0, x1 - 6, z1]); area(x0 + 6, z0, x1 - 6, z1, ai++); }));
+  SB.centre = [[GX[0] + 6, ZN + 6, GX[1] - 6, ZB - 12], [GX[0] + 6, ZB + 12, GX[1] - 6, ZS - 6]];
+  const dist = b => Math.min(...SB.IN.map(x => Math.hypot(b.x - x, b.z - ZN))), out = [];
+  GD.blds.slice(B0).sort((a, b) => dist(a) - dist(b)).forEach(b => b.units.slice().sort((p, q) => p[2] - q[2] || p[3] - q[3]).forEach(([x, z, ly, u]) =>
+    out.push([+x.toFixed(2), +(z + (ly > 6 ? (ly | 0) * 0.01 : 0)).toFixed(2), b.ry, b.t, null, { bid: b.i, u, ly }])));
+  SB.n0 = PLOTS.length; SB.homes = SB.ON ? out.length : 0; SB.blds = GD.blds.length - B0; if (SB.ON) PLOTS.push(...out); else GD.blds.length = B0; }
+// ---- BUSINESS DISTRICT (Dev's OK'd plan v3, 17 Nov): new land east of Riverside (x 1085..1545, beach road to the last lane).
+// A mixed city: the business core sits in the middle band (between the -226 and +226 roads, right in front of the Vinland Tower),
+// and the homes are woven all round it: courtyard blocks (6 / 8 floor apartments round a green), shop streets (apartments with a
+// small shop on the ground floor), 3 parks, and business lots in the home blocks too. One flat per floor (Dev). Every building stands
+// from day one; the name tag goes up when someone moves in. Appended after every existing home: nobody's number or home changes.
+// ON: false = paused (Dev, 17 Nov night: "I will think about the Business District, make it later"). Nothing is drawn and no homes are added.
+const BD = { ON: false, X0: 1085, X1: 1545, Z0: -690, Z1: 580, AV: [1300, 1330], XS: [[1085, 1190], [1190, 1300], [1330, 1440], [1440, 1545]],
+  ZN: [-690, -580, -470, -345, -226], ZS: [226, 350, 470, 580], FH: 3.2, GF: 4, blds: [], lots: [], parks: [], courts: [], sq: [1315, 0], gas: [1109, 27] };
+{ let sd = 11; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  // brick downtown look (Dev, 17 Nov): 6-floor brick corner blocks and brick warehouses, 8-floor art deco mid-rises. The column next to
+  // Riverside stays at 6 floors so the skyline steps up from the Riverside flats instead of jumping.
+  const bld = (x, z, ry, shop) => { const F = x < 1190 ? 6 : rnd() < 0.5 ? 6 : 8, r2 = rnd(); BD.blds.push({ i: BD.blds.length, x, z, ry, F, shop: !!shop, wc: Math.floor(rnd() * 6), kit: F === 8 ? 'decoMidrise' : r2 < 0.55 ? 'brickCorner' : 'brickWarehouse' }); };
+  const court = (x0, z0, x1, z1, shop) => { BD.courts.push([x0 + 8, z0 + 8, x1 - 8, z1 - 8]);   // apartments round a green courtyard
+    const nx = Math.floor((x1 - x0 - 16) / 28), nz = Math.floor((z1 - z0 - 16) / 28), ox = (x1 - x0 - 16 - nx * 28) / 2, oz = (z1 - z0 - 16 - nz * 28) / 2;
+    for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) { if (i > 0 && i < nx - 1 && j > 0 && j < nz - 1) continue;
+      const x = x0 + 8 + ox + 14 + i * 28, z = z0 + 8 + oz + 14 + j * 28, ry = j === nz - 1 ? 0 : j === 0 ? Math.PI : i === 0 ? -Math.PI / 2 : Math.PI / 2;
+      bld(x, z, ry, shop && j === nz - 1); } };
+  const mixed = (x0, z0, x1, z1) => { const nx = Math.floor((x1 - x0 - 14) / 30) + 1, nz = Math.floor((z1 - z0 - 14) / 30) + 1;   // apartments with shops below
+    const ox = (x1 - x0 - (nx - 1) * 30) / 2, oz = (z1 - z0 - (nz - 1) * 30) / 2;
+    for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) bld(x0 + ox + i * 30, z0 + oz + j * 30, j < nz / 2 ? Math.PI : 0, true); };
+  const park = (x0, z0, x1, z1) => BD.parks.push([x0 + 6, z0 + 6, x1 - 6, z1 - 6]);
+  const biz = (x0, z0, x1, z1) => { const xm = (x0 + x1) / 2; [[x0 + 6, xm - 2], [xm + 2, x1 - 6]].forEach(([a, b]) => { for (let z = z0 + 6; z + 44 <= z1 - 6; z += 50) BD.lots.push({ x0: a, z0: z, x1: b, z1: z + 44 }); }); };
+  const fn = { court, mixed, park, biz };
+  const N = [['court', 'mixed', 'park', 'court'], ['mixed', 'court', 'court', 'mixed'], ['court', 'park', 'mixed', 'court'], ['mixed', 'biz', 'biz', 'mixed']];
+  const S = [['mixed', 'biz', 'biz', 'mixed'], ['court', 'mixed', 'park', 'court'], ['mixed', 'court', 'court', 'mixed']];
+  N.forEach((row, r) => row.forEach((t, c) => fn[t](BD.XS[c][0] + 5, BD.ZN[r] + 5, BD.XS[c][1] - 5, BD.ZN[r + 1] - 5)));
+  S.forEach((row, r) => row.forEach((t, c) => fn[t](BD.XS[c][0] + 5, BD.ZS[r] + 5, BD.XS[c][1] - 5, BD.ZS[r + 1] - 5)));
+  // the business core (middle band): big lots round Business Square, the gas station by the entrance, apartments with shops on the far edge
+  [0, 1, 2, 3].forEach(c => [[-221, -5], [5, 221]].forEach(([za, zb]) => { const x0 = BD.XS[c][0] + 5, x1 = BD.XS[c][1] - 5;
+    if (c === 3) mixed(x0, za, x1, zb); else if (c > 0) { if (za < 0) biz(x0, za, x1, zb - 40); else biz(x0, za + 40, x1, zb); } else if (za > 0) biz(x0, za + 50, x1, zb); else biz(x0, za, x1, zb); }));
+  BD.lots.forEach((l, i) => { l.n = i + 1; l.x = (l.x0 + l.x1) / 2; l.z = (l.z0 + l.z1) / 2; });
+  // homes: the buildings nearest the entrance (the Tower road) fill first, each building from the ground floor up
+  const out = [], d = b => Math.hypot(b.x - BD.X0, b.z);
+  BD.blds.slice().sort((a, b) => d(a) - d(b)).forEach((b, k) => { b.no = k + 1; b.id = 20000 + b.no; b.style = 'bd' + b.F;
+    for (let f = 1; f <= b.F; f++) out.push([b.x, b.z, b.ry, 'f', { bid: b.id, block: b.no, style: b.style, floor: f, k: 0, per: 1, fh: (BD.GF + BD.FH * (f - 0.6)) / f / RS.SCALE, bd: true, label: 'Business District, Block ' + b.no + ', Floor ' + f }]); });
+  RS.SPEC.bd6 = { floors: 6, per: 1, fh: 4 }; RS.SPEC.bd8 = { floors: 8, per: 1, fh: 4 };
+  BD.n0 = PLOTS.length; BD.homes = BD.ON ? out.length : 0; if (BD.ON) PLOTS.push(...out); }
 (function drawRiverside() {
   const N = { edge: false, shadow: false }, RAILC = '#2f2b28', hide = new THREE.Matrix4().makeScale(0, 0, 0), g = new THREE.Group();
   spots.forEach(([x, z], i) => { if (x > 294 && x < 1212 && z > -800 && z < 640) { cr.setMatrixAt(i, hide); tk.setMatrixAt(i, hide); } });
@@ -3699,6 +3781,87 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
     scene.add(bakeGroup(T)); });
 })();
 
+(function drawBusinessDistrict() {
+  if (!BD.ON) return;
+  const N = { edge: false, shadow: false }, g = new THREE.Group(), hide = new THREE.Matrix4().makeScale(0, 0, 0), PAVE = '#e6dccb', GRASS = '#a9cf78';
+  spots.forEach(([x, z], i) => { if (x > BD.X0 - 12 && x < BD.X1 + 14 && z > -800 && z < BD.Z1 + 14) { cr.setMatrixAt(i, hide); tk.setMatrixAt(i, hide); } });
+  cr.instanceMatrix.needsUpdate = true; tk.instanceMatrix.needsUpdate = true;
+  let sd = 59; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  const road = (w, dd, x, z) => { ROADS.push([w, dd, x, z]); B(g, w, 0.1, dd, ROAD, x, 0.04, z, N); };
+  const X0 = BD.X0, X1 = BD.X1, Z0 = BD.Z0, Z1 = BD.Z1, H = Z1 - Z0, ZM = (Z0 + Z1) / 2;
+  B(g, X1 - X0 + 10, 0.06, H + 10, '#b9d48c', (X0 + X1) / 2, 0.01, ZM, N);                         // city ground
+  road(8, H + 8, X0, ZM); road(8, H + 8, X1, ZM); road(X1 - X0 + 8, 8, (X0 + X1) / 2, Z0); road(X1 - X0 + 8, 8, (X0 + X1) / 2, Z1);
+  [...BD.ZN.slice(1), 0, ...BD.ZS.slice(0, -1)].forEach(z => road(X1 - X0, [-226, 0, 226].includes(z) ? 12 : 9, (X0 + X1) / 2, z));
+  [-226, 0, 226].forEach(z => road(30, z ? 12 : 14, X0 - 15, z));                                   // the three roads in from the city
+  [1190, 1440].forEach(x => road(9, H, x, ZM));
+  { const [a, b] = BD.AV; road(b - a, H, (a + b) / 2, ZM); B(g, 5, 0.3, H, GRASS, (a + b) / 2, 0.08, ZM, N);   // BUSINESS AVENUE: median with trees and lamps
+    for (let z = Z0 + 12; z < Z1 - 8; z += 24) if (Math.abs(z) > 40 && !BD.ZN.concat(BD.ZS).some(q => Math.abs(z - q) < 8)) { tree(g, (a + b) / 2, 0.3, z, (z / 24 | 0) % 3 ? 'canopy' : 'cypress', 0.85); lamp(g, (a + b) / 2, z + 12); } }
+  // blocks: paved where the apartments stand, lawn with a pavement ring where the business lots and parks are
+  BD.XS.forEach(([xa, xb]) => [...BD.ZN.slice(0, -1).map((z, k) => [z, BD.ZN[k + 1]]), [-226, 0], [0, 226], ...BD.ZS.slice(0, -1).map((z, k) => [z, BD.ZS[k + 1]])].forEach(([za, zb]) => {
+    const cx = (xa + xb) / 2, cz = (za + zb) / 2, w = xb - xa - 10, dd = zb - za - 10, built = BD.blds.some(b => b.x > xa && b.x < xb && b.z > za && b.z < zb);
+    if (built) { B(g, w, 0.12, dd, PAVE, cx, 0.03, cz, N); return; }
+    B(g, w, 0.1, dd, GRASS, cx, 0.03, cz, N); B(g, w, 0.14, 4, PAVE, cx, 0.04, za + 7, N); B(g, w, 0.14, 4, PAVE, cx, 0.04, zb - 7, N); B(g, 4, 0.14, dd, PAVE, xa + 7, 0.04, cz, N); B(g, 4, 0.14, dd, PAVE, xb - 7, 0.04, cz, N);
+    for (let x = xa + 14; x < xb - 10; x += 16) { tree(g, x, 0.1, za + 7, 'canopy', 0.8); tree(g, x, 0.1, zb - 7, 'canopy', 0.8); } }));
+  // courtyards, parks and the square
+  BD.courts.forEach(([x0, z0, x1, z1]) => { B(g, x1 - x0 - 44, 0.18, z1 - z0 - 44, GRASS, (x0 + x1) / 2, 0.05, (z0 + z1) / 2, N);
+    tree(g, (x0 + x1) / 2 - 8, 0.2, (z0 + z1) / 2, 'pink', 0.9); tree(g, (x0 + x1) / 2 + 8, 0.2, (z0 + z1) / 2, 'canopy', 0.9); bench(g, (x0 + x1) / 2, (z0 + z1) / 2 + 6, 0); });
+  BD.parks.forEach(([x0, z0, x1, z1]) => { const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = x1 - x0, dd = z1 - z0;
+    B(g, w, 0.18, dd, GRASS, cx, 0.05, cz, N); B(g, w, 0.2, 3, PAVE, cx, 0.06, cz, N); B(g, 3, 0.2, dd, PAVE, cx, 0.06, cz, N);
+    add(g, new THREE.CylinderGeometry(5, 5.4, 0.7, 20), '#e9e1cf', cx, 0.35, cz, { edge: false }); add(g, new THREE.CylinderGeometry(4.3, 4.3, 0.2, 20), '#4aa3cf', cx, 0.72, cz, N);
+    for (let k = 0; k < 26; k++) { const x = x0 + 5 + rnd() * (w - 10), z = z0 + 5 + rnd() * (dd - 10); if (Math.abs(x - cx) < 5 || Math.abs(z - cz) < 5) continue; const q = rnd();
+      if (q < 0.8) tree(g, x, 0.2, z, q < 0.2 ? 'pink' : q < 0.3 ? 'cypress' : 'canopy', 0.9 + rnd() * 0.5); else flowerBed(g, x, z, q < 0.9 ? C.pink : C.purple); }
+    [[-12, 0], [12, 0], [0, -12], [0, 12]].forEach(([dx, dz]) => bench(g, cx + dx, cz + dz + (dx ? 3 : 0), dz ? (dz < 0 ? Math.PI : 0) : 0)); });
+  { const [x, z] = BD.sq;                                                                            // BUSINESS SQUARE: two plaza halves either side of the z 0 road
+    [-1, 1].forEach(hs => [[x - 45, 58], [x + 45, 58]].forEach(([px, w]) => { B(g, w, 0.2, 28, '#efe6d2', px, 0.05, z + hs * 21, N); tree(g, px - 20, 0.25, z + hs * 21, 'canopy', 1); tree(g, px + 20, 0.25, z + hs * 21, 'pink', 1);
+      bench(g, px - 8, z + hs * 26, hs < 0 ? Math.PI : 0); bench(g, px + 8, z + hs * 26, hs < 0 ? Math.PI : 0); lamp(g, px - 26, z + hs * 10); lamp(g, px + 26, z + hs * 10); }));
+    signBoard(g, 'BUSINESS DISTRICT', X0 + 7, 5.3, 0, 12, 1.6, '#1f2f5a', '#e2b04a', Math.PI / 2); [-8, 8].forEach(dz => { B(g, 2.2, 7, 2.2, '#e3d2ae', X0 + 7, 0, dz); B(g, 2.8, 0.6, 2.8, '#c8603f', X0 + 7, 7, dz); }); }
+  // business lots: paved pad, kerb, and a lot sign (filled when the city grants a business)
+  BD.lots.forEach(l => { B(g, l.x1 - l.x0 - 4, 0.16, l.z1 - l.z0 - 4, '#b8d891', l.x, 0.04, l.z, N); [l.z0 + 2, l.z1 - 2].forEach(z => B(g, l.x1 - l.x0 - 4, 0.5, 0.8, '#5e9a4e', l.x, 0.04, z, N)); [l.x0 + 2, l.x1 - 2].forEach(x => B(g, 0.8, 0.5, l.z1 - l.z0 - 4, '#5e9a4e', x, 0.04, l.z, N)); });
+  { const [x, z] = BD.gas; B(g, 40, 0.16, 32, '#ddd6c8', x, 0.04, z, N); }
+  // the green break towards Riverside (Dev, 17 Nov): two lines of trees along the border road, so the brick district reads as a new part of town
+  for (let z = Z0 + 6; z <= Z1 - 6; z += 14) if (![-226, 0, 226].some(q => Math.abs(z - q) < 14)) { tree(g, X0 - 9, 0.1, z, 'canopy', 1.05); tree(g, X0 - 16, 0.1, z + 7, ((z / 14) | 0) % 2 ? 'cypress' : 'canopy', 1); }
+  // trees along the outer edge
+  for (let z = Z0; z <= Z1; z += 20) tree(g, X1 + 9, 0.1, z, ((z / 20) | 0) % 3 ? 'canopy' : 'cypress', 0.95);
+  window.BD_OBJ = bakeKeep(g, 'businessdistrict');
+  whenKit(() => { const K = window.VinlandKit, T = new THREE.Group();
+    BD.lots.forEach(l => { const m = K.make('lotSign', { text: 'BUSINESS LOT ' + l.n }); m.position.set(l.x, 0, l.z1 - 3); T.add(m); });
+    { const m = K.make('lotSign', { text: 'GAS STATION LOT' }); m.position.set(BD.gas[0], 0, BD.gas[1] + 14); T.add(m); }
+    [[-1, -45], [1, 45]].forEach(([hs, dx]) => { const m = K.make('grandFountain', {}); m.position.set(BD.sq[0] + dx, 0, BD.sq[1] + hs * 21); T.add(m); });
+    scene.add(bakeGroup(T));
+    // the apartment buildings: one shared drawing per kind, instanced, brick / stone tinted per building
+    const TINT = { brickCorner: ['#9a4a3a', '#8a5a3c', '#a8473a', '#b07a55', '#9c6a4a', '#7a4a33'], brickWarehouse: ['#a8473a', '#8c3b2e', '#9a6848', '#b5583f', '#b98a62', '#a0573f'], decoMidrise: ['#f6f0e2', '#efd9b4', '#f0c9a8', '#e8dcc4', '#f3e2c0', '#e9d3b8'] };
+    const SLOT = { brickCorner: 'brick', brickWarehouse: 'brick', decoMidrise: 'wall' }, OPT = { brickCorner: {}, brickWarehouse: { waterTower: 'on' }, decoMidrise: { floors: '8' } }, SC = { brickCorner: [0.85, 1, 0.85], brickWarehouse: [0.75, 1, 0.9], decoMidrise: [0.95, 1, 0.95] };
+    BD.meshes = [];
+    ['brickCorner', 'brickWarehouse', 'decoMidrise'].forEach(key => { const list = BD.blds.filter(b => b.kit === key); if (!list.length) return;
+      const baked = K.bake(K.make(key, OPT[key]));
+      const mats = list.map(b => new THREE.Matrix4().compose(new THREE.Vector3(b.x, 0, b.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), b.ry), new THREE.Vector3(...SC[key])));
+      const grp = K.instances(baked, mats, i => ({ [SLOT[key]]: TINT[key][list[i].wc] }));
+      [...grp.children].forEach(ch => { ch.userData.blds = list; if (ch.isMesh) pickables.push(ch); scene.add(ch); BD.meshes.push(ch); }); }); });
+})();
+
+(function drawSuburb() {
+  if (!SB.ON) return;
+  const N = { edge: false, shadow: false }, g = new THREE.Group(), hide = new THREE.Matrix4().makeScale(0, 0, 0), { XW, XE, ZN, ZS, ZB } = SB, GRASS = '#a9cf78', PAVE = '#e6dccb';
+  spots.forEach(([x, z], i) => { if ((x > XW - 14 && x < XE + 14 && z > ZN - 14 && z < ZS + 14) || SB.IN.some(cx => Math.abs(x - cx) < 10 && z > 560 && z < ZN)) { cr.setMatrixAt(i, hide); tk.setMatrixAt(i, hide); } });
+  cr.instanceMatrix.needsUpdate = true; tk.instanceMatrix.needsUpdate = true;
+  let sd = 91; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  B(g, XE - XW + 24, 0.06, ZS - ZN + 24, '#9fc86e', (XW + XE) / 2, 0.01, (ZN + ZS) / 2, N);
+  const round = (w, d, r) => { const sh = new THREE.Shape(), x = -w / 2, y = -d / 2; sh.moveTo(x + r, y); sh.lineTo(x + w - r, y); sh.quadraticCurveTo(x + w, y, x + w, y + r); sh.lineTo(x + w, y + d - r); sh.quadraticCurveTo(x + w, y + d, x + w - r, y + d);
+    sh.lineTo(x + r, y + d); sh.quadraticCurveTo(x, y + d, x, y + d - r); sh.lineTo(x, y + r); sh.quadraticCurveTo(x, y, x + r, y); return new THREE.ShapeGeometry(sh, 4); };
+  const pad = ([x0, z0, x1, z1], c2) => { const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = x1 - x0, d = z1 - z0;
+    [[w, d, PAVE, 0.05, 6], [w - 4, d - 4, c2 || GRASS, 0.09, 5]].forEach(([a, c, col, y, r]) => { const m = new THREE.Mesh(round(a, c, r), mat(col)); m.rotation.x = -Math.PI / 2; m.position.set(cx, y, cz); m.receiveShadow = true; g.add(m); }); };
+  SB.blocks.forEach(b => pad(b)); SB.centre.forEach(b => pad(b, '#9fc86e'));
+  SB.roads.forEach(([w, d, x, z]) => { ROADS.push([w, d, x, z]); B(g, w, 0.1, d, ROAD, x, 0.07, z, N); });
+  { const L = XE - XW; B(g, L, 0.2, 4, '#8cc06a', (XW + XE) / 2, 0.08, ZB, N); for (let x = XW + 10; x < XE - 6; x += 18) if (Math.abs(x - (SB.GX[0] + SB.GX[1]) / 2) > 60) { tree(g, x, 0.25, ZB, 'canopy', 0.9); lamp(g, x + 9, ZB); } }
+  SB.parks.forEach(([x0, z0, x1, z1]) => { const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2; add(g, new THREE.CylinderGeometry(4, 4.4, 0.6, 18), '#e9e1cf', cx, 0.3, cz, { edge: false }); add(g, new THREE.CylinderGeometry(3.4, 3.4, 0.2, 18), '#4aa3cf', cx, 0.62, cz, N);
+    for (let k = 0; k < 10; k++) { const x = x0 + 8 + rnd() * (x1 - x0 - 16), z = z0 + 8 + rnd() * (z1 - z0 - 16); if (Math.hypot(x - cx, z - cz) > 8) tree(g, x, 0.2, z, rnd() < 0.3 ? 'pink' : 'canopy', 0.9); } bench(g, cx, cz + 7, 0); });
+  SB.pools.forEach(([x, z]) => { B(g, 6.4, 0.24, 4.2, '#e9e1cf', x, 0.1, z, N); B(g, 5.4, 0.26, 3.2, '#4ab3dc', x, 0.11, z, N); });
+  GD.blds.filter(b => b.sb).forEach(b => { if (b.i % 2 === 0) { const bx = -Math.sin(b.ry) * 11, bz = -Math.cos(b.ry) * 11; tree(g, b.x + bx + (rnd() - 0.5) * 6, 0.1, b.z + bz + (rnd() - 0.5) * 3, rnd() < 0.18 ? 'pink' : 'canopy', 0.7 + rnd() * 0.4); } });
+  for (let x = XW + 10; x <= XE - 10; x += 16) [ZN - 9, ZS + 9].forEach(z => { if (z === ZN - 9 && SB.IN.some(c => Math.abs(x - c) < 9)) return; tree(g, x, 0.1, z, 'canopy', 0.95); });
+  for (let z = ZN + 10; z <= ZS - 10; z += 16) [XW - 9, XE + 9].forEach(x => tree(g, x, 0.1, z, 'canopy', 0.95));
+  // the green strip stays empty for now (Dev, 17 Nov night: centre, shops, sports and big buildings come later)
+  window.SB_OBJ = bakeKeep(g, 'suburb');
+})();
 // ---- the Library, next to the school (Education District) ----
 // ---- Education District grounds: front walk with lamps, sports ground with a running track, gardens, groves ----
 (function drawEduGrounds() {
@@ -4181,7 +4344,9 @@ function drawVillas(hs) {
   villaObjs.forEach(o => { scene.remove(o); o.traverse(m => { const k = pickables.indexOf(m); if (k >= 0) pickables.splice(k, 1); }); }); villaObjs = [];
   hs.filter(h => h.villa).forEach(h => { const L = LOTS[h.villa]; if (!L) return;
     if (bigLots.has(h.villa)) console.warn('Villa Lane plot ' + h.villa + ' is also a business lot');
-    if (L.mansion) { if (L.sign) L.sign.visible = false; whenKit(() => { const g = new THREE.Group(), m = window.VinlandKit.make('mnSpanish', { name: h.user }); m.scale.set(1, 1.05, MLANE.deep); g.add(m); g.position.set(L.x, 0, MLANE.mz); g.rotation.y = L.ry; villaObjs.push(bakeKeep(g, 'mansion:' + h.villa)); }); return; }
+    if (L.mansion) { if (L.sign) L.sign.visible = false; whenKit(() => { const g = new THREE.Group(), m = window.VinlandKit.make(MANSION_LOOK[String(h.user || '').toLowerCase()] || 'mnSpanish', { name: h.user }); m.scale.set(1, 1.05, MLANE.deep); g.add(m); g.position.set(L.x, 0, MLANE.mz); g.rotation.y = L.ry; villaObjs.push(bakeKeep(g, 'mansion:' + h.villa)); }); return; }
+    const ck = CUSTOM_VILLA[String(h.user || '').toLowerCase()];
+    if (ck) { if (L.sign) L.sign.visible = false; whenKit(() => { const g = new THREE.Group(); g.add(window.VinlandKit.make(ck, { name: h.user })); g.position.set(L.x, 0, L.z); g.rotation.y = L.ry; villaObjs.push(bakeKeep(g, 'villa:' + h.villa)); }); return; }
     const g = villaModel(h.user); g.position.set(L.x, 0, L.z); g.rotation.y = L.ry; villaObjs.push(bakeKeep(g, 'villa:' + h.villa)); if (L.sign) L.sign.visible = false; });
 }
 let bigLotObjs = [], bigLotLbls = [];
