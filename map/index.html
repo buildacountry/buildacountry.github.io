@@ -694,7 +694,7 @@ scene.background = new THREE.Color('#e8e4d8');
 scene.fog = new THREE.Fog('#e8e4d8', 20, 850);   // the original haze colour. near = haze starts this far outside the built land (full at 16x); far = north edge of the built land
 // Haze that starts where the built land ends: every fragment measures how far it is outside the built box
 // (town, districts, Government Row, north districts, beach) and fades into the haze colour from there.
-window.BUILT = { x0: -1080, x1: 1200, z0: -850, z1: 680 };   // x0: the New District (16 Nov)   // x1: District 2 (Downtown) east of the river
+window.BUILT = { x0: -1080, x1: 1200, z0: -850, z1: 1200 };   // z1 (18 Nov): the Suburb (to z 1175) + Power & Water, so they are not in the haze   // x0: the New District (16 Nov)   // x1: District 2 (Downtown) east of the river
 THREE.ShaderChunk.fog_pars_vertex = '#ifdef USE_FOG\n varying float fogDepth; varying vec3 vFogWorld;\n#endif';
 THREE.ShaderChunk.fog_vertex = '#ifdef USE_FOG\n fogDepth = - mvPosition.z;\n vec4 fw = vec4( transformed, 1.0 );\n #ifdef USE_INSTANCING\n fw = instanceMatrix * fw;\n #endif\n vFogWorld = ( modelMatrix * fw ).xyz;\n#endif';
 THREE.ShaderChunk.fog_pars_fragment = '#ifdef USE_FOG\n uniform vec3 fogColor; varying float fogDepth; varying vec3 vFogWorld;\n uniform float fogNear; uniform float fogFar;\n uniform vec4 builtBox;\n#endif';
@@ -719,7 +719,7 @@ controls.panSpeed = 1.1;
   }, { passive: false, capture: true });
 })();
 function clampView() { const t = controls.target, L = typeof GD !== 'undefined' ? -GD.XW + 20 : 340, cx = Math.max(-L, Math.min(1210, t.x)),   // west edge = the Garden District (16 Nov)
-  cz = Math.max(-860, Math.min(600, t.z)), dx = cx - t.x, dz = cz - t.z;
+  cz = Math.max(-860, Math.min(1150, t.z)), dx = cx - t.x, dz = cz - t.z;
   if (dx || dz) { t.x = cx; t.z = cz; camera.position.x += dx; camera.position.z += dz; } }
 
 scene.add(new THREE.HemisphereLight('#fff3df', '#7a6a50', 0.55));
@@ -3290,8 +3290,9 @@ function canalHouse(ci = 0, gable = 0) {
 // Town → forest → wide river → stone river wall + promenade → waterfront road (verges both sides) → 4 rows of riverside
 // houses (normal homes, appended to PLOTS so nobody moves). Two stone arch bridges: from Government Row (z -226) and from the
 // Education District (z +226). Behind the homes: Downtown's skyline (towers + cranes), the rest of the land kept for Downtown.
-const RS_SHORE = -820;   // = COAST.shore (COAST is defined further down)
+const RS_SHORE = -820, RIVER_END = 1900;   // RIVER_END (Dev, 18 Nov): the river runs on south to the end of the map (it fades in the haze), no more dead end   // = COAST.shore (COAST is defined further down)
 const RS = { EXTRAS: false, SCALE: 0.8, riverE: 520, road: 552.5, lanes: [640], z0: -650, z1: 540, cross: [-470, -226, 0, 226, 470], bridges: [-226, 0, 226] };   // z 0 = Central Bridge (user, 11 Nov): Town Square's road straight over the river
+const PW = { x0: 545, x1: 905, z0: 724, z1: 1070, gx: 785, day: 18, asked: '@hritu_raj_hajong', water: '@perls877', power: '@ploib.1' };   // VINLAND POWER & WATER (Dev's cream box, 18 Nov): south of Riverside on the river
 RS.bridgeFrom = { '-226': 292.5, '0': 292.5, '226': 152.5 };   // where each bridge road starts on the town side
 RS.riverW = z => RS.riverE - (95 + 10 * Math.sin(z / 61) + 5 * Math.sin(z / 19 + 1) + 2 * Math.sin(z / 7.3));
 // Riverside flats (user, 9 Nov: blocks of garden villa-apartments and terrace apartments). Each flat is a home number, appended
@@ -3505,10 +3506,10 @@ const BD = { ON: false, X0: 1085, X1: 1545, Z0: -690, Z1: 580, AV: [1300, 1330],
   BD.n0 = PLOTS.length; BD.homes = BD.ON ? out.length : 0; if (BD.ON) PLOTS.push(...out); }
 (function drawRiverside() {
   const N = { edge: false, shadow: false }, RAILC = '#2f2b28', hide = new THREE.Matrix4().makeScale(0, 0, 0), g = new THREE.Group();
-  spots.forEach(([x, z], i) => { if (x > 294 && x < 1212 && z > -800 && z < 640) { cr.setMatrixAt(i, hide); tk.setMatrixAt(i, hide); } });
+  spots.forEach(([x, z], i) => { if ((x > 294 && x < 1212 && z > -800 && z < 640) || (z >= 640 && x > RS.riverW(z) - 12 && x < RS.riverE + 10) || (x > PW.x0 - 6 && x < PW.x1 + 6 && z > PW.z0 - 10 && z < PW.z1 + 6) || (x > PW.gx - 8 && x < PW.gx + 8 && z > 580 && z < PW.z0)) { cr.setMatrixAt(i, hide); tk.setMatrixAt(i, hide); } });
   cr.instanceMatrix.needsUpdate = true; tk.instanceMatrix.needsUpdate = true;
   let s = 77; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
-  const strip = (xa, xb, col, y, z0 = -826, z1 = 640) => { const pos = [], idx = []; let k = 0;
+  const strip = (xa, xb, col, y, z0 = -826, z1 = RIVER_END) => { const pos = [], idx = []; let k = 0;
     for (let z = z0; z <= z1; z += 4, k++) { pos.push(xa(z), y, z, xb(z), y, z); if (k) { const a = (k - 1) * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); } }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
     const m = new THREE.Mesh(geo, mat(col)); m.receiveShadow = true; scene.add(m); return m; };
@@ -3517,13 +3518,13 @@ const BD = { ON: false, X0: 1085, X1: 1545, Z0: -690, Z1: 580, AV: [1300, 1330],
   RS.river = strip(RS.riverW, () => RS.riverE, '#4aa3cf', 0.08, RS_SHORE - 2);
   strip(z => RS.riverW(z) + 6, () => RS.riverE - 6, '#3a8fc2', 0.11, RS_SHORE + 22);
   strip(z => RS.riverW(z) + 20, () => RS.riverE - 18, '#2f7db3', 0.14, RS_SHORE + 50);   // deep middle (layers well apart: no flicker)
-  strip(() => RS.riverE, () => RS.riverE + 4, C.sand2, 0.05, -770, RS.z0 - 60); strip(() => RS.riverE, () => RS.riverE + 4, C.sand2, 0.05, RS.z1 + 30, 640);
+  strip(() => RS.riverE, () => RS.riverE + 4, C.sand2, 0.05, -770, RS.z0 - 60); strip(() => RS.riverE, () => RS.riverE + 4, C.sand2, 0.05, RS.z1 + 30, RIVER_END);
   const forest = [];
-  for (let i = 0; i < 7000 && forest.length < 2000; i++) { const x = 300 + rnd() * 130, z = -770 + rnd() * 1400;
+  for (let i = 0; i < 12000 && forest.length < 3400; i++) { const x = 300 + rnd() * 130, z = -770 + rnd() * (RIVER_END - 400 + 770);   // (18 Nov) the west-bank forest follows the river south
     if (x > RS.riverW(z) - 7 || RS.bridges.some(b => Math.abs(z - b) < 8) || RAIL.near(x, z)) continue; forest.push([x, z, 0.8 + rnd() * 0.6, Math.floor(rnd() * 4)]); }
   treeBelt(forest, scene);
   { const bush = [], rock = [];                                                                   // flowering bushes and rocks along the natural bank
-    for (let z = -760; z < 630; z += 5) { if (RS.bridges.some(b => Math.abs(z - b) < 9)) continue; const x = RS.riverW(z) - 3 - rnd() * 5;
+    for (let z = -760; z < RIVER_END - 300; z += 5) { if (RS.bridges.some(b => Math.abs(z - b) < 9)) continue; const x = RS.riverW(z) - 3 - rnd() * 5;
       if (rnd() < 0.55) bush.push([x, z + rnd() * 3, 0.6 + rnd() * 0.5, rnd() < 0.5 ? 0 : rnd() < 0.5 ? 1 : 2]); if (rnd() < 0.18) rock.push([x + 2.5, z, 0.6 + rnd() * 0.9]); }
     const o = new THREE.Object3D(), BC = ['#d88fb0', '#a084c8', '#f2c53d'];
     const bm = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1.1, 0), new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: grad }), bush.length);
@@ -3688,6 +3689,114 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
         const fz = z + up * (5.2); if (Math.abs(fz - cz) < D / 2 - 1.8) { if (Math.round(x) % 16 < 8) bench(g, x + 4, fz - up * 1.2, up > 0 ? Math.PI : 0); else flowerBed(g, x + 4, fz, Math.round(x) % 2 ? C.pink : C.purple); } } }); });
   window.RSX_OBJ = bakeKeep(g, 'riverside');
 })();
+
+// ================= VINLAND POWER & WATER (Dev, 18 Nov): the promise to the citizens, in Dev's cream box south of Riverside =================
+// Riverside's lane (x 785) runs on south to a gate. River side: the waterworks (an intake from the river, a brick pump house, the VINLAND
+// water tower, 2 round treatment tanks, 4 filter beds, the control room). East: the solar farm (rows of panels facing the sun) and a
+// substation. No power lines: Dev, "it will be all underground". Tap anything in it for the card (who asked, who works there).
+(function drawPower() {
+  // v2 (Dev, 18 Nov: "make it like a service area, it's small next to our city"): everything at city scale. Paved yards, a ring road,
+  // a big pumping station, a 55 m water tower, a treatment works hall, a covered reservoir; big panels, battery storage, a tall substation.
+  const g = new THREE.Group(), N = { edge: false, shadow: false }, CONC = '#d3cbb8', CONC2 = '#bdb5a3', BRICK = '#a8452f', STONE = '#ead9b8', SLATE = '#4a4f5a',
+    WATER = '#4aa3cf', WATER2 = '#5fb3c8', HEDGE = '#4f7f3f', GRAV = '#cbc4ad', STEEL = '#8e969e', CREAM = '#f3ead6', GREEN = '#2f5d4a', LINE = '#f1eee6';
+  const { x0, x1, z0, z1, gx } = PW, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, W = x1 - x0, D = z1 - z0;
+  const rd = (w, d, x, z) => { ROADS.push([w, d, x, z]); B(g, w, 0.1, d, ROAD, x, 0.04, z, N); };
+  const yard = (w, d, x, z) => B(g, w, 0.1, d, ROAD, x, 0.045, z, N);   // site roads: drawn, but no city traffic on them
+  const dash = (x, z, len, along) => { for (let t = -len / 2 + 3; t < len / 2 - 3; t += 8) B(g, along === 'x' ? 3 : 0.25, 0.02, along === 'x' ? 0.25 : 3, LINE, along === 'x' ? x + t : x, 0.15, along === 'x' ? z : z + t, N); };
+  // ground: paved works on the river side, gravel under the solar farm, a hedge round it all with the gate in it
+  B(g, 140, 0.06, D, CONC, x0 + 70, 0.01, cz, N); B(g, W - 140, 0.06, D, GRAV, x0 + 140 + (W - 140) / 2, 0.01, cz, N);
+  const hedge = (w, d, x, z) => B(g, w, 1.8, d, HEDGE, x, 0.05, z, { shadow: false });
+  hedge(gx - 9 - x0, 1.6, (x0 + gx - 9) / 2, z0); hedge(x1 - gx - 9, 1.6, (gx + 9 + x1) / 2, z0); hedge(W, 1.6, cx, z1); hedge(1.6, D, x1, cz);
+  hedge(1.6, D - 96, x0, (z0 + 96 + z1) / 2); hedge(1.6, 44, x0, z0 + 22);
+  rd(8, z0 - 586, gx, (586 + z0) / 2);
+  // ring road + spine (with centre lines)
+  yard(W - 14, 9, cx, z0 + 12); dash(cx, z0 + 12, W - 14, 'x'); yard(W - 14, 9, cx, z1 - 10); dash(cx, z1 - 10, W - 14, 'x');
+  yard(9, D - 22, x0 + 8, cz + 1); yard(9, D - 22, x1 - 9, cz + 1); yard(9, D - 22, 686, cz + 1); dash(686, cz + 1, D - 22, 'z'); yard(9, 12, gx, z0 + 4);
+  // the gate: big brick piers, the name on a steel arch, a gatehouse with a barrier
+  [-1, 1].forEach(sd => { B(g, 3, 6, 3, BRICK, gx + sd * 8, 0.05, z0); B(g, 3.6, 0.5, 3.6, STONE, gx + sd * 8, 6.05, z0); add(g, new THREE.SphereGeometry(0.6, 10, 8), '#f6d27a', gx + sd * 8, 7.1, z0, N);
+    B(g, 0.5, 9.5, 0.5, C.iron, gx + sd * 7, 0.05, z0 - 2.4, N); });
+  B(g, 14.5, 0.45, 0.45, C.iron, gx, 9.3, z0 - 2.4, N); signBoard(g, 'VINLAND POWER & WATER', gx, 10.8, z0 - 2.4, 18, 2.0, GREEN, '#f7f0e1');
+  B(g, 7, 4, 6, CREAM, gx + 15, 0.05, z0 + 6); B(g, 7.6, 0.5, 6.6, GREEN, gx + 15, 4.05, z0 + 6, N); [-1.8, 1.8].forEach(x => win(g, gx + 15 + x, 1.6, z0 + 2.97, Math.PI, 1.3, 1.4, { shutters: false }));
+  B(g, 7, 0.3, 0.3, '#e04848', gx + 4, 1.2, z0 + 8, N);
+  // ---- WATERWORKS ----
+  const IZ = 790, PX = 603, PW2 = 66, PD = 36, PH = 15;
+  B(g, PX - PW2 / 2 - (RS.riverW(IZ) + 6), 0.14, 12, WATER, (PX - PW2 / 2 + RS.riverW(IZ) + 6) / 2, 0.07, IZ, N);
+  [-1, 1].forEach(sd => B(g, PX - PW2 / 2 - RS.riverE + 2, 1.4, 1.4, STONE, (PX - PW2 / 2 + RS.riverE - 2) / 2, 0.05, IZ + sd * 6.6));
+  for (let k = -4; k <= 4; k++) B(g, 0.2, 2.2, 0.2, C.iron, RS.riverE + 1, 0.05, IZ + k * 1.3, N); B(g, 0.3, 0.3, 12.4, C.iron, RS.riverE + 1, 2.2, IZ, N);
+  // the pumping station: a big brick hall on a stone base, tall arched windows, two lanterns on the slate roof, a 38 m chimney
+  B(g, PW2 + 2, 1.4, PD + 2, STONE, PX, 0.05, IZ); B(g, PW2, PH, PD, BRICK, PX, 1.3, IZ); B(g, PW2 + 0.8, 0.9, PD + 0.8, STONE, PX, PH + 1.3, IZ);
+  hip(g, PW2 + 1.6, 8, PD + 1.6, SLATE, PX, PH + 2.2, IZ); [-14, 14].forEach(d => { B(g, 9, 3.4, 6, CREAM, PX + d, PH + 6.4, IZ); hip(g, 10, 2.4, 7, C.copper, PX + d, PH + 9.8, IZ); });
+  for (let k = 0; k < 8; k++) { const x = PX - PW2 / 2 + 4.2 + k * 8.2; win(g, x, 4.4, IZ - PD / 2 - 0.05, Math.PI, 2.8, 6.8, { shutters: false }); win(g, x, 4.4, IZ + PD / 2 + 0.05, 0, 2.8, 6.8, { shutters: false }); if (k < 7) B(g, 1.2, PH, 0.6, STONE, x + 4.1, 1.3, IZ - PD / 2 - 0.15, N); }
+  [-1, 1].forEach(sd => [-9, 0, 9].forEach(z => win(g, PX + sd * (PW2 / 2 + 0.05), 4.4, IZ + z, sd * Math.PI / 2, 2.8, 6.8, { shutters: false })));
+  door(g, PX, 1.3, IZ - PD / 2 - 0.08, Math.PI, 4.6, 6.0); signBoard(g, 'VINLAND WATERWORKS', PX, 13.6, IZ - PD / 2 - 0.5, 26, 2.2, GREEN, '#f6d27a', Math.PI);
+  B(g, 5, 38, 5, BRICK, PX + 26, 1.3, IZ + 12); B(g, 6, 1, 6, STONE, PX + 26, 39.3, IZ + 12); B(g, 6, 0.8, 6, STONE, PX + 26, 9, IZ + 12, N);
+  // the water tower: the landmark (55 m), eight legs with rings, a balcony, a big cream tank with VINLAND, a green cap
+  const TX = 658, TZ = 792, TH = 38, TR = 11;
+  for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, r = 8.4; add(g, new THREE.CylinderGeometry(0.6, 0.85, TH, 8), STEEL, TX + Math.cos(a) * r, TH / 2, TZ + Math.sin(a) * r, N); }
+  [12, 25].forEach(y => add(g, new THREE.TorusGeometry(8.4, 0.3, 4, 24), STEEL, TX, y, TZ, { rx: Math.PI / 2, edge: false, shadow: false }));
+  add(g, new THREE.CylinderGeometry(1.8, 1.8, TH, 10), CONC2, TX, TH / 2, TZ, N);
+  add(g, new THREE.CylinderGeometry(TR + 1.4, TR + 1.4, 0.5, 32), STEEL, TX, TH + 0.25, TZ, N); add(g, new THREE.TorusGeometry(TR + 1.3, 0.1, 4, 32), C.iron, TX, TH + 1.5, TZ, { rx: Math.PI / 2, edge: false, shadow: false });
+  add(g, new THREE.CylinderGeometry(TR, TR, 13, 32), CREAM, TX, TH + 7, TZ, { shadow: false }); add(g, new THREE.CylinderGeometry(TR + 0.1, TR + 0.1, 1.6, 32), GREEN, TX, TH + 12.4, TZ, N);
+  add(g, new THREE.ConeGeometry(TR + 0.5, 6, 32), GREEN, TX, TH + 16.2, TZ); add(g, new THREE.SphereGeometry(0.9, 10, 8), '#e2b04a', TX, TH + 19.6, TZ, N);
+  [0, Math.PI / 2, Math.PI, -Math.PI / 2].forEach(a => signBoard(g, 'VINLAND', TX + Math.sin(a) * (TR + 0.1), TH + 6.4, TZ + Math.cos(a) * (TR + 0.1), 10, 2.4, CREAM, GREEN, a));
+  // 2 big clarifiers with turning bridges
+  [[586, 862], [642, 862]].forEach(([x, z], k) => { B(g, 52, 0.08, 52, CONC2, x, 0.07, z, N);
+    add(g, new THREE.CylinderGeometry(23, 23, 2.6, 44, 1, true), CONC2, x, 1.3, z, { edge: false }); add(g, new THREE.TorusGeometry(23, 0.5, 4, 44), CONC, x, 2.6, z, { rx: Math.PI / 2, edge: false });
+    add(g, new THREE.CircleGeometry(22.6, 44), WATER2, x, 2.2, z, { rx: -Math.PI / 2, edge: false, shadow: false }); add(g, new THREE.CylinderGeometry(2.2, 2.2, 3.4, 12), CONC, x, 1.7, z, N);
+    const br = new THREE.Group(); br.position.set(x, 3.0, z); br.rotation.y = 0.6 + k * 1.9; g.add(br);
+    B(br, 23, 0.6, 2.4, STEEL, 11.5, 0, 0); [-1, 1].forEach(sd => B(br, 23, 1.1, 0.08, C.iron, 11.5, 0.6, sd * 1.2, N)); B(br, 3, 2.2, 3, CREAM, 21, 0.6, 0); });
+  // the treatment works hall: long, saw-tooth roof with north lights, big sign
+  const HX = 614, HZ = 921, HW = 112, HD = 34, HH = 12;
+  B(g, HW, HH, HD, CREAM, HX, 0.05, HZ); B(g, HW + 0.6, 1.2, HD + 0.6, BRICK, HX, 0.05, HZ, N); B(g, HW + 0.8, 0.6, HD + 0.8, STONE, HX, HH + 0.05, HZ);
+  for (let k = 0; k < 7; k++) { const z = HZ - HD / 2 + 2.4 + k * 4.85; gable(g, 4.8, 3.2, HW - 1, SLATE, HX, HH + 0.65, z, Math.PI / 2); B(g, HW - 2, 2.4, 0.15, C.glass, HX, HH + 0.65, z - 2.3, N); }
+  for (let k = 0; k < 12; k++) { const x = HX - HW / 2 + 5 + k * 9.3; win(g, x, 3, HZ - HD / 2 - 0.05, Math.PI, 3.4, 4.6, { shutters: false }); win(g, x, 3, HZ + HD / 2 + 0.05, 0, 3.4, 4.6, { shutters: false }); }
+  signBoard(g, 'TREATMENT WORKS', HX, 9.6, HZ - HD / 2 - 0.4, 20, 1.8, GREEN, '#f7f0e1', Math.PI); B(g, 9, 7, 0.4, '#9aa0a8', HX + 40, 0.05, HZ - HD / 2 - 0.15, N);
+  // filter beds (5), then the covered clean-water reservoir (a grass roof with vents)
+  for (let k = 0; k < 5; k++) { const x = 563 + k * 23.5; B(g, 21, 1.8, 36, CONC2, x, 0.05, 970); B(g, 19.4, 0.06, 34.4, k % 2 ? WATER : WATER2, x, 1.9, 970, N); }
+  B(g, 116, 4.5, 34, CONC2, 614, 0.05, 1027); B(g, 115, 0.4, 33, '#8fb862', 614, 4.55, 1027, N);
+  for (let k = 0; k < 6; k++) { const x = 566 + k * 19; add(g, new THREE.CylinderGeometry(1.1, 1.1, 1.8, 10), CONC, x, 5.8, 1027, N); add(g, new THREE.ConeGeometry(1.6, 1, 10), SLATE, x, 7.2, 1027, N); }
+  signBoard(g, 'CLEAN WATER RESERVOIR', 614, 2.4, 1009.8, 16, 1.4, GREEN, '#f7f0e1', Math.PI);
+  // staff car park by the gate side of the works
+  for (let k = 0; k < 6; k++) carModel(g, 630 + k * 3.6, 750, 0, ['#3f7fbf', '#f6f0e2', '#2f7a68', '#c8603f', '#55504a', '#e2b04a'][k]);
+  for (let x = 560; x < 680; x += 20) lamp(g, x, z0 + 18);
+  // ---- SOLAR FARM: big panels on tall frames, battery storage, a tall substation, a maintenance depot ----
+  const SX0 = 696, SX1 = 890, MW = 7.2, ROWS = [];
+  for (let z = 820; z <= 1046; z += 13) ROWS.push(z);
+  const nMod = Math.floor((SX1 - SX0) / (MW + 0.4)), mods = ROWS.length * nMod;
+  const fr = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat('#4a5d7e'), mods), pv = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat('#2e4c86'), mods);
+  const o = new THREE.Object3D(); let n = 0;
+  ROWS.forEach(z => { for (let i = 0; i < nMod; i++) { const x = SX0 + (i + 0.5) * (MW + 0.4);
+    o.position.set(x, 2.7, z); o.rotation.set(0.45, 0, 0); o.scale.set(MW, 0.18, 6.4); o.updateMatrix(); fr.setMatrixAt(n, o.matrix);
+    o.position.set(x, 2.8, z); o.scale.set(MW - 0.3, 0.2, 6.1); o.updateMatrix(); pv.setMatrixAt(n, o.matrix); n++; }
+    B(g, SX1 - SX0, 2.2, 0.3, '#5a636b', (SX0 + SX1) / 2, 0.05, z - 2.3, N); B(g, SX1 - SX0, 0.9, 0.3, '#5a636b', (SX0 + SX1) / 2, 0.05, z + 2.3, N); });
+  [fr, pv].forEach(m => { m.castShadow = true; m.receiveShadow = true; m.userData.place = 'power'; pickables.push(m); scene.add(m); });
+  signBoard(g, 'VINLAND SOLAR FARM', 694, 3.4, 830, 16, 1.6, '#2e4c86', '#f7f0e1', Math.PI / 2); [-6.5, 6.5].forEach(d => B(g, 0.35, 3.4, 0.35, C.iron, 694, 0.05, 830 + d, N));
+  // battery storage: 3 rows of white container units with vents
+  for (let r = 0; r < 3; r++) for (let k = 0; k < 6; k++) { const x = 704 + k * 14.5, z = 752 + r * 9.5; B(g, 12.5, 3.2, 3.2, '#eef0ee', x, 0.1, z); B(g, 12.6, 0.3, 3.3, GREEN, x, 3.3, z, N);
+    [-4, 0, 4].forEach(d => B(g, 2, 0.4, 2, '#9aa0a8', x + d, 3.6, z, N)); }
+  signBoard(g, 'BATTERY STORAGE', 747, 3.2, 744.2, 12, 1.2, GREEN, '#f7f0e1', Math.PI);
+  // the substation: big transformers, tall steel gantries, a control building
+  const QX = 862, QZ = 772; B(g, 52, 0.1, 48, '#b9b2a2', QX, 0.05, QZ, N);
+  [-1, 1].forEach(sd => { B(g, 52, 3, 0.15, '#7b857f', QX, 0.05, QZ + sd * 24, N); B(g, 0.15, 3, 48, '#7b857f', QX + sd * 26, 0.05, QZ, N); });
+  for (let k = 0; k < 3; k++) { const x = QX - 15 + k * 14; B(g, 9, 6.5, 6, '#8a9399', x, 0.15, QZ + 6); for (let f = -3; f <= 3; f++) B(g, 0.2, 5, 7, '#737c82', x + f * 1.2, 0.6, QZ + 6, N);
+    B(g, 6, 1.4, 3, '#6f777d', x, 6.65, QZ + 6, N); [-2, 0, 2].forEach(d => add(g, new THREE.CylinderGeometry(0.3, 0.45, 2.6, 8), '#e8e2d2', x + d, 9.3, QZ + 6, N)); }
+  [-22, -8, 6, 20].forEach(d => { B(g, 0.6, 16, 0.6, STEEL, QX + d, 0.1, QZ - 8, N); B(g, 0.6, 16, 0.6, STEEL, QX + d, 0.1, QZ - 14, N); });
+  [16, 11].forEach(y => { B(g, 44, 0.5, 0.5, STEEL, QX - 1, y, QZ - 8, N); B(g, 44, 0.5, 0.5, STEEL, QX - 1, y, QZ - 14, N); });
+  B(g, 14, 5, 9, CREAM, QX + 17, 0.1, QZ + 15); B(g, 14.6, 0.5, 9.6, GREEN, QX + 17, 5.1, QZ + 15, N); door(g, QX + 13, 0.1, QZ + 10.45, Math.PI, 1.6, 2.6);
+  signBoard(g, 'SUBSTATION', QX, 4.2, QZ - 24.4, 9, 1.1, '#2f2b28', '#f6d27a', Math.PI);
+  // maintenance depot for the panel crews, by the spine road
+  B(g, 30, 8, 18, '#9aa7ad', 806, 0.1, 794); gable(g, 30.6, 3, 18.6, SLATE, 806, 8.1, 794, 0); [-7, 7].forEach(x => B(g, 7, 6, 0.3, '#d9dde2', 806 + x, 0.1, 784.8, N));
+  signBoard(g, 'DEPOT', 806, 6.8, 784.6, 6, 1.0, GREEN, '#f7f0e1', Math.PI); [0, 1, 2].forEach(k => carModel(g, 822 + k * 3.6, 790, Math.PI, '#f6f0e2'));
+  // the east bank south of Riverside: a line of trees, broken by the intake
+  const bank = []; let sd = 31; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  for (let z = 600; z < RIVER_END - 400; z += 7) { if (Math.abs(z - IZ) < 11) continue; bank.push([RS.riverE + 8 + rr() * 14, z + rr() * 4, 0.8 + rr() * 0.5, Math.floor(rr() * 4)]); if (z > z1 + 10 && rr() < 0.6) bank.push([RS.riverE + 26 + rr() * 30, z, 0.8 + rr() * 0.5, Math.floor(rr() * 4)]); }
+  treeBelt(bank, scene);
+  window.PW_OBJ = bakeKeep(g, 'power');
+})();
+function powerCard() {
+  return ['South of Riverside, on the river · Day ' + PW.day, 'Vinland Power & Water',
+    `<p class="p">We promised every citizen power and clean water, so here it is. The river feeds the waterworks: the pump house lifts the water, the tanks and filter beds clean it, and the VINLAND water tower sends it to every home. The solar farm makes the power, and the cables run under the ground.</p>
+     <dl class="facts"><dt>Opened</dt><dd>Day ${PW.day}</dd><dt>Asked by</dt><dd>${esc(PW.asked)}</dd><dt>Water engineer</dt><dd>${esc(PW.water)}</dd><dt>Electrical engineer</dt><dd>${esc(PW.power)}</dd><dt>Power</dt><dd>Solar · cables underground</dd><dt>Water</dt><dd>From the river, cleaned, to every home</dd></dl>`]; }
 
 // ---- NEW DISTRICT ground (v3, 16 Nov): natural green belt (trees, rocks, bushes on the map's own grass), the street grid, one road on
 // z 0 with the gate, the lake park (natural lake, trees, rocks, no houses), shop street + big-building lots (later), a small
@@ -4655,7 +4764,7 @@ CONTENT.edu = ['South of town', 'Education District',
 const ray = new THREE.Raycaster(), m2 = new THREE.Vector2(); let down = null, hoverFlag = false;
 function pickAt(cx, cy) { const r = renderer.domElement.getBoundingClientRect(); m2.set((cx - r.left) / r.width * 2 - 1, -(cy - r.top) / r.height * 2 + 1);
   ray.setFromCamera(m2, camera); const hit = ray.intersectObjects(pickables, false)[0]; if (!hit) return null; const ud = hit.object.userData; if (ud.homes) return { home: ud.homes[hit.instanceId] }; if (ud.blds) return { bld: ud.blds[hit.instanceId] }; if (ud.items) { const it = ud.items[hit.instanceId]; return it.owner ? { shop: it } : { open: it }; } return ud.place; }
-renderer.domElement.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse' || e.buttons) return; const p = pickAt(e.clientX, e.clientY); hoverFlag = p === 'flag' || p === 'hall' || p === 'square' || p === 'corner' || p === 'school' || p === 'hospital' || p === 'statue' || p === 'mall' || p === 'mallsite' || (typeof p === 'string' && p.startsWith('cornershop:')) || p === 'gov' || p === 'parliament' || p === 'police' || p === 'fire' || p === 'train' || p === 'bus' || p === 'embassy' || p === 'bank' || p === 'beachtown' || p === 'resort' || p === 'library' || p === 'beach' || (typeof p === 'string' && p.startsWith('lot:')) || (p && (p.home || p.shop || p.open)); renderer.domElement.style.cursor = hoverFlag ? 'pointer' : 'grab'; });
+renderer.domElement.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse' || e.buttons) return; const p = pickAt(e.clientX, e.clientY); hoverFlag = p === 'flag' || p === 'hall' || p === 'square' || p === 'corner' || p === 'school' || p === 'hospital' || p === 'statue' || p === 'mall' || p === 'mallsite' || (typeof p === 'string' && p.startsWith('cornershop:')) || p === 'gov' || p === 'parliament' || p === 'police' || p === 'fire' || p === 'power' || p === 'train' || p === 'bus' || p === 'embassy' || p === 'bank' || p === 'beachtown' || p === 'resort' || p === 'library' || p === 'beach' || (typeof p === 'string' && p.startsWith('lot:')) || (p && (p.home || p.shop || p.open)); renderer.domElement.style.cursor = hoverFlag ? 'pointer' : 'grab'; });
 renderer.domElement.addEventListener('pointerdown', e => { if (WALK.on || DRV.on) return; down = [e.clientX, e.clientY]; fly = null; stopTour(); });
 renderer.domElement.addEventListener('pointerup', e => { if (WALK.on || DRV.on) return; if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
   const p = pickAt(e.clientX, e.clientY);
@@ -4677,6 +4786,7 @@ renderer.domElement.addEventListener('pointerup', e => { if (WALK.on || DRV.on) 
   if (p === 'embassy') { clearSelection(); stopTour(); const c = embassyCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(EMB.x, 4, EMB.z), narrow ? new THREE.Vector3(EMB.x + 40, 70, EMB.z + 100) : new THREE.Vector3(EMB.x + 30, 48, EMB.z + 80)); return; }
   if (p === 'train') { clearSelection(); stopTour(); const c = trainCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(TRAIN.x, 4, TRAIN.z), narrow ? new THREE.Vector3(TRAIN.x - 150, 90, TRAIN.z + 60) : new THREE.Vector3(TRAIN.x - 120, 60, TRAIN.z + 50)); return; }
   if (p === 'bus') { clearSelection(); stopTour(); const c = busCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(BUS.x, 4, BUS.z), narrow ? new THREE.Vector3(BUS.x - 80, 80, BUS.z + 100) : new THREE.Vector3(BUS.x - 70, 55, BUS.z + 80)); return; }
+  if (p === 'power') { clearSelection(); stopTour(); const c = powerCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(720, 4, 860), narrow ? new THREE.Vector3(720, 330, 1180) : new THREE.Vector3(720, 240, 1110)); return; }
   if (p === 'fire') { clearSelection(); stopTour(); const c = fireCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(FIRE.x, 4, FIRE.z), narrow ? new THREE.Vector3(FIRE.x - 40, 70, FIRE.z + 100) : new THREE.Vector3(FIRE.x - 30, 48, FIRE.z + 80)); return; }
   if (p === 'police') { clearSelection(); stopTour(); const c = policeCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(POL.x, 4, POL.z), narrow ? new THREE.Vector3(POL.x - 70, 70, POL.z + 90) : new THREE.Vector3(POL.x - 60, 48, POL.z + 70)); return; }
   if (p === 'gov' || p === 'parliament') { clearSelection(); stopTour(); const c = govCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(0, 4, GOV.parliament.z), narrow ? new THREE.Vector3(60, 80, 130) : new THREE.Vector3(50, 55, 95)); return; }
@@ -4795,6 +4905,7 @@ const LAYOUT_CSV_URL = '';
 const NOTICES_CSV_URL = '';
 // Official notices: only you write these (in the sheet's "notices" tab); nobody can reply on the website.
 const NOTICES_FALLBACK = `date,notice
+18 Nov,"Vinland Power & Water is open, south of Riverside on the river: the waterworks, the VINLAND water tower and the solar farm. Power and clean water for every home, cables under the ground. Tap it on the map."
 16 Nov,"The Central Bank of Vinland is open on Government Row, next to the Embassy. Tap it on the map. Your coins are in the lobby: Me, then Wallet."
 15 Nov,"The Vinland National Stadium is open, with a training pitch, sports hall, pool and courts around it."
 11 Nov,"The Central Bridge is open: straight from the town to Riverside. At its end, the new Business District: a car showroom, a gas station, the newspaper and a dance studio. Plus: Villa Lane has its first villa, police officers stand at the HQ, and the boat shop has boats on the beach."
@@ -4837,7 +4948,7 @@ const DEMANDS_FALLBACK = `emoji,demand,count,likes,asked_by,status
 🌾,Farm,3,1,@just_lovinarts +2,Waiting (new land)
 🎨,Arts centre,2,1,@izabella_maria20 +1,"Built (Day 11, dance studio in the Business District)"
 👟,Shoe / sports store,3,0,@chayce_nathe +2,Opened as a shop
-⚡,Power & water (pumping station + solar),2,1,@hritu_raj_hajong +1,Won the vote (158 to 85): coming next
+⚡,Power & water (pumping station + solar),2,1,@hritu_raj_hajong +1,"Built (Day 18, south of Riverside on the river)"
 🏎️,Race track,1,6,@no.sh_ig,Unlocks at 10k
 🚒,Fire station,2,0,@bhaskar_26.01 +1,"Built (Day 8, next to the Police HQ)"
 🗡️,Adventurer's guild,1,1,@vaibhav.4t,Waiting

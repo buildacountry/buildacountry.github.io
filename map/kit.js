@@ -2677,6 +2677,22 @@
       return g;
     } });
 
+  // 3b. svTaxiStand (Dev, 18 Nov): a taxi rank beside the bus station, 36 x 9 m. Front (+z) = the kerb bay with 6 yellow taxi boxes,
+  // behind it a pavement island with a long yellow canopy, benches, a dispatcher kiosk and a lit TAXI sign. Taxis are placed on the map.
+  def({ key: 'svTaxiStand', name: 'Taxi stand', cat: 'District services', part: 2, budget: 900, size: '36 × 9 m · 6 taxi bays', night: true, opts: {},
+    make() {
+      const g = new THREE.Group(), Y = '#e8b830';
+      B(g, 36, 0.12, 4.6, SV.ASPH, 0, 0, 2.2, FLAT); B(g, 36, 0.3, 4.2, CP.PAVE, 0, 0, -2.2); B(g, 36, 0.32, 0.25, Y, 0, 0, -0.05, NE);
+      for (let k = 0; k <= 6; k++) B(g, 0.15, 0.03, 4.2, Y, -15 + k * 5, 0.13, 2.2, FLAT); B(g, 30, 0.03, 0.15, Y, 0, 0.13, 4.3, FLAT);
+      for (let x = -9; x <= 9; x += 6) B(g, 0.25, 3.2, 0.25, CP.IRON, x, 0.3, -3.6, NE);
+      put(g, geo('box', () => new THREE.BoxGeometry(1, 1, 1)), Y, 0, 3.7, -2.4, { rx: 0.1, s: [20, 0.25, 3.6] });
+      [-6, 0, 6].forEach(x => gdBench(g, x, -3.2, 0));
+      B(g, 2.6, 2.6, 2.2, SV.WHITE, 14, 0.3, -2.4); B(g, 2.8, 0.25, 2.4, Y, 14, 2.9, -2.4, NE); B(g, 1.6, 1.0, 0.08, SV.GLASS, 14, 1.4, -1.27, NE);
+      B(g, 0.18, 4.6, 0.18, CP.IRON, -15, 0.3, -1.2, NE); B(g, 2.6, 1.0, 0.3, glowMat(Y, Y), -15, 4.3, -1.2, NE); svSign(g, 'TAXI', Y, '#2f2b28', 2.4, 0.8, -15, 4.4, -1.04);
+      svSign(g, 'TAXI STAND', '#2f2b28', Y, 8, 0.9, 0, 3.0, -0.55);
+      return g;
+    } });
+
   // 4. svShopRow: a single-storey row of 4 small shops, 32 x 12 m, awnings, shop windows, sign panels (blank unless o.signs is given).
   def({ key: 'svShopRow', name: 'Shop row (1 floor)', cat: 'District services', part: 2, budget: 900, size: '32 × 12 m · 4 shops · 1 floor', night: true,
     opts: { wall: colours('Walls', SV.walls), awnings: choices('Awnings', Object.keys(CP.awnings)), signs: choices('Signs', ['blank', 'sample']) },
