@@ -3292,7 +3292,8 @@ function canalHouse(ci = 0, gable = 0) {
 // Education District (z +226). Behind the homes: Downtown's skyline (towers + cranes), the rest of the land kept for Downtown.
 const RS_SHORE = -820, RIVER_END = 1900;   // RIVER_END (Dev, 18 Nov): the river runs on south to the end of the map (it fades in the haze), no more dead end   // = COAST.shore (COAST is defined further down)
 const RS = { EXTRAS: false, SCALE: 0.8, riverE: 520, road: 552.5, lanes: [640], z0: -650, z1: 540, cross: [-470, -226, 0, 226, 470], bridges: [-226, 0, 226] };   // z 0 = Central Bridge (user, 11 Nov): Town Square's road straight over the river
-const PW = { x0: 545, x1: 905, z0: 724, z1: 1070, gx: 785, day: 18, asked: '@hritu_raj_hajong', water: '@perls877', power: '@ploib.1' };   // VINLAND POWER & WATER (Dev's cream box, 18 Nov): south of Riverside on the river
+const PW = { x0: 545, x1: 905, z0: 1074, z1: 1420, dz: 350, gx: 785,   // (Dev 16:50: moved 350 m further south, half into the haze, away from the homes; drawPower builds at z-dz and shifts)
+  day: 18, asked: '@hritu_raj_hajong', water: '@perls877', power: '@ploib.1' };   // VINLAND POWER & WATER (Dev's cream box, 18 Nov): south of Riverside on the river
 RS.bridgeFrom = { '-226': 292.5, '0': 292.5, '226': 152.5 };   // where each bridge road starts on the town side
 RS.riverW = z => RS.riverE - (95 + 10 * Math.sin(z / 61) + 5 * Math.sin(z / 19 + 1) + 2 * Math.sin(z / 7.3));
 // Riverside flats (user, 9 Nov: blocks of garden villa-apartments and terrace apartments). Each flat is a home number, appended
@@ -3506,7 +3507,7 @@ const BD = { ON: false, X0: 1085, X1: 1545, Z0: -690, Z1: 580, AV: [1300, 1330],
   BD.n0 = PLOTS.length; BD.homes = BD.ON ? out.length : 0; if (BD.ON) PLOTS.push(...out); }
 (function drawRiverside() {
   const N = { edge: false, shadow: false }, RAILC = '#2f2b28', hide = new THREE.Matrix4().makeScale(0, 0, 0), g = new THREE.Group();
-  spots.forEach(([x, z], i) => { if ((x > 294 && x < 1212 && z > -800 && z < 640) || (z >= 640 && x > RS.riverW(z) - 12 && x < RS.riverE + 10) || (x > PW.x0 - 6 && x < PW.x1 + 6 && z > PW.z0 - 10 && z < PW.z1 + 6) || (x > PW.gx - 8 && x < PW.gx + 8 && z > 580 && z < PW.z0)) { cr.setMatrixAt(i, hide); tk.setMatrixAt(i, hide); } });
+  spots.forEach(([x, z], i) => { if ((x > 294 && x < 1212 && z > -800 && z < 640) || (z >= 640 && x > RS.riverW(z) - 12 && x < RS.riverE + 10) || (x > PW.x0 - 6 && x < PW.x1 + 6 && z > PW.z0 - 10 && z < PW.z1 + 6) || (x > 1076 && x < 1190 && (z < -226 || z > 226) && z > -660 && z < 550) || (x > PW.gx - 8 && x < PW.gx + 8 && z > 580 && z < PW.z0)) { cr.setMatrixAt(i, hide); tk.setMatrixAt(i, hide); } });
   cr.instanceMatrix.needsUpdate = true; tk.instanceMatrix.needsUpdate = true;
   let s = 77; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
   const strip = (xa, xb, col, y, z0 = -826, z1 = RIVER_END) => { const pos = [], idx = []; let k = 0;
@@ -3699,7 +3700,7 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
   // a big pumping station, a 55 m water tower, a treatment works hall, a covered reservoir; big panels, battery storage, a tall substation.
   const g = new THREE.Group(), N = { edge: false, shadow: false }, CONC = '#d3cbb8', CONC2 = '#bdb5a3', BRICK = '#a8452f', STONE = '#ead9b8', SLATE = '#4a4f5a',
     WATER = '#4aa3cf', WATER2 = '#5fb3c8', HEDGE = '#4f7f3f', GRAV = '#cbc4ad', STEEL = '#8e969e', CREAM = '#f3ead6', GREEN = '#2f5d4a', LINE = '#f1eee6';
-  const { x0, x1, z0, z1, gx } = PW, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, W = x1 - x0, D = z1 - z0;
+  const { x0, x1, gx } = PW, z0 = PW.z0 - PW.dz, z1 = PW.z1 - PW.dz, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, W = x1 - x0, D = z1 - z0; g.position.z = PW.dz;
   const rd = (w, d, x, z) => { ROADS.push([w, d, x, z]); B(g, w, 0.1, d, ROAD, x, 0.04, z, N); };
   const yard = (w, d, x, z) => B(g, w, 0.1, d, ROAD, x, 0.045, z, N);   // site roads: drawn, but no city traffic on them
   const dash = (x, z, len, along) => { for (let t = -len / 2 + 3; t < len / 2 - 3; t += 8) B(g, along === 'x' ? 3 : 0.25, 0.02, along === 'x' ? 0.25 : 3, LINE, along === 'x' ? x + t : x, 0.15, along === 'x' ? z : z + t, N); };
@@ -3708,7 +3709,7 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
   const hedge = (w, d, x, z) => B(g, w, 1.8, d, HEDGE, x, 0.05, z, { shadow: false });
   hedge(gx - 9 - x0, 1.6, (x0 + gx - 9) / 2, z0); hedge(x1 - gx - 9, 1.6, (gx + 9 + x1) / 2, z0); hedge(W, 1.6, cx, z1); hedge(1.6, D, x1, cz);
   hedge(1.6, D - 96, x0, (z0 + 96 + z1) / 2); hedge(1.6, 44, x0, z0 + 22);
-  rd(8, z0 - 586, gx, (586 + z0) / 2);
+  { const L = PW.z0 - 586, zc = (586 + PW.z0) / 2; ROADS.push([8, L, gx, zc]); B(scene, 8, 0.1, L, ROAD, gx, 0.04, zc, N); }   // Riverside's lane runs on south to the gate (world coords)
   // ring road + spine (with centre lines)
   yard(W - 14, 9, cx, z0 + 12); dash(cx, z0 + 12, W - 14, 'x'); yard(W - 14, 9, cx, z1 - 10); dash(cx, z1 - 10, W - 14, 'x');
   yard(9, D - 22, x0 + 8, cz + 1); yard(9, D - 22, x1 - 9, cz + 1); yard(9, D - 22, 686, cz + 1); dash(686, cz + 1, D - 22, 'z'); yard(9, 12, gx, z0 + 4);
@@ -3720,7 +3721,7 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
   B(g, 7, 0.3, 0.3, '#e04848', gx + 4, 1.2, z0 + 8, N);
   // ---- WATERWORKS ----
   const IZ = 790, PX = 603, PW2 = 66, PD = 36, PH = 15;
-  B(g, PX - PW2 / 2 - (RS.riverW(IZ) + 6), 0.14, 12, WATER, (PX - PW2 / 2 + RS.riverW(IZ) + 6) / 2, 0.07, IZ, N);
+  B(g, PX - PW2 / 2 - (RS.riverW(IZ + PW.dz) + 6), 0.14, 12, WATER, (PX - PW2 / 2 + RS.riverW(IZ + PW.dz) + 6) / 2, 0.07, IZ, N);
   [-1, 1].forEach(sd => B(g, PX - PW2 / 2 - RS.riverE + 2, 1.4, 1.4, STONE, (PX - PW2 / 2 + RS.riverE - 2) / 2, 0.05, IZ + sd * 6.6));
   for (let k = -4; k <= 4; k++) B(g, 0.2, 2.2, 0.2, C.iron, RS.riverE + 1, 0.05, IZ + k * 1.3, N); B(g, 0.3, 0.3, 12.4, C.iron, RS.riverE + 1, 2.2, IZ, N);
   // the pumping station: a big brick hall on a stone base, tall arched windows, two lanterns on the slate roof, a 38 m chimney
@@ -3766,8 +3767,8 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
   const fr = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat('#4a5d7e'), mods), pv = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat('#2e4c86'), mods);
   const o = new THREE.Object3D(); let n = 0;
   ROWS.forEach(z => { for (let i = 0; i < nMod; i++) { const x = SX0 + (i + 0.5) * (MW + 0.4);
-    o.position.set(x, 2.7, z); o.rotation.set(0.45, 0, 0); o.scale.set(MW, 0.18, 6.4); o.updateMatrix(); fr.setMatrixAt(n, o.matrix);
-    o.position.set(x, 2.8, z); o.scale.set(MW - 0.3, 0.2, 6.1); o.updateMatrix(); pv.setMatrixAt(n, o.matrix); n++; }
+    o.position.set(x, 2.7, z + PW.dz); o.rotation.set(0.45, 0, 0); o.scale.set(MW, 0.18, 6.4); o.updateMatrix(); fr.setMatrixAt(n, o.matrix);
+    o.position.set(x, 2.8, z + PW.dz); o.scale.set(MW - 0.3, 0.2, 6.1); o.updateMatrix(); pv.setMatrixAt(n, o.matrix); n++; }
     B(g, SX1 - SX0, 2.2, 0.3, '#5a636b', (SX0 + SX1) / 2, 0.05, z - 2.3, N); B(g, SX1 - SX0, 0.9, 0.3, '#5a636b', (SX0 + SX1) / 2, 0.05, z + 2.3, N); });
   [fr, pv].forEach(m => { m.castShadow = true; m.receiveShadow = true; m.userData.place = 'power'; pickables.push(m); scene.add(m); });
   signBoard(g, 'VINLAND SOLAR FARM', 694, 3.4, 830, 16, 1.6, '#2e4c86', '#f7f0e1', Math.PI / 2); [-6.5, 6.5].forEach(d => B(g, 0.35, 3.4, 0.35, C.iron, 694, 0.05, 830 + d, N));
@@ -3789,10 +3790,113 @@ const RSX = { lanes: [785, 930, 1075], z0: -690, z1: 585, streets: [-600, -535, 
   signBoard(g, 'DEPOT', 806, 6.8, 784.6, 6, 1.0, GREEN, '#f7f0e1', Math.PI); [0, 1, 2].forEach(k => carModel(g, 822 + k * 3.6, 790, Math.PI, '#f6f0e2'));
   // the east bank south of Riverside: a line of trees, broken by the intake
   const bank = []; let sd = 31; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
-  for (let z = 600; z < RIVER_END - 400; z += 7) { if (Math.abs(z - IZ) < 11) continue; bank.push([RS.riverE + 8 + rr() * 14, z + rr() * 4, 0.8 + rr() * 0.5, Math.floor(rr() * 4)]); if (z > z1 + 10 && rr() < 0.6) bank.push([RS.riverE + 26 + rr() * 30, z, 0.8 + rr() * 0.5, Math.floor(rr() * 4)]); }
+  for (let z = 600; z < RIVER_END - 400; z += 7) { if (Math.abs(z - IZ - PW.dz) < 11) continue; bank.push([RS.riverE + 8 + rr() * 14, z + rr() * 4, 0.8 + rr() * 0.5, Math.floor(rr() * 4)]); if (z > PW.z1 + 10 && rr() < 0.6) bank.push([RS.riverE + 26 + rr() * 30, z, 0.8 + rr() * 0.5, Math.floor(rr() * 4)]); }
   treeBelt(bank, scene);
   window.PW_OBJ = bakeKeep(g, 'power');
 })();
+
+// FOREST BELT (Dev's plan, 18 Nov): dense trees between Riverside and the new east side (x 1080..1181), north and south of the middle band.
+// The middle band (z -222..222: the future square + business hub) is left for Dev to plan.
+(function drawForestBelt() {
+  const fo = []; let sd = 7; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  [[-648, -230], [230, 538]].forEach(([za, zb]) => { for (let x = 1083; x < 1180; x += 5.2) for (let z = za; z < zb; z += 5.2) if (rr() < 0.82) fo.push([x + rr() * 3 - 1.5, z + rr() * 3 - 1.5, 1.0 + rr() * 0.7, Math.floor(rr() * 4)]); });
+  const [bc] = treeBelt(fo, scene); bc.userData.place = 'forest';
+})();
+
+// ================= DOWNTOWN SQUARE (Dev's masterplan v1, OK'd 18 Nov 17:44: out/masterplan_downtown_v1.png) =================
+// x 930..1188, z -222..222 around the Vinland Tower (which stays on its plot). Ring streets z ±115, the plaza in between with two fountains,
+// a promenade from the Tower east to Central Boulevard between the Civic Centre and the Vinland Theatre; north row: Grand Hotel, Galleria,
+// Department store; south row: Concert Hall, Food Hall, Offices + shops; service yards + parking behind both rows. Riverside's x 1075 lane
+// stays as a slow paved street through the square. Sizes follow the city's own buildings (3.6 m floors).
+const DSQ = { x0: 930, x1: 1188, z0: -222, z1: 222, lane: 1075, BUILDINGS: false };
+(function drawDowntownSquare() {
+  const g = new THREE.Group(), N = { edge: false, shadow: false }, PAVE = '#e2d6c0', PAVE2 = '#cdbfa6', STONE = '#ead9b8', GLS = '#5d7f97', FH = 3.6;
+  const rd = (w, d, x, z) => { ROADS.push([w, d, x, z]); B(g, w, 0.1, d, ROAD, x, 0.04, z, N); };
+  // ---- streets: ring streets z ±115, the east edge road x 1188 (whole new side), the forest-edge links z ±226 and the boulevard stub
+  rd(1188 - 930 - 8, 7, (930 + 4 + 1188 - 4) / 2, -115); rd(1188 - 930 - 8, 7, (930 + 4 + 1188 - 4) / 2, 115);
+  rd(8, 544 + 654, 1188, (544 - 654) / 2); rd(1188 - 1079, 8, (1079 + 1184) / 2, -226); rd(1188 - 1079, 8, (1079 + 1184) / 2, 226);
+  rd(1184 - 1124, 18, (1124 + 1184) / 2, 0); B(g, 1184 - 1124, 0.25, 4, '#8fbf6a', (1124 + 1184) / 2, 0.1, 0, N);
+  for (let x = 1128; x < 1184; x += 12) tree(g, x, 0.3, 0, 'canopy', 0.8);
+  // ---- the plaza (both sides of the lane) with paving bands, the lane as a paved slow street with crossings
+  B(g, 1072 - 934, 0.1, 222, PAVE, (934 + 1072) / 2, 0.05, 0, N); B(g, 1184 - 1078, 0.1, 222, PAVE, (1078 + 1184) / 2, 0.05, 0, N);
+  for (let z = -105; z <= 105; z += 15) { B(g, 1072 - 934, 0.02, 0.8, PAVE2, (934 + 1072) / 2, 0.16, z, N); B(g, 1124 - 1078, 0.02, 0.8, PAVE2, (1078 + 1124) / 2, 0.16, z, N); }
+  [-60, 60].forEach(z => { for (let k = 0; k < 6; k++) B(g, 0.6, 0.02, 4, '#f6f3ea', 1072.5 + k * 1.1, 0.14, z, N); });
+  // two fountains on the Tower's axis, tree rows along the ring streets, benches + lamps
+  [-78, 78].forEach(z => { add(g, new THREE.CylinderGeometry(10.5, 11, 0.9, 36), STONE, 1032, 0.45, z); add(g, new THREE.CylinderGeometry(9.6, 9.6, 0.2, 36), '#6fb3cc', 1032, 0.85, z, N);
+    add(g, new THREE.CylinderGeometry(2.2, 2.8, 1.6, 16), STONE, 1032, 0.9, z); add(g, new THREE.CylinderGeometry(0.9, 1.4, 1.4, 12), STONE, 1032, 2.4, z); add(g, new THREE.SphereGeometry(0.9, 10, 8), '#bfe6f2', 1032, 3.8, z, N);
+    [-1, 1].forEach(sd => [-1, 1].forEach(t => B(g, 2, 0.45, 0.6, C.wood, 1032 + sd * 14, 0.2, z + t * 6, N))); });
+  for (let x = 942; x < 1182; x += 12) { if (x > 1068 && x < 1084) continue; tree(g, x, 0.1, -104, (x / 12 | 0) % 3 ? 'canopy' : 'pink', 0.85); tree(g, x, 0.1, 104, (x / 12 | 0) % 3 ? 'canopy' : 'pink', 0.85); }
+  for (let z = -95; z <= 95; z += 19) { lamp(g, 940, z); lamp(g, 1066, z); lamp(g, 1084, z); }
+  [[1084, -9], [1084, 9], [1118, -9], [1118, 9]].forEach(([x, z]) => lamp(g, x, z)); for (let x = 1088; x < 1122; x += 10) { tree(g, x, 0.1, -12, 'canopy', 0.7); tree(g, x, 0.1, 12, 'canopy', 0.7); }
+  // the Central Bridge road arrives at the Tower's west door (drop-off), so it stays a real road across the plaza
+  B(g, 990 - 930, 0.1, 9, ROAD, (930 + 990) / 2, 0.18, 0, N); [-1, 1].forEach(sd => B(g, 990 - 930, 0.22, 1.2, '#f1eee6', (930 + 990) / 2, 0.1, sd * 5.1, N));
+  // planted beds (low hedge, lawn, a tree) in the quarters of the plaza, so it reads as a city square, not an empty yard
+  const bed = (x0, z0, x1, z1) => { B(g, x1 - x0, 0.5, z1 - z0, '#4f7f3f', (x0 + x1) / 2, 0.1, (z0 + z1) / 2, N); B(g, x1 - x0 - 1.2, 0.56, z1 - z0 - 1.2, '#93c066', (x0 + x1) / 2, 0.1, (z0 + z1) / 2, N);
+    tree(g, (x0 + x1) / 2, 0.6, (z0 + z1) / 2, 'canopy', 0.9); B(g, 2, 0.45, 0.6, C.wood, (x0 + x1) / 2, 0.2, z0 - 1.6, N); B(g, 2, 0.45, 0.6, C.wood, (x0 + x1) / 2, 0.2, z1 + 1.6, N); };
+  [[946, -95, 984, -58], [946, 58, 984, 95], [946, -40, 984, -14], [946, 14, 984, 40], [994, -96, 1016, -62], [1048, -96, 1068, -62], [994, 62, 1016, 96], [1048, 62, 1068, 96], [1086, -96, 1116, -40], [1086, 40, 1116, 96]].forEach(b => bed(...b));
+  // ---- buildings: one helper. face = 'n' | 's' | 'w' (the side that looks onto the square). Stone base, glass bands per floor,
+  // pilasters on the front, cornice, a shopfront band with awnings at street level, the name on the front.
+  const bld = (x0, z0, x1, z1, fl, col, face, name, o = {}) => {
+    const w = x1 - x0, d = z1 - z0, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, H = 4.6 + (fl - 1) * FH, roof = o.roof || '#5b5f66';
+    const GL = o.glass; if (GL) col = GL;
+    B(g, w, 1, d, STONE, cx, 0.1, cz); B(g, w - 0.4, H, d - 0.4, col, cx, 1.1, cz); B(g, w + 0.6, 0.9, d + 0.6, GL ? '#eef2f4' : STONE, cx, H + 1.1, cz);
+    for (let f = 1; f < fl; f++) B(g, w, GL ? 2.6 : 1.6, d, GL ? (f % 2 ? '#9cc3d8' : '#86b0c8') : GLS, cx, 4.6 + (f - 1) * FH + (GL ? 0.6 : 1.2), cz, N);
+    const along = face === 'w' ? d : w, fn = face === 'n' ? [0, -1] : face === 's' ? [0, 1] : [-1, 0], fx = face === 'w' ? x0 - 0.25 : cx, fz = face === 'n' ? z0 - 0.25 : face === 's' ? z1 + 0.25 : cz;
+    for (let t = -along / 2 + 2; t <= along / 2 - 2; t += GL ? 3 : 4) face === 'w' ? B(g, GL ? 0.35 : 0.6, H - 4, GL ? 0.3 : 0.9, GL ? '#eef2f4' : STONE, fx, 5, cz + t, N) : B(g, GL ? 0.3 : 0.9, H - 4, GL ? 0.35 : 0.6, GL ? '#eef2f4' : STONE, cx + t, 5, fz, N);
+    face === 'w' ? B(g, 0.4, 3.2, d - 4, '#f3ead6', fx - 0.1, 1.1, cz, N) : B(g, w - 4, 3.2, 0.4, '#f3ead6', cx, 1.1, fz);   // shopfront band
+    face === 'w' ? B(g, 0.5, 2.6, d - 6, '#9fc0d8', fx - 0.3, 1.3, cz, N) : B(g, w - 6, 2.6, 0.5, '#9fc0d8', cx, 1.3, fz + fn[1] * 0.3, N);
+    if (o.awn) for (let t = -along / 2 + 6; t <= along / 2 - 6; t += 8) face === 'w' ? B(g, 2.2, 0.2, 5, o.awn, fx - 1.1, 4.0, cz + t, N) : B(g, 5, 0.2, 2.2, o.awn, cx + t, 4.0, fz + fn[1] * 1.1, N);
+    if (o.crown) B(g, w * 0.5, o.crown, d * 0.5, col, cx, H + 2, cz); if (o.hip) hip(g, w + 1, o.hip, d + 1, roof, cx, H + 2, cz);
+    if (name) { const ry = face === 'n' ? Math.PI : face === 's' ? 0 : -Math.PI / 2; signBoard(g, name, face === 'w' ? fx - 0.5 : cx, H - 0.6, face === 'w' ? cz : fz + fn[1] * 0.5, Math.min(along - 8, name.length * 1.5 + 4), 1.6, o.signBg || '#2f2b28', o.signFg || '#f6d27a', ry); } };
+  if (DSQ.BUILDINGS) {   // (Dev 18 Nov 18:06: no buildings in the square for now. Set DSQ.BUILDINGS = true to bring back the rows, screens and parking)
+  // north row (faces south onto the square: 's'), south row (faces north: 'n')
+  bld(934, -178, 1000, -119, 8, '#e9dcc4', 's', 'GRAND HOTEL', { awn: '#7a2a2a', crown: 5, signBg: '#7a2a2a', glass: '#5f88a6' });
+  bld(1004, -178, 1071, -119, 4, '#f1e4cc', 's', 'GALLERIA', { awn: '#2f7a68', glass: '#7aa3bd' }); B(g, 30, 3, 50, '#bfe0ea', 1037.5, 4.6 + 3 * FH + 2, -148.5, N);   // glass roof of the arcade
+  bld(1079, -178, 1184, -119, 6, '#e6d3b6', 's', 'DEPARTMENT STORE', { awn: '#c8603f', crown: 3, glass: '#4f7895' });
+  bld(934, 119, 1000, 178, 3, '#efe3cf', 'n', 'CONCERT HALL', { hip: 12, roof: C.copper, signBg: '#3f5866', signFg: '#f7f0e1' }); B(g, 70, 10, 4, STONE, 967, 1, 116, N);
+  bld(1004, 119, 1071, 178, 2, '#f3e6cc', 'n', 'FOOD HALL', { awn: '#e8b830', hip: 11, roof: C.terra, glass: '#8cb4cc' });
+  bld(1079, 119, 1184, 178, 6, '#e3d6c2', 'n', 'OFFICES + SHOPS', { awn: '#3f5866', glass: '#5a8299' });
+  // the Civic Centre and the Vinland Theatre either side of the promenade (face west to the Tower)
+  bld(1124, -107, 1184, -14, 4, '#f3ead6', 'w', 'CIVIC CENTRE', { hip: 9, roof: '#4a4f5a', signBg: '#2f5d4a', signFg: '#f7f0e1' });
+  for (let t = -36; t <= 36; t += 8) add(g, new THREE.CylinderGeometry(0.7, 0.8, 12, 12), STONE, 1121.5, 7, -60.5 + t);   // colonnade
+  bld(1124, 14, 1184, 107, 4, '#e7d0bf', 'w', 'VINLAND THEATRE', { hip: 9, roof: '#7a2a2a', signBg: '#7a2a2a', signFg: '#ffe9a8', glass: '#6d8fa6' });
+  B(g, 4, 1.2, 40, '#f6d27a', 1120, 5.4, 60.5, N);   // the theatre marquee
+  // ---- screens: 6 live canvases + 1 ticker shared by every screen on the square. What they show = DSQ.slides (Vinland news now;
+  // future ad slots get added to that same list). They redraw every 6 s, only while the camera is near (phones stay fast).
+  const mk = (w, h) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const t = new THREE.CanvasTexture(cv); return { cv, t, m: new THREE.MeshBasicMaterial({ map: t }) }; };
+  DSQ.screens = []; for (let i = 0; i < 6; i++) DSQ.screens.push(mk(512, 256)); DSQ.ticker = mk(2048, 64); DSQ.ticker.t.wrapS = THREE.RepeatWrapping; DSQ.ticker.t.repeat.set(0.3, 1);
+  let si = 0; const scr = (w, h, x, y, z, ry, tick) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), DSQ.screens[si++ % 6].m); m.position.set(x, y, z); m.rotation.y = ry; m.userData.keep = true; g.add(m);
+    B(g, ry % Math.PI ? 0.5 : w + 1, h + 1, ry % Math.PI ? w + 1 : 0.5, '#1d1f24', x - Math.sin(ry) * 0.3, y - h / 2 - 0.5, z - Math.cos(ry) * 0.3, N);
+    if (tick) { const t = new THREE.Mesh(new THREE.PlaneGeometry(w, 1.4), DSQ.ticker.m); t.position.set(x + Math.sin(ry) * 0.05, y - h / 2 - 1.4, z + Math.cos(ry) * 0.05); t.rotation.y = ry; t.userData.keep = true; g.add(t); } };
+  scr(46, 15, 1131, 13.5, -118.2, 0, true); scr(22, 11, 967, 25, -118.2, 0); scr(26, 9, 1037.5, 10, -118.2, 0);          // north row (face south)
+  scr(46, 15, 1131, 13.5, 118.2, Math.PI, true); scr(22, 10, 967, 11, 118.2, Math.PI);                                  // south row (face north)
+  scr(26, 9, 1122.6, 13, 60.5, -Math.PI / 2, true); scr(18, 8, 1122.6, 14, -82, -Math.PI / 2);                            // theatre + civic centre corner (face west)
+  // service yards + parking behind both rows
+  [-1, 1].forEach(sd => { B(g, 250, 0.1, 34, '#4f5259', 1059, 0.05, sd * 200, N);
+    for (let x = 940; x < 1180; x += 3.2) { if ((x | 0) % 7 === 0) continue; carModel(g, x, sd * 192, sd > 0 ? 0 : Math.PI, ['#3f7fbf', '#f6f0e2', '#c8603f', '#2f7a68', '#55504a', '#e2b04a'][(x | 0) % 6]); }
+    for (let x = 940; x < 1180; x += 3.2) B(g, 0.12, 0.02, 5, '#f1eee6', x - 1.6, 0.11, sd * 192, N); });
+  }
+  window.DSQ_OBJ = bakeKeep(g, 'dsquare');
+})();
+
+function dsquareFrame(now) {
+  if (!DSQ.BUILDINGS || !DSQ.ticker) return; const t = controls.target; if (Math.abs(t.x - 1060) > 450 || Math.abs(t.z) > 520 || camera.position.y > 900) return;
+  DSQ.ticker.t.offset.x = (now / 26000) % 1;
+  if (DSQ.last && now - DSQ.last < 6000) return; DSQ.last = now; DSQ.slide = (DSQ.slide || 0) + 1;
+  const live = homes.filter(h => h.status !== 'abandoned'), n = live.length, pub = live.filter(h => h.user && h.status !== 'hidden').sort((a, b) => (b.n || 0) - (a.n || 0));
+  const newest = pub[0] ? '@' + pub[0].user : '', fmt = v => v.toLocaleString('en-IN');
+  const S = DSQ.slides || [['#c8603f', '#fff3df', 'WELCOME HOME', fmt(n) + ' citizens live in Vinland'], ['#2f5d4a', '#f6d27a', 'NEWEST CITIZEN', newest ? newest + ' just moved in' : 'Your home is waiting.'],
+    ['#2f2b28', '#e8b830', 'VINLAND TOWER', fmt(n) + ' / 10,000 citizens'], ['#3f5866', '#f7f0e1', 'VINLAND', 'Your home is waiting.'], ['#7a2a52', '#ffd9ec', 'VINLAND THEATRE', 'Tonight on the square'], ['#2e4c86', '#d8ecff', 'POWER & WATER', 'Clean water and solar power for every home']];
+  DSQ.screens.forEach((sc, i) => { const [bg, fg, a, b] = S[(DSQ.slide + i) % S.length], x = sc.cv.getContext('2d'), W = sc.cv.width, H = sc.cv.height;
+    const gr = x.createLinearGradient(0, 0, W, H); gr.addColorStop(0, bg); gr.addColorStop(1, '#111'); x.fillStyle = gr; x.fillRect(0, 0, W, H);
+    x.fillStyle = fg; x.textAlign = 'center'; let f1 = 60; x.font = `bold ${f1}px Poppins, sans-serif`; while (x.measureText(a).width > W * 0.9 && f1 > 20) { f1 -= 2; x.font = `bold ${f1}px Poppins, sans-serif`; } x.fillText(a, W / 2, H * 0.48);
+    let fs = 30; x.font = `600 ${fs}px Poppins, sans-serif`; while (x.measureText(b).width > W * 0.9 && fs > 14) { fs -= 2; x.font = `600 ${fs}px Poppins, sans-serif`; } x.fillText(b, W / 2, H * 0.76); sc.t.needsUpdate = true; });
+  const tx = DSQ.ticker.cv.getContext('2d'); tx.fillStyle = '#111'; tx.fillRect(0, 0, 2048, 64); tx.fillStyle = '#ffcf4a'; tx.font = 'bold 34px Poppins, sans-serif'; tx.textAlign = 'left';
+  tx.fillText(('VINLAND NEWS  •  ' + fmt(n) + ' CITIZENS' + (newest ? '  •  NEWEST: ' + newest : '') + '  •  POWER & WATER IS OPEN  •  ').repeat(2), 10, 44); DSQ.ticker.t.needsUpdate = true; }
+function dsquareCard() {
+  return ['Downtown · around the Vinland Tower', 'Downtown Square',
+    `<p class="p">The civic heart of the new Downtown: the Vinland Tower in the middle, two fountains, and a promenade to Central Boulevard.</p>
+     <dl class="facts"><dt>Around it</dt><dd>Plots for the square's buildings, coming soon</dd></dl>`]; }
 function powerCard() {
   return ['South of Riverside, on the river · Day ' + PW.day, 'Vinland Power & Water',
     `<p class="p">We promised every citizen power and clean water, so here it is. The river feeds the waterworks: the pump house lifts the water, the tanks and filter beds clean it, and the VINLAND water tower sends it to every home. The solar farm makes the power, and the cables run under the ground.</p>
@@ -4764,7 +4868,7 @@ CONTENT.edu = ['South of town', 'Education District',
 const ray = new THREE.Raycaster(), m2 = new THREE.Vector2(); let down = null, hoverFlag = false;
 function pickAt(cx, cy) { const r = renderer.domElement.getBoundingClientRect(); m2.set((cx - r.left) / r.width * 2 - 1, -(cy - r.top) / r.height * 2 + 1);
   ray.setFromCamera(m2, camera); const hit = ray.intersectObjects(pickables, false)[0]; if (!hit) return null; const ud = hit.object.userData; if (ud.homes) return { home: ud.homes[hit.instanceId] }; if (ud.blds) return { bld: ud.blds[hit.instanceId] }; if (ud.items) { const it = ud.items[hit.instanceId]; return it.owner ? { shop: it } : { open: it }; } return ud.place; }
-renderer.domElement.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse' || e.buttons) return; const p = pickAt(e.clientX, e.clientY); hoverFlag = p === 'flag' || p === 'hall' || p === 'square' || p === 'corner' || p === 'school' || p === 'hospital' || p === 'statue' || p === 'mall' || p === 'mallsite' || (typeof p === 'string' && p.startsWith('cornershop:')) || p === 'gov' || p === 'parliament' || p === 'police' || p === 'fire' || p === 'power' || p === 'train' || p === 'bus' || p === 'embassy' || p === 'bank' || p === 'beachtown' || p === 'resort' || p === 'library' || p === 'beach' || (typeof p === 'string' && p.startsWith('lot:')) || (p && (p.home || p.shop || p.open)); renderer.domElement.style.cursor = hoverFlag ? 'pointer' : 'grab'; });
+renderer.domElement.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse' || e.buttons) return; const p = pickAt(e.clientX, e.clientY); hoverFlag = p === 'flag' || p === 'hall' || p === 'square' || p === 'corner' || p === 'school' || p === 'hospital' || p === 'statue' || p === 'mall' || p === 'mallsite' || (typeof p === 'string' && p.startsWith('cornershop:')) || p === 'gov' || p === 'parliament' || p === 'police' || p === 'fire' || p === 'power' || p === 'dsquare' || p === 'train' || p === 'bus' || p === 'embassy' || p === 'bank' || p === 'beachtown' || p === 'resort' || p === 'library' || p === 'beach' || (typeof p === 'string' && p.startsWith('lot:')) || (p && (p.home || p.shop || p.open)); renderer.domElement.style.cursor = hoverFlag ? 'pointer' : 'grab'; });
 renderer.domElement.addEventListener('pointerdown', e => { if (WALK.on || DRV.on) return; down = [e.clientX, e.clientY]; fly = null; stopTour(); });
 renderer.domElement.addEventListener('pointerup', e => { if (WALK.on || DRV.on) return; if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
   const p = pickAt(e.clientX, e.clientY);
@@ -4786,7 +4890,8 @@ renderer.domElement.addEventListener('pointerup', e => { if (WALK.on || DRV.on) 
   if (p === 'embassy') { clearSelection(); stopTour(); const c = embassyCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(EMB.x, 4, EMB.z), narrow ? new THREE.Vector3(EMB.x + 40, 70, EMB.z + 100) : new THREE.Vector3(EMB.x + 30, 48, EMB.z + 80)); return; }
   if (p === 'train') { clearSelection(); stopTour(); const c = trainCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(TRAIN.x, 4, TRAIN.z), narrow ? new THREE.Vector3(TRAIN.x - 150, 90, TRAIN.z + 60) : new THREE.Vector3(TRAIN.x - 120, 60, TRAIN.z + 50)); return; }
   if (p === 'bus') { clearSelection(); stopTour(); const c = busCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(BUS.x, 4, BUS.z), narrow ? new THREE.Vector3(BUS.x - 80, 80, BUS.z + 100) : new THREE.Vector3(BUS.x - 70, 55, BUS.z + 80)); return; }
-  if (p === 'power') { clearSelection(); stopTour(); const c = powerCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(720, 4, 860), narrow ? new THREE.Vector3(720, 330, 1180) : new THREE.Vector3(720, 240, 1110)); return; }
+  if (p === 'dsquare') { clearSelection(); stopTour(); const c = dsquareCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(1060, 4, 0), narrow ? new THREE.Vector3(860, 210, 200) : new THREE.Vector3(880, 150, 170)); return; }
+  if (p === 'power') { clearSelection(); stopTour(); const c = powerCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(720, 4, 1210), narrow ? new THREE.Vector3(720, 330, 1530) : new THREE.Vector3(720, 240, 1460)); return; }
   if (p === 'fire') { clearSelection(); stopTour(); const c = fireCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(FIRE.x, 4, FIRE.z), narrow ? new THREE.Vector3(FIRE.x - 40, 70, FIRE.z + 100) : new THREE.Vector3(FIRE.x - 30, 48, FIRE.z + 80)); return; }
   if (p === 'police') { clearSelection(); stopTour(); const c = policeCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(POL.x, 4, POL.z), narrow ? new THREE.Vector3(POL.x - 70, 70, POL.z + 90) : new THREE.Vector3(POL.x - 60, 48, POL.z + 70)); return; }
   if (p === 'gov' || p === 'parliament') { clearSelection(); stopTour(); const c = govCard(); show(c[0], c[1], c[2]); flyTo(new THREE.Vector3(0, 4, GOV.parliament.z), narrow ? new THREE.Vector3(60, 80, 130) : new THREE.Vector3(50, 55, 95)); return; }
@@ -4865,7 +4970,7 @@ controls.addEventListener('change', () => kick(350));
 function frame(now) {
   if (window.PEN_ON) { RUN.stopped = true; return; }   // the penalty game is open: the map sleeps
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
-  nightFrame(now); plazaFrame(now); crackFrame(now);
+  nightFrame(now); plazaFrame(now); crackFrame(now); dsquareFrame(now);
   if (WALK.on) walkFrame(dt, now); else if (DRV.on) driveFrame(dt, now); else {
   if (fly) { const k = ease(Math.min(1, (now - fly.t0) / fly.ms)); controls.target.lerpVectors(fly.fT, fly.tT, k); camera.position.lerpVectors(fly.fP, fly.tP, k); if (k >= 1) fly = null; }
   if (touring) { const t = controls.target, dx = camera.position.x - t.x, dz = camera.position.z - t.z, a = dt * 0.12;
