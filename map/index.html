@@ -339,6 +339,15 @@ body.driving #labels .lbl.walker { display: none !important; }
 @media (pointer: coarse) { #walkNear { top: calc(64px + env(safe-area-inset-top, 0px)); bottom: auto; } }
 #walkHint { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); font: 600 .9rem var(--body); color: #fff8ef; background: rgba(47,43,40,.82); border-radius: 14px; padding: 12px 16px; text-align: center; max-width: min(320px, calc(100vw - 32px)); pointer-events: none; }
 #walkTags { position: fixed; inset: 0; pointer-events: none; }
+#rtTags { position: fixed; inset: 0; pointer-events: none; z-index: 6; }
+.lbl.wvis.named { background: #c8603f; color: #fff; }
+.lbl.wvis.car { background: #2f2b28; color: #fff8ef; }
+#rideBtn { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 9; font: 700 .9rem var(--body); padding: 11px 18px; border-radius: 999px; border: 0; background: var(--terra, #c8603f); color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,.28); cursor: pointer; white-space: nowrap; }
+#rideBtn:disabled { background: #6b6f78; cursor: default; }
+#rideAsk { position: fixed; left: 50%; top: 30%; transform: translate(-50%, -50%); z-index: 9; font: 600 .95rem var(--body); color: #fff8ef; background: rgba(47,43,40,.92); border-radius: 16px; padding: 14px 18px; text-align: center; }
+#rideAsk div { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+#rideAsk button { font: 700 .9rem var(--body); padding: 9px 16px; border-radius: 999px; border: 0; background: #6b6f78; color: #fff; cursor: pointer; }
+#rideAsk button[data-ok] { background: #2a9d8f; }
 .lbl.wvis { position: absolute; transform: translate(-50%, -100%); background: #4f9a86; color: #f4fbf8; border-color: transparent; }
 .wemoji { position: absolute; transform: translate(-50%, -100%); font-size: 1.7rem; transition: opacity .2s; pointer-events: none; }
 body.walking .controls, body.walking #card, body.walking .infobtn, body.walking .tabs, body.walking .search, body.walking #labels .lbl:not(.walker), body.walking .toast { display: none !important; }
@@ -6059,7 +6068,7 @@ function stopWalk() {
   if (PLAYHOOK.onStop) PLAYHOOK.onStop();
   if (!WALK.on && walkHud.hidden) return; WALK.on = false; controls.enabled = true; document.body.classList.remove('walking'); walkHud.hidden = true; walkNear.hidden = true;
   WALK.keys = {}; WALK.joy.x = WALK.joy.y = 0; walkKnob.style.transform = '';
-  if (WALK.batches) WALK.batches.forEach(b => b.im.count = 0); walkTags.innerHTML = ''; WALK.others.clear();
+  if (WALK.batches) WALK.batches.forEach(b => b.im.count = 0); walkTags.innerHTML = '';
   walkDisconnect();
   const t = new THREE.Vector3(WALK.x, 0, WALK.z); flyTo(t, new THREE.Vector3(Math.sin(WALK.yaw) * -40, 34, Math.cos(WALK.yaw) * -40), 1100);
 }
@@ -6097,6 +6106,7 @@ function popEmoji(id, e) { if (!EMOJIS.includes(e)) return; const el = document.
 // ---- every frame while walking ----
 const WV = new THREE.Vector3();
 function walkFrame(dt, now) {
+  if (WALK.ride && rideFrame(dt, now)) return;
   const K = WALK.keys; let mx = WALK.joy.x, mz = WALK.joy.y;
   if (K.w || K.arrowup) mz -= 1; if (K.s || K.arrowdown) mz += 1; if (K.a || K.arrowleft) mx -= 1; if (K.d || K.arrowright) mx += 1;
   const mag = Math.min(1, Math.hypot(mx, mz)), run = K.shift ? 1.9 : 1;
@@ -6119,20 +6129,10 @@ function walkFrame(dt, now) {
   camera.position.set(tx + bx * WALK.cd * cp, 1.6 + Math.sin(WALK.pitch) * WALK.cd + 0.6 + lift, tz + bz * WALK.cd * cp);
   WV.set(tx, 1.7, tz); camera.lookAt(WV); controls.target.set(tx, 0, tz);
   { const dx = tx - camera.position.x, dz = tz - camera.position.z; compassNeedle.style.transform = 'rotate(' + (Math.atan2(dx, -dz) * -180 / Math.PI).toFixed(1) + 'deg)'; }
-  // other walkers glide towards where they last said they were
-  let i = 1; const W = wrap.clientWidth, H = wrap.clientHeight;
-  for (const [id, o] of WALK.others) {
-    if (now - o.seen > 20000) { if (o.el) o.el.remove(); WALK.others.delete(id); continue; }
-    if (i > WALK_MAX) break;
-    const dx = o.tx - o.x, dz = o.tz - o.z, l = Math.hypot(dx, dz);
-    if (l > 30) { o.x = o.tx; o.z = o.tz; } else if (l > 0.05) { const st = Math.min(l, Math.max(6.2, l * 1.2) * dt); o.x += dx / l * st; o.z += dz / l * st; o.phase += dt * 7.5; o.ang = Math.atan2(dx, dz); } else o.phase *= 0.8;
-    if (o.slot !== i) { o.slot = i; colourSlot(i, o.c, hashStr(id)); }
-    { const [spin, hop] = moveOf(o.move, now); poseSlot(i, o.x, o.z, o.ang + spin, l > 0.05 ? Math.sin(o.phase) : 0, 1.1, jumpY(o.jt, now) + hop); } i++;
-    if (!o.el) { o.el = document.createElement('div'); o.el.className = 'lbl wvis'; o.el.textContent = 'Visitor'; walkTags.appendChild(o.el); }   // real people walking right now, not the citizens on the streets
-    vv.set(o.x, 2.55, o.z).project(camera); const d = Math.hypot(o.x - tx, o.z - tz);
-    if (vv.z >= 1 || Math.abs(vv.x) > 1.05 || Math.abs(vv.y) > 1.05 || d > 60) o.el.hidden = true; else { o.el.hidden = false; o.el.style.left = ((vv.x + 1) / 2 * W) + 'px'; o.el.style.top = ((1 - vv.y) / 2 * H) + 'px'; }
-  }
+  // other walkers glide towards where they last said they were (+ live cars, + the ride button)
+  const i = othersFrame(dt, now, tx, tz, 1); const W = wrap.clientWidth, H = wrap.clientHeight;
   WALK.batches.forEach(b => { b.im.count = i; b.im.instanceMatrix.needsUpdate = true; });
+  carsFrame(dt, now); rideScan(now);
   // emoji bubbles follow their walker
   walkTags.querySelectorAll('.wemoji').forEach(el => { const id = el.dataset.id, o = id === WALK.me ? WALK : WALK.others.get(id); if (!o) { el.remove(); return; }
     const age = (now - +el.dataset.t) / 1000; vv.set(o.x, 2.7 + age * 0.6, o.z).project(camera);
@@ -6159,33 +6159,139 @@ function loadSb() { if (window.supabase) return Promise.resolve(window.supabase)
 async function walkConnect() {
   if (WALK.ch || document.hidden) return;
   try {
-    const sb = await loadSb(); if (!WALK.on || WALK.ch) return;
+    const sb = await loadSb(); if (!(WALK.on || DRV.on) || WALK.ch) return;
     WALK.client = WALK.client || sb.createClient(RT.url, RT.key, { auth: { persistSession: false, autoRefreshToken: false }, realtime: { params: { eventsPerSecond: 4 } } });
     const ch = WALK.client.channel('walk-v1', { config: { broadcast: { self: false, ack: false }, presence: { key: WALK.me } } });
     ch.on('broadcast', { event: 'p' }, ({ payload: p }) => { if (!p || typeof p.i !== 'string' || p.i === WALK.me || !isFinite(p.x) || !isFinite(p.z)) return;
         let o = WALK.others.get(p.i); if (!o) { o = { x: +p.x, z: +p.z, ang: 0, phase: 0, slot: -1 }; WALK.others.set(p.i, o); }
-        o.tx = +p.x; o.tz = +p.z; o.c = (p.c | 0) % 9; o.seen = performance.now(); if (isFinite(p.a)) o.ang = +p.a; })
+        o.tx = +p.x; o.tz = +p.z; o.c = (p.c | 0) % 9; o.seen = performance.now(); if (isFinite(p.a)) o.ang = +p.a; o.nm = nameOk(p.n); o.r = typeof p.r === 'string' ? p.r : null; })
+      .on('broadcast', { event: 'd' }, ({ payload: p }) => carMsg(p))
+      .on('broadcast', { event: 'dx' }, ({ payload: p }) => { if (p && typeof p.i === 'string') dropCar(p.i); })
+      .on('broadcast', { event: 'rq' }, ({ payload: p }) => onRideRq(p))
+      .on('broadcast', { event: 'ra' }, ({ payload: p }) => onRideRa(p))
+      .on('broadcast', { event: 'rx' }, ({ payload: p }) => onRideRx(p))
       .on('broadcast', { event: 'e' }, ({ payload: p }) => { const o = p && WALK.others.get(p.i); if (!o) return; if (p.e === 'jump') { o.jt = performance.now(); return; } if (EMOJIS.includes(p.e)) { popEmoji(p.i, p.e); o.move = { e: p.e, t: performance.now() }; } })
       .on('presence', { event: 'sync' }, () => { const n = Object.keys(ch.presenceState()).length; WALK.count = Math.max(1, n);
         walkCount.textContent = n > 1 ? `👣 ${n} walking now` : 'Just you here'; })
-      .on('presence', { event: 'leave' }, ({ key }) => { const o = WALK.others.get(key); if (o && o.el) o.el.remove(); WALK.others.delete(key); })
+      .on('presence', { event: 'leave' }, ({ key }) => { const o = WALK.others.get(key); if (o && o.el) o.el.remove(); WALK.others.delete(key); dropCar(key); })
       .subscribe(st => { if (st === 'SUBSCRIBED') { ch.track({ c: WALK.shirt }); WALK.sent = 0; } });
     WALK.ch = ch;
   } catch (e) { /* no live walkers: walking alone still works */ }
 }
-function walkDisconnect() { const ch = WALK.ch; WALK.ch = null; if (ch && WALK.client) { try { WALK.client.removeChannel(ch); } catch (e) {} } }
+function walkDisconnect() { const ch = WALK.ch; WALK.ch = null; if (ch && WALK.client) { try { WALK.client.removeChannel(ch); } catch (e) {} }
+  WALK.ride = null; WALK.asked = null; WALK.others.forEach(o => { if (o.el) o.el.remove(); }); WALK.others.clear(); [...CARS.keys()].forEach(dropCar); rideBtn.hidden = true; rideAsk.hidden = true; }
 function walkSend(now) {   // 1 update a second while moving, 1 every 6 s while standing (so new walkers see you); nothing after 3 min idle
   const ch = WALK.ch; if (!ch || WALK.idle > 180) return;
   const gap = WALK.moving ? 1000 : 6000; if (now - WALK.sent < gap) return;
   if (!WALK.moving && WALK.sent && Math.hypot(WALK.x - WALK.lastSend.x, WALK.z - WALK.lastSend.z) < 0.05 && now - WALK.sent < 6000) return;
   WALK.sent = now; WALK.lastSend.x = WALK.x; WALK.lastSend.z = WALK.z;
-  ch.send({ type: 'broadcast', event: 'p', payload: { i: WALK.me, x: +WALK.x.toFixed(1), z: +WALK.z.toFixed(1), a: +WALK.ang.toFixed(2), c: WALK.shirt } });
+  ch.send({ type: 'broadcast', event: 'p', payload: { i: WALK.me, x: +WALK.x.toFixed(1), z: +WALK.z.toFixed(1), a: +WALK.ang.toFixed(2), c: WALK.shirt, n: myName(), r: WALK.ride ? WALK.ride.id : null } });
 }
-document.addEventListener('visibilitychange', () => { if (document.hidden) walkDisconnect(); else if (WALK.on) walkConnect(); });
+// ================= LIVE NAMES + RIDES (19 Nov, Dev: "show name not Visitor", "sit in my car, only 1 passenger") =================
+// Your @name shows only when you are logged in on this phone (your KEY link) and your home is on the map and not hidden. Everyone else stays "Visitor".
+// Drivers are live too: walkers and other drivers see your car with your name. A walker next to a car can ask for a ride; the driver taps Let in or No.
+// One passenger per car. The passenger's camera rides along; Get out puts them back on the pavement. (Names are claimed by the browser for now, not checked by a server.)
+const CARS = new Map(), NAMEOK = new Map(), CARS_MAX = 8;
+const rtTags = document.createElement('div'); rtTags.id = 'rtTags'; document.body.appendChild(rtTags);
+const rideBtn = document.createElement('button'); rideBtn.id = 'rideBtn'; rideBtn.hidden = true; document.body.appendChild(rideBtn);
+const rideAsk = document.createElement('div'); rideAsk.id = 'rideAsk'; rideAsk.hidden = true; document.body.appendChild(rideAsk);
+function nameOk(n) { if (typeof n !== 'string' || !/^[a-z0-9._]{1,30}$/i.test(n)) return null; const k = n.toLowerCase(); if (NAMEOK.has(k)) return NAMEOK.get(k);
+  const h = homes.find(x => x.status === 'active' && x.user && x.user.toLowerCase() === k), v = h ? h.user : null; if (homes.length) NAMEOK.set(k, v); return v; }
+function myName() { let s = null; try { s = JSON.parse(localStorage.getItem('vin_session') || 'null'); } catch (e) {}   // logged in with the KEY link, and not expired
+  return s && s.token && s.user && (!s.exp || new Date(s.exp) > new Date()) ? nameOk(String(s.user).replace(/^@/, '')) : null; }
+const tagOf = n => n ? '@' + n : 'Visitor';
+function rtSend(event, payload) { if (WALK.ch) WALK.ch.send({ type: 'broadcast', event, payload }); }
+function othersFrame(dt, now, tx, tz, i) {
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  for (const [id, o] of WALK.others) {
+    if (now - o.seen > 20000) { if (o.el) o.el.remove(); WALK.others.delete(id); continue; }
+    if (o.r) { if (o.el) o.el.hidden = true; continue; }   // sitting in someone's car: the car's tag shows them
+    if (i > WALK_MAX) break;
+    const dx = o.tx - o.x, dz = o.tz - o.z, l = Math.hypot(dx, dz);
+    if (l > 30) { o.x = o.tx; o.z = o.tz; } else if (l > 0.05) { const st = Math.min(l, Math.max(6.2, l * 1.2) * dt); o.x += dx / l * st; o.z += dz / l * st; o.phase += dt * 7.5; o.ang = Math.atan2(dx, dz); } else o.phase *= 0.8;
+    if (o.slot !== i) { o.slot = i; colourSlot(i, o.c, hashStr(id)); }
+    { const [spin, hop] = moveOf(o.move, now); poseSlot(i, o.x, o.z, o.ang + spin, l > 0.05 ? Math.sin(o.phase) : 0, 1.1, jumpY(o.jt, now) + hop); } i++;
+    if (!o.el) { o.el = document.createElement('div'); o.el.className = 'lbl wvis'; rtTags.appendChild(o.el); }   // real people walking right now, not the citizens on the streets
+    { const t = tagOf(o.nm); if (o.el.dataset.t !== t) { o.el.dataset.t = t; o.el.textContent = t; o.el.classList.toggle('named', !!o.nm); } }
+    vv.set(o.x, 2.55, o.z).project(camera); const d = Math.hypot(o.x - tx, o.z - tz);
+    if (vv.z >= 1 || Math.abs(vv.x) > 1.05 || Math.abs(vv.y) > 1.05 || d > 60) o.el.hidden = true; else { o.el.hidden = false; o.el.style.left = ((vv.x + 1) / 2 * W) + 'px'; o.el.style.top = ((1 - vv.y) / 2 * H) + 'px'; }
+  }
+  return i;
+}
+// ---- live cars ----
+function carMsg(p) {
+  if (!p || typeof p.i !== 'string' || p.i === WALK.me || !isFinite(p.x) || !isFinite(p.z)) return;
+  let c = CARS.get(p.i); if (!c) { if (CARS.size >= CARS_MAX) return; c = { x: +p.x, z: +p.z, a: isFinite(p.a) ? +p.a : 0 }; CARS.set(p.i, c); }
+  c.tx = +p.x; c.tz = +p.z; c.ta = isFinite(p.a) ? +p.a : c.a; c.nm = nameOk(p.n); c.p = typeof p.p === 'string' ? p.p : null; c.pn = c.p ? nameOk(p.pn) : null; c.seen = performance.now();
+  const look = { model: CAR_MODELS[p.m] ? p.m : 'hatch', colour: /^#[0-9a-f]{6}$/i.test(p.k) ? p.k : CAR_COLOURS[hashStr(p.i) % CAR_COLOURS.length] };
+  if (!c.car || c.car.userData.look.model !== look.model || c.car.userData.look.colour !== look.colour) { if (c.car) dropMesh(c.car); c.car = buildCar(look); c.car.position.set(c.x, 0, c.z); scene.add(c.car); }
+}
+function dropMesh(g) { scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
+function dropCar(id) { const c = CARS.get(id); if (!c) return; if (WALK.ride && WALK.ride.id === id) rideEnd('The ride is over: the driver parked.'); if (c.car) dropMesh(c.car); if (c.el) c.el.remove(); CARS.delete(id); }
+function carsFrame(dt, now) {
+  if (!CARS.size) return; driveRoads(); const W = wrap.clientWidth, H = wrap.clientHeight;
+  for (const [id, c] of CARS) {
+    if (now - c.seen > 15000) { dropCar(id); continue; }
+    const dx = c.tx - c.x, dz = c.tz - c.z; if (Math.hypot(dx, dz) > 40) { c.x = c.tx; c.z = c.tz; } else { const k = Math.min(1, dt * 5); c.x += dx * k; c.z += dz * k; }
+    let da = c.ta - c.a; da = Math.atan2(Math.sin(da), Math.cos(da)); c.a += da * Math.min(1, dt * 6);
+    c.car.position.set(c.x, groundY(c.x, c.z) + 0.02, c.z); c.car.rotation.set(0, c.a, 0);
+    if (!c.el) { c.el = document.createElement('div'); c.el.className = 'lbl wvis car'; rtTags.appendChild(c.el); }
+    { const t = '🚗 ' + tagOf(c.nm) + (c.p ? ' · 👤 ' + tagOf(c.pn) : ''); if (c.el.dataset.t !== t) { c.el.dataset.t = t; c.el.textContent = t; } }
+    vv.set(c.x, 3.3, c.z).project(camera); const d = Math.hypot(c.x - camera.position.x, c.z - camera.position.z);
+    if (vv.z >= 1 || Math.abs(vv.x) > 1.05 || Math.abs(vv.y) > 1.05 || d > 140) c.el.hidden = true; else { c.el.hidden = false; c.el.style.left = ((vv.x + 1) / 2 * W) + 'px'; c.el.style.top = ((1 - vv.y) / 2 * H) + 'px'; }
+  }
+}
+function driveSend(now) {   // 2.5 updates a second while moving, one every 2.5 s while parked
+  if (!WALK.ch || !DRV.car) return; if (now - (DRV.sent || 0) < (Math.abs(DRV.v) > 0.3 ? 400 : 2500)) return; DRV.sent = now; const lk = DRV.car.userData.look;
+  rtSend('d', { i: WALK.me, x: +DRV.x.toFixed(1), z: +DRV.z.toFixed(1), a: +DRV.a.toFixed(2), n: myName(), m: lk.model, k: lk.colour, p: DRV.pass ? DRV.pass.id : null, pn: DRV.pass ? DRV.pass.n : null });
+}
+// ---- rides: ask, let in, get out ----
+function rideScan(now) {
+  if (now - (rideScan.t || 0) < 250) return; rideScan.t = now;
+  if (WALK.ride) { rideBtn.textContent = '🚪 Get out'; rideBtn.disabled = false; rideBtn.hidden = false; rideBtn.onclick = () => rideEnd(null, true); return; }
+  let best = null, bd = 8; for (const [id, c] of CARS) { const d = Math.hypot(c.x - WALK.x, c.z - WALK.z); if (d < bd) { bd = d; best = id; } }
+  if (!best) { rideBtn.hidden = true; return; }
+  const c = CARS.get(best), wait = WALK.asked && WALK.asked.id === best && now - WALK.asked.t < 20000;
+  rideBtn.textContent = c.p ? '🚗 ' + tagOf(c.nm) + "'s car is full" : wait ? '⏳ Waiting for ' + tagOf(c.nm) + '…' : '🚗 Ask ' + tagOf(c.nm) + ' for a ride';
+  rideBtn.disabled = !!c.p || !!wait; rideBtn.hidden = false;
+  rideBtn.onclick = () => { if (rideBtn.disabled) return; WALK.asked = { id: best, t: performance.now() }; rtSend('rq', { i: WALK.me, to: best, n: myName() }); track('ride-ask'); rideScan.t = 0; };
+}
+function onRideRq(p) {   // the driver: someone wants to get in
+  if (!p || p.to !== WALK.me || typeof p.i !== 'string') return;
+  if (!DRV.on || DRV.pass) { rtSend('ra', { to: p.i, from: WALK.me, ok: false }); return; }
+  const n = nameOk(p.n); rideAsk.innerHTML = `🙋 <b>${esc(tagOf(n))}</b> wants a ride<div><button data-ok="1">Let in</button><button>No</button></div>`; rideAsk.hidden = false;
+  clearTimeout(rideAsk.t); rideAsk.t = setTimeout(() => { rideAsk.hidden = true; }, 20000);
+  rideAsk.querySelectorAll('button').forEach(b => b.onclick = () => { const ok = !!b.dataset.ok && DRV.on && !DRV.pass; rideAsk.hidden = true;
+    if (ok) { DRV.pass = { id: p.i, n }; DRV.sent = 0; driveToast('👤 ' + tagOf(n) + ' is in your car. Drive!'); track('ride-yes'); }
+    rtSend('ra', { to: p.i, from: WALK.me, ok }); });
+}
+function onRideRa(p) {   // the walker: yes or no
+  if (!p || p.to !== WALK.me || !WALK.on || !WALK.asked || p.from !== WALK.asked.id) return; const c = CARS.get(p.from); WALK.asked = null; rideScan.t = 0;
+  if (!p.ok || !c) { walkToast((c ? tagOf(c.nm) : 'The driver') + ' said no this time.'); return; }
+  WALK.ride = { id: p.from, t: performance.now() }; WALK.keys = {}; WALK.sent = 0; walkToast("You're in! Riding with " + tagOf(c.nm) + '. Tap Get out to leave.'); track('ride-in');
+}
+function onRideRx(p) { if (p && p.to === WALK.me && DRV.pass && DRV.pass.id === p.i) { driveToast('👋 ' + tagOf(DRV.pass.n) + ' got out.'); DRV.pass = null; DRV.sent = 0; } }
+function rideEnd(msg, mine) { const r = WALK.ride; if (!r) return; WALK.ride = null; rideScan.t = 0; if (mine) rtSend('rx', { i: WALK.me, to: r.id });
+  const c = CARS.get(r.id); if (c) [WALK.x, WALK.z] = nearestFree(c.x + Math.cos(c.a) * 2.6, c.z - Math.sin(c.a) * 2.6);
+  WALK.sent = 0; walkToast(msg || 'You got out. Walk on!'); }
+function rideFrame(dt, now) {   // the passenger: sit in the car, the camera rides along behind it
+  const r = WALK.ride, c = CARS.get(r.id);
+  if (!c || now - c.seen > 8000) { rideEnd('The ride is over: the driver left.'); return false; }
+  if (c.p !== WALK.me && now - r.t > 4000) { rideEnd('The driver let you out.'); return false; }
+  WALK.x = c.x; WALK.z = c.z; WALK.ang = c.a; WALK.moving = false; WALK.idle = 0; poseSlot(0, c.x, c.z - 0, c.a, 0, 0.001, -5);
+  let dy = c.a - WALK.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); if (!WALK.look) WALK.yaw += dy * Math.min(1, dt * 4);
+  const portrait = wrap.clientWidth < wrap.clientHeight, dist = portrait ? 12 : 10.5, y0 = groundY(c.x, c.z);
+  camera.position.set(c.x - Math.sin(WALK.yaw) * dist, y0 + (portrait ? 6.4 : 4.6), c.z - Math.cos(WALK.yaw) * dist);
+  WV.set(c.x + Math.sin(c.a) * 5, y0 + 1.1, c.z + Math.cos(c.a) * 5); camera.lookAt(WV); controls.target.set(c.x, 0, c.z);
+  { const dx = c.x - camera.position.x, dz = c.z - camera.position.z; compassNeedle.style.transform = 'rotate(' + (Math.atan2(dx, -dz) * -180 / Math.PI).toFixed(1) + 'deg)'; }
+  const i = othersFrame(dt, now, c.x, c.z, 1); WALK.batches.forEach(b => { b.im.count = i; b.im.instanceMatrix.needsUpdate = true; });
+  carsFrame(dt, now); rideScan(now); walkSend(now); return true;
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) walkDisconnect(); else if (WALK.on || DRV.on) walkConnect(); });
 
 // ================= DRIVE MODE (10 Nov): drive a car around Vinland on the roads =================
 // No crashes and no damage: the car can only be on a road or its pavement; past the pavement it just slides along and slows down.
-// Stops at the level crossings (stop, look, go). Name tags on the homes you pass. Solo for now (live drivers come later).
+// Stops at the level crossings (stop, look, go). Name tags on the homes you pass. Live since 19 Nov: other people see your car, and one walker can ride with you.
 // The car look is per citizen: carLook(user) -> { model, colour }. Later the Coin Shop fills window.CAR_SHOP[user].
 const CAR_COLOURS = ['#c8603f', '#3d6be0', '#f4efe4', '#2f5d4a', '#e0a33a', '#6b6f78', '#a084c8', '#d23b2c', '#2a9d8f'];
 const CAR_MODELS = {   // L/W = footprint used for the road check; build() draws the body (front = +z)
@@ -6261,13 +6367,13 @@ function startDrive(from) {
   if (DRV.on) return; if (WALK.on) stopWalk(); track('drive-start');
   stopTour(); fly = null; closeCard(); infoBtn.hidden = true; res.hidden = true;
   driveRoads();
-  DRV.user = from && from.user && from.status !== 'hidden' ? from.user : null;
+  DRV.user = from && from.user && from.status !== 'hidden' ? from.user : myName();   // your own car look when you are logged in
   const look = carLook(DRV.user); if (!DRV.car || DRV.car.userData.look.model !== look.model || DRV.car.userData.look.colour !== look.colour) setCarLook(look);
   const [x, z, a] = from && from.x !== undefined ? nearestRoadSpot(from.x, from.z) : nearestRoadSpot(0, 43);
   Object.assign(DRV, { x, z, a, v: 0, steer: 0, camYaw: a, lookOff: 0, cleared: {}, wait: 0, waitAt: null, near: null, tagT: 0, keys: {} });
   DRV.y = groundY(x, z); DRV.camH = wrap.clientWidth < wrap.clientHeight ? 6.4 : 4.6;
   document.body.classList.add('walking', 'driving'); driveHud.hidden = false; scene.add(DRV.car);
-  DRV.on = true; controls.enabled = false; driveSpeed.textContent = '0 km/h';
+  DRV.on = true; DRV.pass = null; DRV.sent = 0; controls.enabled = false; driveSpeed.textContent = '0 km/h'; walkBodies(); WALK.batches.forEach(b => { b.im.count = 0; }); walkConnect();
   if (!DRV.tags.length) for (let i = 0; i < (PHONE ? 10 : 16); i++) { const el = document.createElement('div'); el.className = 'lbl home drv'; el.hidden = true; driveTags.appendChild(el); DRV.tags.push(el); }
   driveToast(PHONE ? 'Push the stick up to drive, sideways to steer. 📯 for the horn.' : 'Arrow keys or WASD to drive, Space to brake, H for the horn.');
 }
@@ -6276,6 +6382,7 @@ function stopDrive() {
   if (!DRV.on) return; DRV.on = false; controls.enabled = true; document.body.classList.remove('walking', 'driving'); driveHud.hidden = true; driveNear.hidden = true;
   DRV.keys = {}; DRV.joy.x = DRV.joy.y = 0; DRV.joy.id = null; driveKnob.style.transform = ''; DRV.tags.forEach(el => el.hidden = true);
   if (DRV.car) scene.remove(DRV.car); if (DRV.blink) DRV.blink.visible = false;
+  rtSend('dx', { i: WALK.me }); DRV.pass = null; rideAsk.hidden = true; if (WALK.batches) WALK.batches.forEach(b => b.im.count = 0); walkDisconnect();
   const t = new THREE.Vector3(DRV.x, 0, DRV.z); flyTo(t, new THREE.Vector3(Math.sin(DRV.a) * -40, 34, Math.cos(DRV.a) * -40), 1100);
 }
 driveBtn.onclick = () => startDrive();
@@ -6379,6 +6486,8 @@ function driveFrame(dt, now) {
     el.hidden = false; el.style.opacity = Math.max(0.5, 1 - o[0] / 110).toFixed(2); el.style.left = ((vv.x + 1) / 2 * W) + 'px'; el.style.top = ((1 - vv.y) / 2 * H) + 'px'; });
   if (DRV.hornEl && DRV.hornEl.isConnected) { const age = (now - +DRV.hornEl.dataset.t) / 1000; vv.set(DRV.x, DRV.y + 2.4 + age, DRV.z).project(camera);
     DRV.hornEl.style.left = ((vv.x + 1) / 2 * W) + 'px'; DRV.hornEl.style.top = ((1 - vv.y) / 2 * H) + 'px'; DRV.hornEl.style.opacity = Math.max(0, 1 - age); }
+  { const i = othersFrame(dt, now, DRV.x, DRV.z, 0); WALK.batches.forEach(b => { b.im.count = i; b.im.instanceMatrix.needsUpdate = true; }); }   // live walkers + cars (19 Nov)
+  carsFrame(dt, now); driveSend(now);
   if (PLAYHOOK.tick) PLAYHOOK.tick(dt, now);
 }
 
