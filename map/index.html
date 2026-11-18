@@ -456,7 +456,7 @@ function parseCSV(text) { const rows = []; let row = [], cell = '', q = false;
 function build2D(text) {
   const seen = new Set(), byNum = new Map(), noNum = [], villas = [], never = ST.never.map(x => x.toLowerCase());
   const st = v => { v = String(v || '').trim().toLowerCase(); return /^(abandon|left|unfollow|gone)/.test(v) ? 'abandoned' : /^(hid|private|anon)/.test(v) ? 'hidden' : 'active'; };
-  parseCSV(text).map(r => ({ n: parseInt(String(r.number || '').replace(/[^\d]/g, ''), 10), user: String(r.username || '').trim().replace(/^@/, '').replace(/\s+/g, '').slice(0, 30), job: (r.profession || r.job || '').trim().slice(0, 24), status: st(r.status), shopCol: String(r.shop || '').trim().toLowerCase() }))
+  parseCSV(text).map(r => ({ n: parseInt(String(r.number || '').replace(/[^\d]/g, ''), 10), user: String(r.username || '').trim().replace(/^@/, '').replace(/\s+/g, '').slice(0, 30), job: (r.profession || r.job || '').trim().slice(0, 34), status: st(r.status), shopCol: String(r.shop || '').trim().toLowerCase() }))
     .forEach(r => { const k = r.user.toLowerCase(); if (!r.user && r.status !== 'hidden') return; if (never.includes(k)) return; if (k && seen.has(k)) return; if (k) seen.add(k);
       if (ST.villas[k] && r.status === 'active') { villas.push(r); return; } if (r.n > 0 && !byNum.has(r.n)) byNum.set(r.n, r); else noNum.push(r); });
   let free = 1; noNum.forEach(r => { while (byNum.has(free)) free++; r.n = free; byNum.set(free, r); });
@@ -2168,7 +2168,7 @@ function selectOpen(o) {
 }
 function buildHomes(rows) {
   const seenUser = new Set(), byNum = new Map(), noNum = [], villaRows = [];
-  rows.map(r => ({ n: parseInt(String(r.number || '').replace(/[^\d]/g, ''), 10), user: cleanName(r.username), job: (r.profession || r.job || '').trim().slice(0, 24), status: normStatus(r.status), joined: joinedDay(r.joined), shopCol: r.shop === undefined ? undefined : /^(y|yes|true|shop|\d+|staff\s*\d+)$/i.test(String(r.shop).trim()), shopNum: /b\d/i.test(String(r.shop || '')) ? 0 : parseInt(String(r.shop || '').replace(/[^\d]/g, ''), 10) || 0, staff: !/b\d/i.test(String(r.shop || '')) && /staff/i.test(String(r.shop || '')), bigLot: +((/^(?:staff\s*)?b(\d+)$/i.exec(String(r.shop || '').trim()) || [])[1] || 0), bigStaff: /^staff\s*b\d/i.test(String(r.shop || '').trim()) }))
+  rows.map(r => ({ n: parseInt(String(r.number || '').replace(/[^\d]/g, ''), 10), user: cleanName(r.username), job: (r.profession || r.job || '').trim().slice(0, 34), status: normStatus(r.status), joined: joinedDay(r.joined), shopCol: r.shop === undefined ? undefined : /^(y|yes|true|shop|\d+|staff\s*\d+)$/i.test(String(r.shop).trim()), shopNum: /b\d/i.test(String(r.shop || '')) ? 0 : parseInt(String(r.shop || '').replace(/[^\d]/g, ''), 10) || 0, staff: !/b\d/i.test(String(r.shop || '')) && /staff/i.test(String(r.shop || '')), bigLot: +((/^(?:staff\s*)?b(\d+)$/i.exec(String(r.shop || '').trim()) || [])[1] || 0), bigStaff: /^staff\s*b\d/i.test(String(r.shop || '').trim()) }))
     .forEach(r => {
       const key = r.user.toLowerCase();
       if (!r.user && r.status !== 'hidden') return;              // empty row
@@ -4654,7 +4654,7 @@ function buildBigLots(hs) {
   Object.values(LOTS).forEach(L => { if (L.sign) L.sign.visible = true; });
   bigLots.forEach(lot => {
     if (!lot.owners.length) return;
-    const L = LOTS[lot.n], kind = bigKind(lot.owners[0].job), m = /\(([^)]+)\)/.exec(lot.owners[0].job || '');
+    const L = LOTS[lot.n], kind = bigKind(lot.owners[0].job), m = /\(([^)]+)\)?/.exec(lot.owners[0].job || '');   // (18 Nov) a cut-off name still counts
     lot.kind = kind; lot.name = (kind === 'news' || kind === 'arcade') && m ? m[1] : BIG_NAMES[kind];   // a name in brackets in the job, e.g. "Arcade owner (Vice Arena)"
     const g = L.biz ? bizXL(kind, lot.name, L.W, L.D) : bigBuilding(kind, lot.name); g.position.set(L.x, 0, L.z); g.rotation.y = L.ry;
     const o = bakeKeep(g, 'lot:' + lot.n); bigLotObjs.push(o);
