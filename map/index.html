@@ -4313,11 +4313,11 @@ function carModel(p, x, z, ry, col) {
 const BIG_KINDS = [
   [/journal|newspaper|spark/i, 'news'], [/startup|\bai\b|founder|office|real estate/i, 'hub'], [/gym/i, 'gym'],
   [/daycare|day care|nursery/i, 'daycare'], [/\bgas\b|petrol|fuel/i, 'gas'], [/\bcars?\b|showroom|dealer/i, 'cars'], [/dance/i, 'dance'],
-  [/pizz/i, 'pizza'], [/restaurant|chef/i, 'rest'],   // 18 Nov (Dev): riverfront restaurant (lot 14) + pizza place behind it (lot 17)
+  [/pizz/i, 'pizza'], [/restaurant|chef/i, 'rest'], [/arcade|gaming/i, 'arcade'],   // 18 Nov (Dev): riverfront restaurant (lot 14) + pizza place behind it (lot 17)
 ];
 const bigKind = job => (BIG_KINDS.find(([re]) => re.test(job || '')) || [0, 'shop'])[1];
-const BIG_NAMES = { news: 'Vinland Times', hub: 'Startup Hub', gym: 'Gym', cars: 'Car Showroom', gas: 'Gas Station', dance: 'Dance Studio', daycare: 'Daycare', shop: 'Business', rest: 'Riverfront Restaurant', pizza: 'Pizza Place' };
-const BIG_EYES = { rest: 'Restaurant on the river', pizza: 'Pizzeria', news: 'Newspaper · with Spark Sight', hub: 'Shared startup office', gym: 'Gym · bigger home for the gym', cars: 'Car showroom', gas: 'Gas station', dance: 'Dance studio', daycare: 'Daycare', shop: 'Business' };
+const BIG_NAMES = { news: 'Vinland Times', hub: 'Startup Hub', gym: 'Gym', cars: 'Car Showroom', gas: 'Gas Station', dance: 'Dance Studio', daycare: 'Daycare', shop: 'Business', rest: 'Riverfront Restaurant', pizza: 'Pizza Place', arcade: 'Neon Arcade' };
+const BIG_EYES = { arcade: 'Gaming arcade', rest: 'Restaurant on the river', pizza: 'Pizzeria', news: 'Newspaper · with Spark Sight', hub: 'Shared startup office', gym: 'Gym · bigger home for the gym', cars: 'Car showroom', gas: 'Gas station', dance: 'Dance studio', daycare: 'Daycare', shop: 'Business' };
 function bigBuilding(kind, name) {
   const g = new THREE.Group(), T = '#e3d2ae';
   B(g, 38, 0.16, 25, '#e2d8c0', 0, 0.03, 0, { shadow: false, edge: false });
@@ -4522,6 +4522,48 @@ function bizXL(kind, name, W, D) {
     add(g, new THREE.CylinderGeometry(0.9, 1.2, 12, 12), '#6f6a62', -hw + 5, 14.3, -F + 5);
     const v = new THREE.Group(); v.position.set(hw - 4, 0.35, -F + 9); g.add(v); B(v, 2.6, 2.6, 5.4, '#f7f0e1', 0, 0.4, 0); B(v, 2.65, 0.9, 1.4, C.glass, 0, 1.6, 2.1, N); B(v, 2.66, 0.7, 3.2, BR, 0, 1.6, -0.8, N);   // delivery van
     pylon(hw - 3, F - 2, '#2f2b28', '#f6d27a');
+  } else if (kind === 'arcade') {              // (half lot, Dev 18 Nov) NEON ARCADE: a 1980s beach-city deco block in pastel pink + white with teal bands,
+    // neon tubes (pink / cyan) on every edge, a round corner tower with a sunset-striped fin, a glass front full of glowing game cabinets,
+    // a giant joystick on the roof, palms + a pink convertible out front. Made-up name, no game brands (no logos).
+    const PK = '#f6b8cf', WH = '#fbf7f2', TL = '#3fb8b0', fz = F - 12, BW = W - 7, BH = 10;
+    const NEON = c => new THREE.MeshBasicMaterial({ color: c }), NP = NEON('#ff4fa3'), NC = NEON('#4ff0ff'), NY = NEON('#ffd84f');
+    const tube = (w, h, d, m, x, y, z) => { const t = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); t.position.set(x, y + h / 2, z); g.add(t); };
+    B(g, W - 2, 0.12, 9, '#f3e9da', 0, 0.3, F - 4.5, N);                                                            // pink-tinted forecourt
+    for (let x = -hw + 2; x < hw - 1; x += 3) B(g, 1.5, 0.02, 9, '#f6d6e2', x, 0.43, F - 4.5, N);
+    B(g, BW, BH, 13, WH, -1.5, 0.3, fz); B(g, BW + 0.4, 1.2, 13.4, TL, -1.5, 3.6, fz, N); B(g, BW + 0.6, 0.7, 13.6, PK, -1.5, BH + 0.3, fz);
+    B(g, BW - 1, 1.6, 0.3, PK, -1.5, BH - 2.2, fz + 6.6, N);
+    // round corner tower (right) with the fin
+    const TX = hw - 5.5; add(g, new THREE.CylinderGeometry(4.2, 4.2, BH + 4, 24), PK, TX, (BH + 4) / 2 + 0.3, fz + 2.3);
+    add(g, new THREE.CylinderGeometry(4.5, 4.5, 0.6, 24), WH, TX, BH + 4.6, fz + 2.3, N);
+    [0, 1, 2].forEach(k => add(g, new THREE.CylinderGeometry(4.25, 4.25, 0.7, 24), [NP, NC, NY][k], TX, 5 + k * 3, fz + 2.3, N));
+    const FN = ['#ffcf5a', '#ff9a5a', '#ff5f8a', '#c45fd6', '#6f5fd6'];
+    FN.forEach((c, k) => B(g, 1.4, 3.2, 3, c, TX, BH + 4.9 + k * 3.2, fz + 2.3, N));                                 // sunset-stripe fin
+    tube(0.25, 16, 0.25, NC, TX - 0.85, BH + 4.9, fz + 3.85); tube(0.25, 16, 0.25, NC, TX + 0.85, BH + 4.9, fz + 3.85);
+    // glass front with glowing cabinets inside
+    B(g, BW - 12, 6.2, 0.2, '#2b3550', -4.5, 0.6, fz + 6.4, N);
+    const SC = ['#ff4fa3', '#4ff0ff', '#ffd84f', '#8aff6a', '#b07bff'];
+    for (let i = 0; i < 8; i++) { const x = -13.5 + i * 2.4; B(g, 1.6, 2.6, 1.4, '#20243a', x, 0.6, fz + 4.8, N);
+      const sc = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.9), NEON(SC[i % 5])); sc.position.set(x, 2.5, fz + 5.55); g.add(sc); }
+    door(g, 4.2, 0.3, fz + 6.55, 0, 2.4, 3.2);
+    // neon edges + the big sign
+    tube(BW + 0.2, 0.3, 0.3, NP, -1.5, BH + 1.05, fz + 6.85); tube(BW + 0.2, 0.3, 0.3, NC, -1.5, 3.55, fz + 6.85);
+    tube(0.3, BH - 0.4, 0.3, NP, -hw + 3.6, 0.6, fz + 6.85);
+    signBoard(g, name.toUpperCase(), -4.5, 8.0, fz + 6.95, 16, 2.0, '#1d1630', '#ff7ac0');
+    // giant joystick on the roof
+    B(g, 5, 1.4, 4, '#1d1630', -9, BH + 1.0, fz - 1); add(g, new THREE.CylinderGeometry(0.35, 0.35, 4.2, 10), '#2b2b2b', -9, BH + 4.4, fz - 1, N);
+    add(g, new THREE.SphereGeometry(1.2, 14, 10), '#e8323c', -9, BH + 6.9, fz - 1); [[-6.8, '#ffd84f'], [-5.6, '#4ff0ff']].forEach(([x, c]) => add(g, new THREE.CylinderGeometry(0.55, 0.55, 0.5, 12), c, x, BH + 2.6, fz - 0.4, N));
+    // front: palms, pink convertible, neon bench, flower beds
+    const palmA = (x, z, s) => { const p = new THREE.Group(); p.position.set(x, 0.3, z); p.rotation.y = x * 0.4; g.add(p);
+      for (let i = 0; i < 6; i++) add(p, new THREE.CylinderGeometry(0.28 * s, 0.34 * s, 1.25 * s, 7), '#9a7650', i * 0.25 * s, 0.6 * s + i * 1.18 * s, 0, { rz: -0.1, edge: false });
+      for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; add(p, new THREE.ConeGeometry(0.6 * s, 3.8 * s, 4), k % 2 ? '#4f8a42' : '#5e9a4e', 1.5 * s + Math.cos(a) * 1.7 * s, 7 * s, Math.sin(a) * 1.7 * s, { rz: Math.cos(a) * 1.7, rx: -Math.sin(a) * 1.7, edge: false }); } };
+    palmA(-hw + 2.5, F - 2, 1); palmA(hw - 2.5, F - 2.5, 1.1); palmA(-1, F - 1.6, 0.9);
+    carModel(g, 8.5, F - 4.5, Math.PI / 2, '#ff8fc4'); B(g, 4.8, 0.02, 2.8, '#ff4fa3', 8.5, 0.44, F - 4.5, N);
+    flowerBed(g, -9, F - 2, C.pink);
+    // back: a small open-air court with neon-lit benches (the garden of the half lot)
+    B(g, W - 4, 0.08, D - 30, '#a9cf78', 0, 0.3, -F + (D - 30) / 2 + 1, N);
+    B(g, 14, 0.12, 9, '#3b3550', 0, 0.36, -F + 6, N); for (let x = -6; x <= 6; x += 3) B(g, 0.2, 0.02, 9, '#ff4fa3', x, 0.5, -F + 6, N);
+    [-8, 8].forEach(x => bench(g, x, -F + 6, Math.PI / 2)); [[-13, -F + 4], [13, -F + 4]].forEach(([x, z]) => palmA(x, z, 0.9));
+    pylon(hw - 3, F - 2, '#1d1630', '#ff7ac0');
   } else if (kind === 'dance') {               // (half lot) pastel studio at the front, little open-air stage in the garden behind
     const PK = '#f2c6d2', CR = '#fbf6ec', fz = F - 11;
     B(g, W - 6, 11, 14, PK, 0, 0.3, fz); B(g, W - 5.4, 0.6, 14.6, CR, 0, 11.3, fz); hip(g, W - 5, 4, 15, PU, 0, 11.9, fz);
@@ -4613,7 +4655,7 @@ function buildBigLots(hs) {
   bigLots.forEach(lot => {
     if (!lot.owners.length) return;
     const L = LOTS[lot.n], kind = bigKind(lot.owners[0].job), m = /\(([^)]+)\)/.exec(lot.owners[0].job || '');
-    lot.kind = kind; lot.name = kind === 'news' && m ? m[1] : BIG_NAMES[kind];
+    lot.kind = kind; lot.name = (kind === 'news' || kind === 'arcade') && m ? m[1] : BIG_NAMES[kind];   // a name in brackets in the job, e.g. "Arcade owner (Vice Arena)"
     const g = L.biz ? bizXL(kind, lot.name, L.W, L.D) : bigBuilding(kind, lot.name); g.position.set(L.x, 0, L.z); g.rotation.y = L.ry;
     const o = bakeKeep(g, 'lot:' + lot.n); bigLotObjs.push(o);
     if (L.sign) L.sign.visible = false;
@@ -5010,6 +5052,7 @@ const LAYOUT_CSV_URL = '';
 const NOTICES_CSV_URL = '';
 // Official notices: only you write these (in the sheet's "notices" tab); nobody can reply on the website.
 const NOTICES_FALLBACK = `date,notice
+18 Nov,"Vice Arena is open: a neon gaming arcade in the Business District, right behind the Dance Studio, for the GTA 6 launch. Asked for by @t4nze."
 18 Nov,"Vinland Power & Water is open, south of Riverside on the river: the waterworks, the VINLAND water tower and the solar farm. Power and clean water for every home, cables under the ground. Tap it on the map."
 16 Nov,"The Central Bank of Vinland is open on Government Row, next to the Embassy. Tap it on the map. Your coins are in the lobby: Me, then Wallet."
 15 Nov,"The Vinland National Stadium is open, with a training pitch, sports hall, pool and courts around it."
@@ -5039,6 +5082,7 @@ const DEMANDS_FALLBACK = `emoji,demand,count,likes,asked_by,status
 🍽️,Restaurant,7,2,@bhaskar_26.01 +6,"Built (Day 18, Riverfront Restaurant by the Central Bridge + beach shop 50)"
 🏋️,Gym,3,2,@_.r5k_ +2,Opened as a shop
 🍕,Pizza place,1,0,@anshu161210,"Built (Day 18, Pizza Place behind the Riverfront Restaurant)"
+🕹️,Gaming arcade,1,0,@t4nze,"Built (Day 18, Vice Arena behind the Dance Studio)"
 🦁,Zoo,3,1,@izabella_maria20 +2,Waiting
 🛍️,Mall,4,0,@avanti_ray +3,Built (Day 6)
 💼,Startup office,3,1,@hritu_raj_hajong +2,Waiting
