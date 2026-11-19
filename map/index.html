@@ -1445,10 +1445,10 @@ const PLAZA_COL = [['#e4a27c', '#d6906a', '#c98360'], ['#efe0c2', '#e6d3b0', '#d
 // ⭐ SUPPORTERS: only people who really supported (their own money). Add them here by hand: 'username': 'wall' | 'supporter' | 'patron' | 'villa' | 'landmark'
 const SUPPORT = { '_aman.sriva_': 'villa', 'devsinghbuilds': 'villa', 'amorydsmt': 'mansion', 'tashfeenmichal': 'mansion', 'shannyreti': 'mansion', 'adbar9929': 'villa', 'dblockkkfrl': 'villa', 'corn_en_le_cob': 'villa', 'nathanmaleh': 'mansion' };   // 17-18 Nov (Buy Me a Coffee): adbar9929 $1, dblockkkfrl $3, corn_en_le_cob $10 = villas 3-5 of the first-5 pay-what-you-want; nathanmaleh $10 = mansion   // 11 Nov: first villa owner (Dev's friend, his own money) · 16 Nov: devsinghbuilds, villa (first-5 villas are pay-what-you-want, Dev)
 // 🏡 VILLAS (Home upgrade 'Villa', a real support): 'username': Villa Lane plot number. The citizen MOVES into the villa; their old plot goes to the next new citizen.
-const VILLAS = { '_aman.sriva_': 6, 'devsinghbuilds': 5, 'amorydsmt': 101, 'tashfeenmichal': 102, 'shannyreti': 103, 'adbar9929': 4, 'dblockkkfrl': 12, 'corn_en_le_cob': 11, 'nathanmaleh': 104 };   // 101+ = MANSION LANE (beachfront, 16 Nov): amorydsmt = first mansion (€10, Spanish style)   // keep them in the order they bought (the first one is 'Villa Lane's first owner')
+const VILLAS = { 'pies_bandyta_2.0': 111, '_aman.sriva_': 6, 'devsinghbuilds': 5, 'amorydsmt': 101, 'tashfeenmichal': 102, 'shannyreti': 103, 'adbar9929': 4, 'dblockkkfrl': 12, 'corn_en_le_cob': 11, 'nathanmaleh': 104 };   // 101+ = MANSION LANE (beachfront, 16 Nov): amorydsmt = first mansion (€10, Spanish style)   // keep them in the order they bought (the first one is 'Villa Lane's first owner')
 // custom looks: villas use a kit piece instead of the standard villa (none yet); mansions pick their kit piece (default mnSpanish)
 const CUSTOM_VILLA = {};
-const MANSION_LOOK = { 'tashfeenmichal': 'mnMediterranean', 'shannyreti': 'mnModern', 'nathanmaleh': 'mnRiviera' };   // 17 Nov: shannyreti ($15, modern single storey from her photo, plot 103)
+const MANSION_LOOK = { 'pies_bandyta_2.0': 'mnRiviera', 'tashfeenmichal': 'mnMediterranean', 'shannyreti': 'mnModern', 'nathanmaleh': 'mnRiviera' };   // 17 Nov: shannyreti ($15, modern single storey from her photo, plot 103)
 //   // 17 Nov: tashfeenmichal ($20 custom home, Mediterranean, Mansion Row plot 102)
 const villaRank = u => Object.keys(VILLAS).indexOf(String(u || '').toLowerCase()) + 1;
 // 🎨 STYLE (Supporter perk "your style"): your citizen's outfit and your home's colours. Add by hand after a real support:
@@ -2184,12 +2184,12 @@ function buildHomes(rows) {
       if (NEVER_SHOW.includes(key)) return;                          // the page's own account never gets a home
       if (key && seenUser.has(key)) return;                          // same person twice: keep the first
       if (key) seenUser.add(key);
-      if (VILLAS[key] && r.status === 'active') { villaRows.push(r); return; }   // moved into a villa: their old plot is free for the next citizen
+      if (VILLAS[key] && r.status === 'active') { villaRows.push(r); if (VILLAS[key] < 111) return; r = { ...r, user: '', status: 'hidden', reserved: true }; }   // moved into a villa: their old plot is free for the next citizen. Coral Bay (20 Nov): the old spot stays reserved, so nobody after them changes number
       if (r.n > 0 && !byNum.has(r.n)) byNum.set(r.n, r); else noNum.push(r);   // missing or repeated number: give the next free plot
     });
   let free = 1; noNum.forEach(r => { while (byNum.has(free)) free++; r.n = free; byNum.set(free, r); });
   const AVAIL = PLOTS.filter(p => !layout.blocked.some(b => b[0] === p[0] && b[1] === p[1]));
-  rows = [...byNum.values()].filter(r => r.n <= AVAIL.length).sort((a, b) => a.n - b.n);
+  rows = [...byNum.values()].filter(r => r.n <= AVAIL.length && !r.reserved).sort((a, b) => a.n - b.n);
   rows.forEach(r => {
     const pl = AVAIL[r.n - 1], x = pl[0], z = pl[1];
     if (pl[2] === undefined) ensureRoads(Math.max(Math.abs(x), Math.abs(z)) / S);
@@ -2512,6 +2512,9 @@ let govBuilt = null, govSites = null;
 const LOTS = {};   // Villa Lane plots (old Commercial Lane) by number: position, facing, and the 'Villa plot' sign
 const MLANE = { lots: [[105.5, -719.6], [156.5, -719.6], [212, -719.6], [262, -719.6]], deep: 1.166, mz: -725.5 };   // the mansion piece runs from local z -30.9 (gate) to +21 (pool): placed so the gate sits at the back road (z -689.5) and the pool side reaches the beach road (z -750)   // MANSION ROW (Dev, 17 Nov): the 2 east beach-shop blocks on the beach road, 4 plots, lot 101 next to Beach Square; gate on the back road, pool facing the beach
 MLANE.lots.forEach(([x, z], k) => { LOTS[101 + k] = { x, z, ry: Math.PI, sg: 1, mansion: true }; });
+// CORAL BAY (Dev, 20 Nov): 6 big beachfront mansion plots on the strip between Beach Lane and the sand (x 645..1075). #1 sits by The Club.
+const CB = { X0: 645, X1: 1075, PZ: -737, xs: [690, 760, 830, 900, 970, 1040] };
+CB.xs.forEach((x, i) => { LOTS[111 + i] = { x, z: CB.PZ, ry: Math.PI, sg: 1, mansion: true, cb: true, mz: CB.PZ + 4, sc: 1.3 }; });
 const isMansion = lot => lot >= 101;
 (function drawNorth() {
   const hide = new THREE.Matrix4().makeScale(0, 0, 0);
@@ -3442,7 +3445,8 @@ GD.gate = [GD.XE, 0];
 // ON: false until Dev OKs the v4 preview (17 Nov night). Off = no homes added, nothing drawn.
 // v5 (Dev, 18 Nov): east edge on the last lane of the district above (x 290); the 2 roads that come down from the city (x -641.5 and 0) run
 // straight through as the MAIN roads (the near-by split roads are gone); the -770 and -386 links are removed; normal grass; Garden District homes.
-const SB = { ON: true, XW: -897, XE: 290, ZN: 625, ZS: 1175, ZB: 900, GX: [-343, -233], IN: [-641.5, 0], roads: [], pools: [], blocks: [], parks: [] };
+const SB = { ON: true, XW: -897, XE: 290, ZN: 625, ZS: 1175, ZB: 900, GX: [-386, -290],   // GX (Dev, 20 Nov): the green gap now sits exactly under the Garden District's green belt (GD.XE..GD.BELT)
+  IN: [-641.5, 0], roads: [], pools: [], blocks: [], parks: [] };
 { GD.TPL.LU = 'sbHouse'; GD.TPL.LW = 'sbCottage'; GD.TPL.LQ = 'ndFourplex';
   let sd = 2027; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
   const rd = (w, d, x, z) => SB.roads.push([w, d, x, z]), B0 = GD.blds.length;
@@ -3561,6 +3565,11 @@ const BD = { ON: false, X0: 1085, X1: 1545, Z0: -690, Z1: 580, AV: [1300, 1330],
   B(g, RS.road - 3.5 - 6 - (W0 + 1.6), 0.13, PL, '#a9c97f', (W0 + 1.6 + RS.road - 9.5) / 2, 0.02, PC, N);          // green waterfront strip
   B(g, 3.2, 0.15, PL, '#e9dcc0', W0 + 3.2, 0.03, PC, N);                                                             // waterside walk by the wall
   RS.pathX = z => W0 + 13 + 6.5 * Math.sin(z / 37) + 2 * Math.sin(z / 11);                                         // the winding promenade
+  { const EZ0 = -792, EL = PZ0 - EZ0, EC = (PZ0 + EZ0) / 2;   // (Dev, 20 Nov) the riverfront path goes on to the beach, past The Club and Coral Bay Marina
+    B(g, 1.6, 1.2, EL, '#cdbf9f', W0 + 0.8, -0.5, EC); B(g, 2.2, 0.25, EL, '#e9e1cf', W0 + 1.1, 0.7, EC, N);
+    B(g, RS.road - 3.5 - (W0 + 1.6), 0.13, EL, '#a9c97f', (W0 + 1.6 + RS.road - 3.5) / 2, 0.02, EC, N); B(g, 3.2, 0.15, EL, '#e9dcc0', W0 + 3.2, 0.03, EC, N);
+    for (let z = EZ0; z < PZ0; z += 2) { const x = RS.pathX(z); B(g, 5.2, 0.16, 2.2, '#e9dcc0', x, 0.06, z + 1, N); }
+    for (let z = EZ0 + 8; z < PZ0 - 4; z += 16) tree(g, RS.road - 6, 0.1, z, (z / 16 | 0) % 3 ? 'canopy' : 'pink', 0.9); }
   { const pos = [], idx = []; let k = 0; for (let z = PZ0; z <= PZ1; z += 2, k++) { const x = RS.pathX(z); pos.push(x - 2.6, 0.18, z, x + 2.6, 0.18, z); if (k) { const a = (k - 1) * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); } }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals(); const m = new THREE.Mesh(geo, mat('#e9dcc0')); m.receiveShadow = true; g.add(m); }
   [[RS.road - 7.5, 0], [RS.road + 7.5, 1]].forEach(([vx, k]) => { B(g, 4, 0.13, PL, '#a9c97f', vx, 0.03, PC, N);         // tree verges both sides of the road
@@ -3943,6 +3952,34 @@ function powerCard() {
     put('grandFountain', {}, cxc, czc, 0, 1.3);
     put('court', { sport: 'tennis', floor: '#c8603f' }, cxc - 12, -752, 0); put('court', { sport: 'tennis', floor: '#c8603f' }, cxc + 12, -752, 0);
     scene.add(bakeGroup(T)); });
+  // CORAL BAY: pale stone ground, the PUBLIC seafront promenade + cycle strip, 6 walled plots (lawn, boardwalk to the public sand),
+  // gardens on the plots still waiting, a palm buffer to the flats, the gate by The Club, lamps, and the marina at the river mouth
+  { const cg = new THREE.Group(), { X0, X1, PZ, xs } = CB, cxm = (X0 + X1) / 2, cpal = [], lamps = [];
+    B(cg, X1 - X0, 0.1, 82, '#efe2c2', cxm, 0.035, -731, N);
+    B(cg, X1 - X0, 0.14, 9, '#f4ecd8', cxm, 0.06, -776, N); B(cg, X1 - X0, 0.16, 1.6, '#c9603f', cxm, 0.07, -771.5, N);
+    B(cg, X1 - X0, 0.4, 14, '#7fb35f', cxm, 0.05, -699, N);
+    xs.forEach((x, i) => { B(cg, 62, 0.12, 54, '#a9d27e', x, 0.07, PZ, N);
+      [[0, -27, 62, 0.6], [-31, 0, 0.6, 54], [31, 0, 0.6, 54]].forEach(([dx, dz, w, d]) => B(cg, w, 0.9, d, '#f7f3ea', x + dx, 0.07, PZ + dz, N));
+      B(cg, 3, 0.18, 14, '#a07a52', x, 0.09, -768, N);
+      const L = LOTS[111 + i], sg = new THREE.Group();   // the waiting plot: a garden + sign, hidden once someone moves in
+      [[-18, -8], [18, -8], [-14, 12], [14, 12]].forEach(([dx, dz]) => cpal.push([x + dx, PZ + dz, sg]));
+      flowerBed(sg, x - 6, PZ + 4, C.pink); flowerBed(sg, x + 6, PZ + 4, C.purple); add(sg, new THREE.CylinderGeometry(6, 6, 0.1, 28), '#e9dcc0', x, 0.13, PZ + 4, { edge: false });
+      signBoard(sg, 'CORAL BAY ' + (i + 1), x, 1.6, PZ + 24, 6.8, 1.1, '#173040', '#f6d27a', 0); scene.add(sg); L.sign = sg; });
+    for (let x = X0 + 6; x <= X1 - 4; x += 12) tree(cg, x, 0.1, -699 + ((x / 12 | 0) % 2 ? 3 : -3), 'canopy', 0.9);
+    [-6, 6].forEach(d => B(cg, 2.4, 6, 2.4, '#efe6d2', X0 + 2, 0.1, PZ + d, { edge: false }));
+    signBoard(cg, 'CORAL BAY', X0 + 2, 6.4, PZ, 12, 1.8, '#173040', '#f2b33d', Math.PI / 2);
+    for (let x = X0 + 11; x <= X1; x += 28) { bench(cg, x, -779.5, 0); lamps.push(x + 7); }
+    // MARINA at the river mouth (east bank x 520): a bank walkway, 3 wooden piers into the river, boats in the berths
+    const MW = '#9a6f47'; B(cg, 4, 0.5, 52, MW, 517, 0.25, -786, N); [-806, -790, -774].forEach(z => B(cg, 40, 0.5, 3, MW, 497, 0.25, z, N));
+    signBoard(cg, 'CORAL BAY MARINA', 530, 2.2, -760, 9, 1.2, '#173040', '#f6d27a', Math.PI / 2);
+    bakeKeep(cg, 'coralbay');
+    window.CB_LAMPS = []; lamps.forEach(x => window.CB_LAMPS.push(x, 5.6, -781.5));
+    whenKit(() => { const K = window.VinlandKit, T = new THREE.Group(), put = (key, o, x, z, ry, sc, par) => { const m = K.make(key, o || {}); m.position.set(x, 0, z); m.rotation.y = ry || 0; if (sc) m.scale.setScalar(sc); (par || T).add(m); return m; };
+      for (let x = X0 + 4; x <= X1; x += 14) put('palmTree', {}, x, -766.4, x * 0.37);
+      lamps.forEach(x => put('streetLamp', {}, x, -781.5, 0));
+      [[497, -798], [490, -782], [500, -766]].forEach(([x, z], i) => put('boat', {}, x, z, Math.PI / 2 + (i % 2) * 0.1, 1.8));
+      scene.add(bakeGroup(T));
+      cpal.forEach(([x, z, sg], i) => put('palmTree', {}, x, z, i * 1.3, 1, sg)); }); }
 })();
 (function drawGardenDistrict() {
   const N = { edge: false, shadow: false }, g = new THREE.Group(), hide = new THREE.Matrix4().makeScale(0, 0, 0), ZN = GD.ZN, ZS = GD.ZS, R = GD.RZ, SX = GD.SX;
@@ -4645,7 +4682,7 @@ function drawVillas(hs) {
   villaObjs.forEach(o => { scene.remove(o); o.traverse(m => { const k = pickables.indexOf(m); if (k >= 0) pickables.splice(k, 1); }); }); villaObjs = [];
   hs.filter(h => h.villa).forEach(h => { const L = LOTS[h.villa]; if (!L) return;
     if (bigLots.has(h.villa)) console.warn('Villa Lane plot ' + h.villa + ' is also a business lot');
-    if (L.mansion) { if (L.sign) L.sign.visible = false; whenKit(() => { const g = new THREE.Group(), m = window.VinlandKit.make(MANSION_LOOK[String(h.user || '').toLowerCase()] || 'mnSpanish', { name: h.user }); m.scale.set(1, 1.05, MLANE.deep); g.add(m); g.position.set(L.x, 0, MLANE.mz); g.rotation.y = L.ry; villaObjs.push(bakeKeep(g, 'mansion:' + h.villa)); }); return; }
+    if (L.mansion) { if (L.sign) L.sign.visible = false; whenKit(() => { const g = new THREE.Group(), m = window.VinlandKit.make(MANSION_LOOK[String(h.user || '').toLowerCase()] || 'mnSpanish', { name: h.user }); if (L.cb) m.scale.setScalar(L.sc); else m.scale.set(1, 1.05, MLANE.deep); g.add(m); g.position.set(L.x, 0, L.cb ? L.mz : MLANE.mz); g.rotation.y = L.ry; villaObjs.push(bakeKeep(g, 'mansion:' + h.villa)); }); return; }
     const ck = CUSTOM_VILLA[String(h.user || '').toLowerCase()];
     if (ck) { if (L.sign) L.sign.visible = false; whenKit(() => { const g = new THREE.Group(); g.add(window.VinlandKit.make(ck, { name: h.user })); g.position.set(L.x, 0, L.z); g.rotation.y = L.ry; villaObjs.push(bakeKeep(g, 'villa:' + h.villa)); }); return; }
     const g = villaModel(h.user); g.position.set(L.x, 0, L.z); g.rotation.y = L.ry; villaObjs.push(bakeKeep(g, 'villa:' + h.villa)); if (L.sign) L.sign.visible = false; });
@@ -5062,6 +5099,7 @@ const NOTICES_CSV_URL = '';
 // Official notices: only you write these (in the sheet's "notices" tab); nobody can reply on the website.
 const NOTICES_FALLBACK = `date,notice
 18 Nov,"Vice Arena is open: a neon gaming arcade in the Business District, right behind the Dance Studio, for the GTA 6 launch. Asked for by @t4nze."
+20 Nov,"Coral Bay is here: 6 beachfront mansions on the strip by The Club, with a public promenade and Coral Bay Marina at the river mouth. Coral Bay #1 is home to @pies_bandyta_2.0."
 18 Nov,"Vinland Power & Water is open, south of Riverside on the river: the waterworks, the VINLAND water tower and the solar farm. Power and clean water for every home, cables under the ground. Tap it on the map."
 16 Nov,"The Central Bank of Vinland is open on Government Row, next to the Embassy. Tap it on the map. Your coins are in the lobby: Me, then Wallet."
 15 Nov,"The Vinland National Stadium is open, with a training pitch, sports hall, pool and courts around it."
@@ -5765,7 +5803,7 @@ function buildNight() {
   const bulbs = [], v = new THREE.Vector3(), B1 = new THREE.Color('#ffd98a'), B2 = new THREE.Color('#f6d27a');
   scene.traverse(o => { if (!o.isMesh || o.isInstancedMesh || !o.material || !o.material.color) return; const c = o.material.color;
     if ((c.equals(B1) || c.equals(B2)) && o.geometry && o.geometry.type === 'SphereGeometry') { o.getWorldPosition(v); bulbs.push(v.x, v.y, v.z); } });
-  NIGHT.lamps = glowPoints(bulbs.concat(STREETLAMPS), 6, 'rgba(255,236,190,1)', 'rgba(255,190,90,0.35)');
+  NIGHT.lamps = glowPoints(bulbs.concat(STREETLAMPS, window.CB_LAMPS || []), 6, 'rgba(255,236,190,1)', 'rgba(255,190,90,0.35)');
   if (FESTIVAL === 'diwali') {
     // fairy lights along both edges of the town's ring roads
     const fl = [];

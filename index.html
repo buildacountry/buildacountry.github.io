@@ -228,11 +228,11 @@ function build(rows) {
       shopCol: r.shop === undefined ? undefined : /^(y|yes|true|shop|\d+|staff\s*\d+)$/i.test(sh), shopNum: /b\d/i.test(sh) ? 0 : parseInt(sh.replace(/[^\d]/g, ''), 10) || 0, staff: !/b\d/i.test(sh) && /staff/i.test(sh), bigLot: +((/^(?:staff\s*)?b(\d+)$/i.exec(sh) || [])[1] || 0), bigStaff: /^staff\s*b\d/i.test(sh) }; })
     .forEach(r => { const key = r.user.toLowerCase();
       if (!r.user && r.status !== 'hidden') return; if (never.includes(key)) return; if (key && seen.has(key)) return; if (key) seen.add(key);
-      if (ST.villas[key] && r.status === 'active') { villaRows.push(r); return; }
+      if (ST.villas[key] && r.status === 'active') { villaRows.push(r); if (ST.villas[key] < 111) return; r = r.ph = { n: r.n, user: '', status: 'hidden', reserved: true }; }   // Coral Bay (20 Nov): the old spot stays reserved, so nobody after them changes number
       if (r.n > 0 && !byNum.has(r.n)) byNum.set(r.n, r); else noNum.push(r); });
   let free = 1; noNum.forEach(r => { while (byNum.has(free)) free++; r.n = free; byNum.set(free, r); });
-  homes = [...byNum.values()].filter(r => r.n <= PL.length).sort((a, b) => a.n - b.n).map(r => { const p = PL[r.n - 1]; return Object.assign(r, p, { cn: r.n, district: isBD(p) ? 'Business District' : p.a === 'R' ? 'Riverside' : p.a === 'L' ? 'New District' : p.a === 'U' ? 'Suburb' : 'Central', area: p.a === 'R' ? 'Block ' + p.block : AREA[p.a] || '' }); });
-  villaRows.forEach(r => { const lot = ST.villas[r.user.toLowerCase()]; homes.push(Object.assign(r, { cn: r.n > 0 ? r.n : 0, n: 10000 + lot, villa: lot, a: 'V', district: 'Central', area: 'Villa Lane, plot ' + lot, x: 0, z: 0 })); });
+  homes = [...byNum.values()].filter(r => r.n <= PL.length && !r.reserved).sort((a, b) => a.n - b.n).map(r => { const p = PL[r.n - 1]; return Object.assign(r, p, { cn: r.n, district: isBD(p) ? 'Business District' : p.a === 'R' ? 'Riverside' : p.a === 'L' ? 'New District' : p.a === 'U' ? 'Suburb' : 'Central', area: p.a === 'R' ? 'Block ' + p.block : AREA[p.a] || '' }); });
+  villaRows.forEach(r => { const lot = ST.villas[r.user.toLowerCase()]; homes.push(Object.assign(r, { cn: r.ph ? r.ph.n : r.n > 0 ? r.n : 0, n: 10000 + lot, villa: lot, a: 'V', district: lot >= 111 ? 'Coral Bay' : 'Central', area: lot >= 111 ? 'Coral Bay #' + (lot - 110) : 'Villa Lane, plot ' + lot, x: 0, z: 0 })); });
   const act = homes.filter(h => h.status !== 'abandoned'); live = act.length;
   pioneers = new Set(act.slice().sort((a, b) => a.n - b.n).slice(0, ST.pioneers));
   byUser = new Map(homes.filter(h => h.user && h.status !== 'hidden').map(h => [h.user.toLowerCase(), h]));
@@ -558,7 +558,7 @@ const newsEmoji = t => /police|fire/i.test(t) ? '🚓' : /diwali|cracker|festiva
 function hero(h, mode) {   // a real picture of a Vinland street, rendered from the 3D map (tools/hero_shots.py), with the person's own address on it
   const bubble = mode === 'home' ? 'Welcome home 👋' : mode === 'soon' ? 'Your home is on its way' : 'Your home is waiting';
   const plate = h ? `<span class="plate"><b>${h.villa ? 'Villa ' + h.villa : '№ ' + num(h.cn || h.n)}</b>${esc(homeLine(h))}</span>` : `<span class="plate"><b>№ ?</b>${mode === 'soon' ? 'Being built' : 'Follow + comment HOME'}</span>`;
-  return `<div class="hero" role="img" aria-label="A street in Vinland${h ? ', your home ' + esc(h.villa ? (h.villa >= 101 ? 'Mansion ' + (h.villa - 100) : 'Villa ' + h.villa) : '№ ' + (h.cn || h.n)) : ''}" style="background-image:url(${h ? 'hero-home.jpg' : 'hero-street.jpg'})"><span class="bubble">${bubble}</span>${plate}</div>`;
+  return `<div class="hero" role="img" aria-label="A street in Vinland${h ? ', your home ' + esc(h.villa ? (h.villa >= 111 ? 'Coral Bay ' + (h.villa - 110) : h.villa >= 101 ? 'Mansion ' + (h.villa - 100) : 'Villa ' + h.villa) : '№ ' + (h.cn || h.n)) : ''}" style="background-image:url(${h ? 'hero-home.jpg' : 'hero-street.jpg'})"><span class="bubble">${bubble}</span>${plate}</div>`;
 }
 const thumbOf = h => /^Beach Lane/.test(h.label || '') ? 'thumb-beach.jpg' : h.a === 'R' ? 'thumb-flat.jpg' : 'thumb-house.jpg';
 function homeTop(h) {   // small card with a 3D picture of their kind of home (from the asset kit), their № and address; tap = their home on the map
@@ -701,7 +701,7 @@ document.documentElement.style.setProperty('--guil', `url("${GUIL_URL}")`);
 const stampSVG = (st, id, rot) => { const r = 52; return `<svg viewBox="-56 -56 112 112" style="transform:rotate(${rot}deg)"><defs><path id="${id}t" d="M-39 0A39 39 0 0 1 39 0"/><path id="${id}b" d="M-46 0A46 46 0 0 0 46 0"/></defs><g fill="none" stroke="${st.col}"><circle r="${r}" stroke-width="2.6"/><circle r="47.5" stroke-width=".9"/><circle r="31" stroke-width=".9"/></g><g fill="${st.col}" font-family="Poppins,sans-serif" font-weight="600" text-anchor="middle"><text font-size="${st.top.length > 10 ? 8.2 : 9}" letter-spacing="1.3"><textPath href="#${id}t" startOffset="50%">${st.top}</textPath></text><text font-size="7.6" letter-spacing="1.1"><textPath href="#${id}b" startOffset="50%">${st.bot}</textPath></text><text y="-2" font-size="8.5" letter-spacing="1">${st.mid[0]}</text><text y="12" font-size="${st.mid[1].length > 5 ? 11 : 14}">${st.mid[1]}</text></g></svg>`; };
 const mrz = h => { const pad = (s, n) => (s + '<'.repeat(n)).slice(0, n), u = h.user.toUpperCase().replace(/[^A-Z0-9]/g, '<'), area = (h.villa ? 'VILLA<LANE' : h.district.toUpperCase() + '<' + h.area.toUpperCase().replace(/[^A-Z0-9]+/g, '<'));
   return [pad('P<VIN<' + u, 34), pad('VN' + String(h.cn || 0).padStart(6, '0') + '<VIN<' + area + '<<DAY' + String(h.joined).padStart(2, '0'), 34)]; };
-const homeLine = h => h.villa ? (h.villa >= 101 ? 'Mansion Lane, plot ' + (h.villa - 100) : 'Villa Lane, plot ' + h.villa) : h.area + ', ' + h.district;
+const homeLine = h => h.villa ? (h.villa >= 111 ? 'Coral Bay #' + (h.villa - 110) : h.villa >= 101 ? 'Mansion Lane, plot ' + (h.villa - 100) : 'Villa Lane, plot ' + h.villa) : h.area + ', ' + h.district;   // Coral Bay (20 Nov): beachfront mansions 111-116
 function pageHTML(h, i) {
   if (i === 0) return `<div class="pg cv" style="background-image:url(passport-cover.jpg)"></div>`;
   if (i === 1) { const st = stampsOf(h).find(s => s.k === 'founding'), m = mrz(h);
