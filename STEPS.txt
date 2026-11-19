@@ -1,6 +1,6 @@
-VINLAND · UPDATE (20 Nov): Coral Bay + marina + river path + Suburb gap
+VINLAND · UPDATE (20 Nov): Coral Bay + marina + river path + Suburb gap + The Club roads/fountain/courts
 1. GitHub site, same folders:
    index.html, vinland-static.js, vinland-support.js  -> site root (replace)
    map/index.html, map/mapdata.js                      -> map folder (replace)
-2. Sheet script: if CAPACITY is 7828, change it to 7908 (the Suburb gained 80 homes).
+2. Sheet script: if CAPACITY is 7828, change it to 7908.
 Nothing in Supabase, nothing else in the sheet.

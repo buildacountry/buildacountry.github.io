@@ -3303,7 +3303,7 @@ function canalHouse(ci = 0, gable = 0) {
 // houses (normal homes, appended to PLOTS so nobody moves). Two stone arch bridges: from Government Row (z -226) and from the
 // Education District (z +226). Behind the homes: Downtown's skyline (towers + cranes), the rest of the land kept for Downtown.
 const RS_SHORE = -820, RIVER_END = 1900;   // RIVER_END (Dev, 18 Nov): the river runs on south to the end of the map (it fades in the haze), no more dead end   // = COAST.shore (COAST is defined further down)
-const RS = { EXTRAS: false, SCALE: 0.8, riverE: 520, road: 552.5, lanes: [640], z0: -650, z1: 540, cross: [-470, -226, 0, 226, 470], bridges: [-226, 0, 226] };   // z 0 = Central Bridge (user, 11 Nov): Town Square's road straight over the river
+const RS = { BOTTOM: -778, EXTRAS: false, SCALE: 0.8, riverE: 520, road: 552.5, lanes: [640], z0: -650, z1: 540, cross: [-470, -226, 0, 226, 470], bridges: [-226, 0, 226] };   // z 0 = Central Bridge (user, 11 Nov): Town Square's road straight over the river
 const PW = { x0: 545, x1: 905, z0: 1074, z1: 1420, dz: 350, gx: 785,   // (Dev 16:50: moved 350 m further south, half into the haze, away from the homes; drawPower builds at z-dz and shifts)
   day: 18, asked: '@hritu_raj_hajong', water: '@perls877', power: '@ploib.1' };   // VINLAND POWER & WATER (Dev's cream box, 18 Nov): south of Riverside on the river
 RS.bridgeFrom = { '-226': 292.5, '0': 292.5, '226': 152.5 };   // where each bridge road starts on the town side
@@ -3560,22 +3560,19 @@ const BD = { ON: false, X0: 1085, X1: 1545, Z0: -690, Z1: 580, AV: [1300, 1330],
     for (let x = x0 + R + 4; x < x1 - R - 2; x += 16) [-1, 1].forEach(sd => lamp(g, x, bz + sd * 6.5));
     rdD(x0 - RS.bridgeFrom[bz], 7, (RS.bridgeFrom[bz] + x0) / 2, bz); rdD(RS.road - 3.5 - x1, 7, (x1 + RS.road - 3.5) / 2, bz); });
   // ---- waterfront: curved-feeling stone wall, promenade, cafés, ferry; road with verges both sides ----
-  const W0 = RS.riverE, PZ0 = RS.z0 - 40, PZ1 = RS.z1 + 20, PL = PZ1 - PZ0, PC = (PZ0 + PZ1) / 2;
+  const W0 = RS.riverE, PZ0 = RS.BOTTOM, PZ1 = RS.z1 + 20,   // PZ0 (Dev, 20 Nov): the riverfront runs on to the road along the bottom of The Club (was RS.z0 - 40)
+    PL = PZ1 - PZ0, PC = (PZ0 + PZ1) / 2;
   B(g, 1.6, 1.2, PL, '#cdbf9f', W0 + 0.8, -0.5, PC); B(g, 2.2, 0.25, PL, '#e9e1cf', W0 + 1.1, 0.7, PC, N);
   B(g, RS.road - 3.5 - 6 - (W0 + 1.6), 0.13, PL, '#a9c97f', (W0 + 1.6 + RS.road - 9.5) / 2, 0.02, PC, N);          // green waterfront strip
   B(g, 3.2, 0.15, PL, '#e9dcc0', W0 + 3.2, 0.03, PC, N);                                                             // waterside walk by the wall
   RS.pathX = z => W0 + 13 + 6.5 * Math.sin(z / 37) + 2 * Math.sin(z / 11);                                         // the winding promenade
-  { const EZ0 = -792, EL = PZ0 - EZ0, EC = (PZ0 + EZ0) / 2;   // (Dev, 20 Nov) the riverfront path goes on to the beach, past The Club and Coral Bay Marina
-    B(g, 1.6, 1.2, EL, '#cdbf9f', W0 + 0.8, -0.5, EC); B(g, 2.2, 0.25, EL, '#e9e1cf', W0 + 1.1, 0.7, EC, N);
-    B(g, RS.road - 3.5 - (W0 + 1.6), 0.13, EL, '#a9c97f', (W0 + 1.6 + RS.road - 3.5) / 2, 0.02, EC, N); B(g, 3.2, 0.15, EL, '#e9dcc0', W0 + 3.2, 0.03, EC, N);
-    for (let z = EZ0; z < PZ0; z += 2) { const x = RS.pathX(z); B(g, 5.2, 0.16, 2.2, '#e9dcc0', x, 0.06, z + 1, N); }
-    for (let z = EZ0 + 8; z < PZ0 - 4; z += 16) tree(g, RS.road - 6, 0.1, z, (z / 16 | 0) % 3 ? 'canopy' : 'pink', 0.9); }
   { const pos = [], idx = []; let k = 0; for (let z = PZ0; z <= PZ1; z += 2, k++) { const x = RS.pathX(z); pos.push(x - 2.6, 0.18, z, x + 2.6, 0.18, z); if (k) { const a = (k - 1) * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); } }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals(); const m = new THREE.Mesh(geo, mat('#e9dcc0')); m.receiveShadow = true; g.add(m); }
   [[RS.road - 7.5, 0], [RS.road + 7.5, 1]].forEach(([vx, k]) => { B(g, 4, 0.13, PL, '#a9c97f', vx, 0.03, PC, N);         // tree verges both sides of the road
     for (let z = PZ0 + 6 + k * 9; z < PZ1; z += 18) if (!RS.bridges.some(b => Math.abs(z - b) < 8) && !RS.cross.some(c => Math.abs(z - c) < 6)) tree(g, vx, 0.1, z, (Math.round(z / 18) + k) % 3 ? 'canopy' : 'pink', 0.85); });
   B(g, 2.2, 0.15, PL, '#e2d6bb', RS.road + 10.6, 0.03, PC, N);                                                     // sidewalk on the homes side
   rdD(7, PL, RS.road, PC); RS.lanes.forEach(x => rdD(5, RS.z1 - RS.z0 + 18, x, (RS.z0 + RS.z1) / 2));
+  { const zt = RS.z0 - 9, zb = RS.BOTTOM - 3.5; RS.lanes.forEach(x => rdD(5, zt - zb, x, (zt + zb) / 2)); rdD(RS.lanes[0] - RS.road + 5, 7, (RS.road + RS.lanes[0]) / 2, RS.BOTTOM); }   // (Dev, 20 Nov) roads on 3 sides of The Club
   RS.blocks.forEach(([z0, z1]) => { B(g, 22, 0.12, z1 - z0 - 4, '#a9c97f', 600.5, 0.05, (z0 + z1) / 2, N); B(g, 2.4, 0.14, z1 - z0 - 4, '#e2d6bb', 600.5, 0.06, (z0 + z1) / 2, N);   // courtyard gardens
     for (let z = z0 + 12; z < z1 - 8; z += 24) { if (RS.BIZLOTS.some(([bz, n, W]) => Math.abs(z + 6 - bz) < W / 2 + 8)) continue; tree(g, 594, 0.1, z, 'canopy', 0.8); tree(g, 607, 0.1, z + 12, (z / 24 | 0) % 2 ? 'pink' : 'cypress', 0.8); if ((z / 24 | 0) % 3 === 0) fountain(g, 600.5, z + 6, 2); } });
   RS.cross.forEach(z => rdD(RS.lanes[RS.lanes.length - 1] + 2.5 - (RS.road + 3.5), 5, (RS.road + 3.5 + RS.lanes[RS.lanes.length - 1] + 2.5) / 2, z));
@@ -3939,7 +3936,7 @@ function powerCard() {
   for (let x = 88; x <= 284; x += 22) if (Math.abs(x - 184) > 8) add(g, new THREE.IcosahedronGeometry(1.1, 0), (x / 22 | 0) % 2 ? '#4f8a42' : '#5e9a4e', x + 5, 0.6, -753.4, { edge: false });
   // THE CLUB (the square block at the river end, x 556..637, z -770..-693): 2 clay tennis courts on the sea side, a fountain square
   // with palms, hedges, flower beds and benches on the street side
-  const CL = { x0: 556, x1: 637, z0: -770, z1: -693 }, cxc = (CL.x0 + CL.x1) / 2, czc = -712;
+  const CL = { x0: 556, x1: 637, z0: -770, z1: -693 }, cxc = (CL.x0 + CL.x1) / 2, czc = (CL.z0 + CL.z1) / 2;   // (Dev, 20 Nov) fountain in the middle; the courts moved to the block above
   B(g, CL.x1 - CL.x0, 0.1, CL.z1 - CL.z0, '#a9cf78', cxc, 0.04, (CL.z0 + CL.z1) / 2, N);
   add(g, new THREE.CylinderGeometry(13, 13, 0.12, 40), '#efe6d2', cxc, 0.07, czc, { edge: false }); B(g, CL.x1 - CL.x0 - 6, 0.12, 4, '#efe6d2', cxc, 0.06, czc, N); B(g, 4, 0.12, CL.z1 - czc, '#efe6d2', cxc, 0.06, (CL.z1 + czc) / 2, N);
   [[CL.x0 + 1.5, (CL.z0 + CL.z1) / 2, 1.2, CL.z1 - CL.z0 - 4], [CL.x1 - 1.5, (CL.z0 + CL.z1) / 2, 1.2, CL.z1 - CL.z0 - 4], [cxc, CL.z1 - 1.5, CL.x1 - CL.x0 - 4, 1.2]].forEach(([x, z, w, d]) => B(g, w, 0.9, d, '#4f8a42', x, 0.1, z, { edge: false }));
@@ -3950,7 +3947,7 @@ function powerCard() {
   whenKit(() => { const K = window.VinlandKit, T = new THREE.Group(), put = (key, o, x, z, ry, sc) => { const m = K.make(key, o || {}); m.position.set(x, 0, z); m.rotation.y = ry || 0; if (sc) m.scale.setScalar(sc); T.add(m); };
     palms.forEach(([x, z], i) => put('palmTree', {}, x, z, i * 1.7));
     put('grandFountain', {}, cxc, czc, 0, 1.3);
-    put('court', { sport: 'tennis', floor: '#c8603f' }, cxc - 12, -752, 0); put('court', { sport: 'tennis', floor: '#c8603f' }, cxc + 12, -752, 0);
+    put('court', { sport: 'tennis', floor: '#c8603f' }, cxc - 12, -668, 0); put('court', { sport: 'tennis', floor: '#c8603f' }, cxc + 12, -668, 0);
     scene.add(bakeGroup(T)); });
   // CORAL BAY: pale stone ground, the PUBLIC seafront promenade + cycle strip, 6 walled plots (lawn, boardwalk to the public sand),
   // gardens on the plots still waiting, a palm buffer to the flats, the gate by The Club, lamps, and the marina at the river mouth
