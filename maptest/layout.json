@@ -1,9 +1,0 @@
-{
- "v": 1,
- "note": "Clean Downtown land (Dev, 14 Nov): build it yourself in the Builder (/map/?edit). The old Downtown is saved as plans/layout_downtown_v2.json.",
- "objects": [],
- "ground": [],
- "roads": [],
- "places": [],
- "prefabs": {}
-}
