@@ -1,9 +1,10 @@
-// Vinland · PENALTY SHOOTOUT (16 Nov). Opened from the National Stadium card. Single player, 5 kicks a round.
+// Vinland · PENALTY SHOOTOUT (16 Nov). Opened from the National Stadium card. Single player.
+// 20 Nov (District Football Cup): shoot until you miss (max 25), the keeper gets better after every goal. Weekend goals = the Cup.
 // The keeper's dive comes from Supabase (`social` → game_start / game_play, game 'pen'), so a score can't be typed in. Without a login
 // (or before the server part is live) it runs as a practice round with the same keeper rules, clearly marked "not counted".
 // One small scene, drawn only while open; the map's own loop sleeps meanwhile. Works with touch (swipe) and mouse (drag).
 (function () {
-  const GW = 3.66, GH = 2.44, SPOT = 11, ROUND = 5;
+  const GW = 3.66, GH = 2.44, SPOT = 11, MAXK = 25;
   const css = `#pen *{box-sizing:border-box}#pen{position:fixed;inset:0;z-index:9000;background:#9fc7e8;font-family:Poppins,system-ui,sans-serif;color:#fff;touch-action:none;user-select:none;-webkit-user-select:none}
 #pen canvas{display:block;width:100%;height:100%}
 #pen .ptop{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:10px;padding:12px 14px;background:linear-gradient(#1f2f5acc,#1f2f5a00)}
@@ -106,7 +107,7 @@
 
   function flash(t, col = '#fff', ms = 1100) { P.big.textContent = t; P.big.style.color = col; P.big.classList.add('on'); clearTimeout(P.ft); P.ft = setTimeout(() => P.big.classList.remove('on'), ms); }
 
-  function dotsDraw() { P.dots.innerHTML = ''; for (let i = 0; i < ROUND; i++) { const r = P.res[i], d = el('div', 'dot' + (r === undefined ? '' : r ? ' g' : ' m'), r === undefined ? '' : r ? '✓' : '✕'); P.dots.appendChild(d); } }
+  function dotsDraw() { const g = P.res.filter(Boolean).length; P.dots.innerHTML = `<div class="dot g" style="width:auto;height:24px;line-height:20px;padding:0 10px;border-radius:12px;white-space:nowrap">⚽ ${g}</div><span style="font-size:12px;font-weight:700;align-self:center;text-shadow:0 1px 3px #0008">${g ? 'in a row' : 'Shoot until you miss'}</span>`; }
 
   function place() {   // everyone back on their marks
     const { ball, keeper, me } = P; ball.position.set(0, 0.11, SPOT); ball.rotation.set(0, 0, 0);
@@ -123,12 +124,13 @@
         else if (r && r.error === 'not a citizen') P.why = 'Only citizens can score for the leaderboard. Practice round.';
       } catch (e) {} }
     P.tag.textContent = P.practice ? 'Practice · not counted' : 'Counts for the leaderboard'; P.tag.className = 'tag' + (P.practice ? ' p' : '');
-    if (P.practice && P.why) flash(P.why.length > 40 ? 'Practice round' : P.why, '#fff', 1600);
+    if (P.practice && P.why) flash(P.why.length > 40 ? 'Practice round' : P.why, '#fff', 1600); else flash('Keeper gets better after every goal', '#fff', 1600);
     P.state = 'aim'; }
 
-  function keeperLocal(x, y) {   // the same rules Supabase uses, for practice rounds
-    const out = Math.abs(x) > 3.55 || y > 2.35 || y < 0, r = Math.random(), dive = r < 0.38 ? 'L' : r < 0.62 ? 'C' : 'R', zone = x < -1.1 ? 'L' : x > 1.1 ? 'R' : 'C';
-    const corner = Math.abs(x) > 2.7 && y > 1.7, saved = !out && dive === zone && (!corner || Math.random() < 0.35);
+  function keeperLocal(x, y) {   // the same rules Supabase uses (social → penKeeper), for practice rounds
+    const k = P.res.filter(Boolean).length, out = Math.abs(x) > 3.55 || y > 2.35 || y < 0, zone = x < -1.1 ? 'L' : x > 1.1 ? 'R' : 'C';
+    const r = Math.random(), dive = Math.random() < Math.min(0.6, 0.04 * k) ? zone : r < 0.38 ? 'L' : r < 0.62 ? 'C' : 'R';
+    const corner = Math.abs(x) > 2.7 && y > 1.7, saved = !out && dive === zone && (!corner || Math.random() < Math.min(0.85, 0.2 + 0.04 * k));
     return { ok: true, out, saved, goal: !out && !saved, dive }; }
 
   function shoot(tx, ty) {
@@ -158,7 +160,7 @@
         if (dir) { keeper.position.set(dir * 2.3 * e, Math.sin(kd * Math.PI) * 0.75 + (A.ty > 1.4 ? 0.4 * e : 0), 0.35); keeper.rotation.z = -dir * 1.25 * e; kl.armL.rotation.z = -0.5 - 2.4 * e; kl.armR.rotation.z = 0.5 + 2.4 * e; }
         else { keeper.position.set(0, Math.sin(kd * Math.PI) * 0.55, 0.35); kl.armL.rotation.z = -0.5 - 2.2 * e; kl.armR.rotation.z = 0.5 + 2.2 * e; }
         if (f > D && !A.told) { A.told = true; const g = R.goal; P.res.push(g); dotsDraw(); flash(g ? 'GOAL!' : R.out ? (A.ty > 2.3 ? 'Over the bar!' : 'Wide!') : 'SAVED!', g ? '#ffd23f' : '#ffffff', 1200); }
-        if (f > D + 1.4) { P.anim = null; if (P.res.length >= ROUND) end(); else place(); } }
+        if (f > D + 1.4) { P.anim = null; if (!P.res[P.res.length - 1] || P.res.length >= MAXK) end(); else place(); } }
     }
     P.R.render(P.sc, P.cam);
   }
@@ -167,10 +169,10 @@
     P.state = 'end'; const goals = P.res.filter(Boolean).length;
     const box = el('div', 'pend'), c = el('div', 'pcard'); box.appendChild(c); P.root.appendChild(box);
     const left = P.practice ? null : P.left;
-    c.innerHTML = `<h2>${goals === 5 ? 'Perfect round! ⚽' : goals >= 3 ? 'Good round!' : 'Round over'}</h2>
-      <p class="s">${P.practice ? 'Practice round: not counted.' + (P.ctx.session ? '' : ' Log in from the lobby (Me) to count your goals.') : 'Your goals count for you and your district this week.' + (left !== null ? ` Rounds left today: ${left}.` : '')}</p>
-      <div class="pscore">${goals} / ${ROUND}</div>
-      <div class="ptabs"><button class="on" data-t="p">Top players</button><button data-t="d">Districts</button></div><ol><li>Loading the leaderboard…</li></ol>
+    c.innerHTML = `<h2>${goals >= 10 ? 'Legend! ⚽🔥' : goals >= 5 ? 'Great streak! ⚽' : goals >= 2 ? 'Good round!' : 'Round over'}</h2>
+      <p class="s">${P.practice ? 'Practice round: not counted.' + (P.ctx.session ? '' : ' Log in from the lobby (Me) to count your goals.') : 'Your goals count for you and your district. Weekend goals count for the District Cup.' + (left !== null ? ` Rounds left today: ${left}.` : '')}</p>
+      <div class="pscore">${goals} <span style="font-size:18px">in a row</span></div>
+      <div class="ptabs"><button class="on" data-t="d">District Cup</button><button data-t="p">Top players</button></div><ol><li>Loading the leaderboard…</li></ol>
       <div class="pbtns"><button class="back">Back to the map</button><button class="go">Play again</button></div>`;
     c.querySelector('.back').onclick = close; c.querySelector('.go').onclick = () => { box.remove(); newRound(); };
     if (!P.practice && left === 0) { const g = c.querySelector('.go'); g.textContent = 'Practice'; }
@@ -179,10 +181,21 @@
     const show = t => { c.querySelectorAll('.ptabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
       if (!B) { list.innerHTML = '<li>The leaderboard opens soon.</li>'; return; }
       if (t === 'p') { list.innerHTML = B.top.length ? B.top.map((r, i) => `<li class="${r.user === me ? 'me' : ''}"><span>${i + 1}. @${r.user}</span><b>${r.v} ⚽</b></li>`).join('') : '<li>No goals yet this week. Be the first.</li>'; return; }
-      const d = new Map(); Object.entries(B.scores || {}).forEach(([u, g]) => { const k = P.ctx.teamOf(u); if (k) d.set(k, (d.get(k) || 0) + g); });
-      const myD = me && P.ctx.teamOf(me), rows = [...d.entries()].sort((a, b) => b[1] - a[1]);
-      list.innerHTML = rows.length ? rows.map(([k, g], i) => `<li class="${k === myD ? 'me' : ''}"><span>${i + 1}. ${k}</span><b>${g} pts</b></li>`).join('') : '<li>No district points yet this week.</li>'; };
-    c.querySelectorAll('.ptabs button').forEach(b => b.onclick = () => show(b.dataset.t)); show('p');
+      list.innerHTML = cupRows(B, me); };
+    c.querySelectorAll('.ptabs button').forEach(b => b.onclick = () => show(b.dataset.t)); show('d');
+  }
+
+  // District Cup points = (goals + 5 for every citizen who played) per 1,000 citizens of that district, so small districts can win too.
+  function cupRows(B, me) {
+    const C = B.cup; if (!C) return '<li>The District Cup opens soon.</li>';
+    const size = (P.ctx.teamSize && P.ctx.teamSize()) || {}, g = new Map(), pl = new Map();
+    Object.entries(C.scores || {}).forEach(([u, v]) => { const k = P.ctx.teamOf(u); if (!k) return; g.set(k, (g.get(k) || 0) + (+v || 0)); pl.set(k, (pl.get(k) || 0) + 1); });
+    const myD = me && P.ctx.teamOf(me), keys = Object.keys(size).length ? Object.keys(size) : [...g.keys()];
+    const rows = keys.map(k => ({ k, goals: g.get(k) || 0, players: pl.get(k) || 0, pts: size[k] ? Math.round(((g.get(k) || 0) + 5 * (pl.get(k) || 0)) * 1000 / size[k]) : 0 })).sort((a, b) => b.pts - a.pts);
+    const day = d => new Date(d).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    const head = C.live ? `<li style="font-weight:700;color:#2f7a68">🔴 Live now · ends ${day(C.to)}, 9 PM</li>` : (Date.now() < Date.parse(C.from) ? `<li>Next Cup: ${day(C.from)}</li>` : `<li style="font-weight:700">🏆 Last Cup (${day(C.from)}). Next one: Saturday</li>`);
+    return head + rows.map((r, i) => `<li class="${r.k === myD ? 'me' : ''}"><span>${i + 1}. ${r.k}<br><small style="color:#5b6570">${r.players} played · ${r.goals} goals</small></span><b>${r.pts} pts</b></li>`).join('') +
+      '<li style="font-size:12px;color:#5b6570;display:block">Points = goals + 5 per player, per 1,000 citizens. Every district has a fair chance.</li>';
   }
 
   window.VinPenalty = { open, close };

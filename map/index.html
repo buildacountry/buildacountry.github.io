@@ -613,14 +613,17 @@ function shopCard(i) { const q = MD.slots[i], n = i + 1, grp = q[2] === 'm' ? 'M
     ${o ? `<div class="row"><a class="push p" href="../?pp=${encodeURIComponent(o.user)}">Open passport</a><button class="push" data-c="pick" data-n="${o.n}">Their home</button></div>${socRows(o)}` : ''}`;
   c2.hidden = false; }
 // ---------- PENALTY SHOOTOUT launcher (16 Nov), shared by Maps mode and 3D. Loads the 3D engine + kit + game only on tap. ----------
-const PEN_TEAMS = { F: 'Middle', M: 'Middle', V: 'Middle', E: 'East', W: 'West', NE: 'North', NW: 'North', NSE: 'North', NSW: 'North', S: 'South', SG: 'South', SE: 'South', SW: 'South', R: 'Riverside', L: 'New District' };
-const penTeamOf = u => { const h = V.byUser ? V.byUser.get(String(u || '').toLowerCase()) : null; return h ? PEN_TEAMS[h.a] || null : null; };
+// 20 Nov (District Football Cup): 4 districts = 4 clubs. Club names come from the citizens' vote; until then the district names.
+const PEN_TEAMS = { R: 'Riverside', L: 'Garden District', U: 'Suburb' };   // everything else = Central
+const penTeamKey = h => h ? (PEN_TEAMS[h.a] || 'Central') : null;
+const penTeamOf = u => { const h = V.byUser ? V.byUser.get(String(u || '').toLowerCase()) : null; return h && h.status !== 'hidden' ? penTeamKey(h) : null; };
+const penTeamSize = () => { const n = {}; (V.homes || []).forEach(h => { if (h.status === 'active' || h.status === 'founding') { const k = penTeamKey(h); n[k] = (n[k] || 0) + 1; } }); return n; };   // citizens per district: the Cup is per 1,000 citizens
 const penJS = src => new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
-window.VinPenStart = async (game = 'pen') => { if (window.PEN_ON) return; const G = game === 'cricket' ? ['VinCricket', 'cricket.js?v=16nov'] : ['VinPenalty', 'penalty.js?v=16nov'];
+window.VinPenStart = async (game = 'pen') => { if (window.PEN_ON) return; const G = game === 'cricket' ? ['VinCricket', 'cricket.js?v=16nov'] : ['VinPenalty', 'penalty.js?v=20nov'];
   try { if (!window.THREE) await penJS('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'); if (!window.VinlandKit) await penJS('kit.js'); if (!window[G[0]]) await penJS(G[1]); }
   catch (e) { toast('The game could not load. Check your internet and try again.'); return; }
   const se = socSess(), lk = se && window.VLOOKS ? window.VLOOKS[String(se.user).toLowerCase()] : null; window.PEN_ON = true;
-  window[G[0]].open({ api: socApi, session: se, look: lk || null, teamOf: penTeamOf, onClose: () => { window.PEN_ON = false; if (window.VIN3D_KICK) window.VIN3D_KICK(); } }); };
+  window[G[0]].open({ api: socApi, session: se, look: lk || null, teamOf: penTeamOf, teamSize: penTeamSize, onClose: () => { window.PEN_ON = false; if (window.VIN3D_KICK) window.VIN3D_KICK(); } }); };
 function stadiumCard2D() { V.sel = null; wake();
   c2.innerHTML = `<button class="x" data-c="close" aria-label="Close">×</button><div class="k">Riverside · next to the Business District</div><div class="t">Vinland National Stadium</div>
     <div class="u">Two games, 3 rounds a day each. ⚽ Penalty shootout: 5 kicks against the Vinland keeper. 🏏 Cricket: bat one over. Every goal and run counts for you and your district this week.</div>
