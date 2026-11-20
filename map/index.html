@@ -450,7 +450,7 @@ function frameTime(ms) { if (judged || !PHONE || qs.get('view') || LS.get('vin_m
 const B = { x0: -1100, z0: -900, x1: 1140, z1: 720 };   // the part of the world Maps mode shows, in metres
 const V = { el: $('#v2d'), cv: $('#plan'), ctx: null, s: 1, cx: 300, cz: -100, W: 0, H: 0, dpr: 1, homes: [], blds: new Map(), byUser: new Map(), sel: null, me: null, dirty: false, ready: false, labels: [] };
 const MD = window.VIN_MAPDATA || null;   // roads, water, parks, big buildings, shop spots (tools/export_mapdata.py)
-const AREA = { F: 'Founder Square', M: 'Middle', E: 'East', W: 'West', NE: 'North-east', NW: 'North-west', S: 'South', SG: 'South, Garden Lane', SE: 'South-east', SW: 'South-west', NSE: 'North Shore east', NSW: 'North Shore west', L: 'New District' };
+const AREA = { F: 'Founder Square', M: 'Middle', E: 'East', W: 'West', NE: 'North-east', NW: 'North-west', S: 'South', SG: 'South, Garden Lane', SE: 'South-east', SW: 'South-west', NSE: 'North Shore east', NSW: 'North Shore west', L: 'Garden District' };
 const PL = ST ? ST.plots.split('\n').map(l => { const a = l.split(','); if (a.length > 7) a.splice(5, a.length - 6, a.slice(5, a.length - 1).join(', ').replace(/,\s+/g, ', '));   // a label may hold a comma ("Beach Lane, Flat 1")
   return { x: +a[0], z: +a[1], a: a[2], block: +a[3] || 0, bid: +a[4] || 0, label: a[5] || '', floor: +a[6] || 0 }; }) : [];
 function parseCSV(text) { const rows = []; let row = [], cell = '', q = false;
@@ -469,7 +469,7 @@ function build2D(text) {
     .forEach(r => { const k = r.user.toLowerCase(); if (!r.user && r.status !== 'hidden') return; if (never.includes(k)) return; if (k && seen.has(k)) return; if (k) seen.add(k);
       if (ST.villas[k] && r.status === 'active') { villas.push(r); return; } if (r.n > 0 && !byNum.has(r.n)) byNum.set(r.n, r); else noNum.push(r); });
   let free = 1; noNum.forEach(r => { while (byNum.has(free)) free++; r.n = free; byNum.set(free, r); });
-  V.homes = [...byNum.values()].filter(r => r.n <= PL.length).sort((a, b) => a.n - b.n).map(r => { const p = PL[r.n - 1]; return Object.assign(r, p, { district: p.a === 'R' && p.bid > 20000 ? 'Business District' : p.a === 'R' ? 'Riverside' : p.a === 'L' ? 'New District' : p.a === 'U' ? 'Suburb' : 'Central', area: p.a === 'R' ? 'Block ' + p.block : AREA[p.a] || '' }); });
+  V.homes = [...byNum.values()].filter(r => r.n <= PL.length).sort((a, b) => a.n - b.n).map(r => { const p = PL[r.n - 1]; return Object.assign(r, p, { district: p.a === 'R' && p.bid > 20000 ? 'Business District' : p.a === 'R' ? 'Riverside' : p.a === 'L' ? 'Garden District' : p.a === 'U' ? 'Suburb' : 'Central', area: p.a === 'R' ? 'Block ' + p.block : AREA[p.a] || '' }); });
   villas.forEach(r => { const lot = ST.villas[r.user.toLowerCase()], L = (ST.lots || {})[lot]; if (L) V.homes.push(Object.assign(r, { n: 10000 + lot, villa: lot, a: 'V', x: L[0], z: L[1], district: 'Central', area: 'Villa Lane, plot ' + lot })); });
   V.homes.forEach(h => { h.shown = h.status === 'hidden' ? 'Citizen #' + h.n : '@' + h.user; h.gold = (ST.support[h.user.toLowerCase()] || 0) >= 2; });
   V.blds = new Map(); V.homes.filter(h => h.bid).forEach(h => { let b = V.blds.get(h.bid); if (!b) V.blds.set(h.bid, b = { bid: h.bid, x: h.x, z: h.z, block: h.block, list: [] }); b.list.push(h); });
@@ -478,7 +478,7 @@ function build2D(text) {
   const cen = f => { const l = PL.filter(f); return l.length ? [l.reduce((a, p) => a + p.x, 0) / l.length, l.reduce((a, p) => a + p.z, 0) / l.length] : null; };
   if (!V.labels.length) {   // names by zoom level. ONLY names that exist today: districts, areas (the same words as in addresses), named lanes and places. No street is named until citizens vote.
     const L = V.labels, add = (t, c, lv) => { if (c) L.push([t, c[0], c[1], lv]); };
-    add('Central', cen(p => p.a !== 'R' && p.a !== 'L' && p.a !== 'U'), 0); add('Suburb', cen(p => p.a === 'U'), 0); add('Riverside', cen(p => p.a === 'R' && p.bid < 20000), 0); add('New District', cen(p => p.a === 'L'), 0); add('Business District', cen(p => p.a === 'R' && p.bid > 20000), 0); if (ST.coast) L.push(['Vinland Beach', 0, (ST.coast.shore + ST.coast.beach0) / 2, 0]);
+    add('Central', cen(p => p.a !== 'R' && p.a !== 'L' && p.a !== 'U'), 0); add('Suburb', cen(p => p.a === 'U'), 0); add('Riverside', cen(p => p.a === 'R' && p.bid < 20000), 0); add('Garden District', cen(p => p.a === 'L'), 0); add('Business District', cen(p => p.a === 'R' && p.bid > 20000), 0); if (ST.coast) L.push(['Vinland Beach', 0, (ST.coast.shore + ST.coast.beach0) / 2, 0]);
     Object.keys(AREA).forEach(k => add(k === 'SG' ? 'Garden Lane' : k === 'F' ? 'Founder Square' : AREA[k], cen(p => p.a === k), 1));
     [...new Set(PL.filter(p => p.a === 'R' && p.bid < 20000 && !/^Beach Lane/.test(p.label)).map(p => p.block))].forEach(b => add('Block ' + b, cen(p => p.a === 'R' && p.block === b && !/^Beach Lane/.test(p.label)), 1));
     add('Beach Lane', cen(p => /^Beach Lane/.test(p.label)), 1);

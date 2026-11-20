@@ -201,9 +201,9 @@ $('#crest').innerHTML = crest(26, '#c9a24a');
 // ---------- data (mirrors buildHomes / buildMarket in map.html; plots come from vinland-static.js) ----------
 const PL = ST ? ST.plots.split('\n').map(l => { const a = l.split(','); if (a.length > 7) a.splice(5, a.length - 6, a.slice(5, a.length - 1).join(', ').replace(/,\s+/g, ', '));   // a label may hold a comma ("Beach Lane, Flat 1")
   return { x: +a[0], z: +a[1], a: a[2], block: +a[3] || 0, bid: +a[4] || 0, label: a[5] || '', floor: +a[6] || 0 }; }) : [];
-const AREA = { U: 'Suburb', F: 'Founder Square', M: 'Middle', E: 'East', W: 'West', NE: 'North-east', NW: 'North-west', S: 'South', SG: 'South, Garden Lane', SE: 'South-east', SW: 'South-west', NSE: 'North Shore east', NSW: 'North Shore west', L: 'New District' };
+const AREA = { U: 'Suburb', F: 'Founder Square', M: 'Middle', E: 'East', W: 'West', NE: 'North-east', NW: 'North-west', S: 'South', SG: 'South, Garden Lane', SE: 'South-east', SW: 'South-west', NSE: 'North Shore east', NSW: 'North Shore west', L: 'Garden District' };
 const isBD = p => p.a === 'R' && p.bid > 20000;   // Business District flats (17 Nov) come through as flats too
-const CAP = { Central: PL.filter(p => p.a !== 'R' && p.a !== 'L' && p.a !== 'U').length, Suburb: PL.filter(p => p.a === 'U').length, Riverside: PL.filter(p => p.a === 'R' && !isBD(p)).length, 'New District': PL.filter(p => p.a === 'L').length, 'Business District': PL.filter(isBD).length };
+const CAP = { Central: PL.filter(p => p.a !== 'R' && p.a !== 'L' && p.a !== 'U').length, Suburb: PL.filter(p => p.a === 'U').length, Riverside: PL.filter(p => p.a === 'R' && !isBD(p)).length, 'Garden District': PL.filter(p => p.a === 'L').length, 'Business District': PL.filter(isBD).length };
 const UNLOCKS = [[250, 'The fog clears'], [500, 'Citizen passports'], [1000, "Citizens' Plaza"], [10000, 'Vinland Tower']];   // same list as the map's old "Locked" tab
 const PLACES = [["Citizens' Plaza", "Every citizen's name is on a brick, around the flag."], ['Government Row', 'Parliament, the Passport office, the Post office and the Embassy.'], ['Vinland Beach', 'Beach shops along the sand, and the Resort.'], ['The Vinland Times', 'The newspaper office with the clock tower, at Central Bridge.'], ['Transport Hub', 'The station and the train line.'], ['Police HQ and Fire Station', 'Side by side, next to Government Row.'], ['Villa Lane', 'Villas built by hand, with the owner’s name.'], ['Riverside', 'The second district, across Central Bridge.']];
 let homes = [], byUser = new Map(), live = 0, pioneers = new Set(), shops = [], bigs = [], notices = [], demands = [], dataOK = false, loadErr = false;
@@ -236,7 +236,7 @@ function build(rows) {
       if (ST.villas[key] && r.status === 'active') { villaRows.push(r); if (ST.villas[key] < 111) return; r = r.ph = { n: r.n, user: '', status: 'hidden', reserved: true }; }   // Coral Bay (20 Nov): the old spot stays reserved, so nobody after them changes number
       if (r.n > 0 && !byNum.has(r.n)) byNum.set(r.n, r); else noNum.push(r); });
   let free = 1; noNum.forEach(r => { while (byNum.has(free)) free++; r.n = free; byNum.set(free, r); });
-  homes = [...byNum.values()].filter(r => r.n <= PL.length && !r.reserved).sort((a, b) => a.n - b.n).map(r => { const p = PL[r.n - 1]; return Object.assign(r, p, { cn: r.n, district: isBD(p) ? 'Business District' : p.a === 'R' ? 'Riverside' : p.a === 'L' ? 'New District' : p.a === 'U' ? 'Suburb' : 'Central', area: p.a === 'R' ? 'Block ' + p.block : AREA[p.a] || '' }); });
+  homes = [...byNum.values()].filter(r => r.n <= PL.length && !r.reserved).sort((a, b) => a.n - b.n).map(r => { const p = PL[r.n - 1]; return Object.assign(r, p, { cn: r.n, district: isBD(p) ? 'Business District' : p.a === 'R' ? 'Riverside' : p.a === 'L' ? 'Garden District' : p.a === 'U' ? 'Suburb' : 'Central', area: p.a === 'R' ? 'Block ' + p.block : AREA[p.a] || '' }); });
   villaRows.forEach(r => { const lot = ST.villas[r.user.toLowerCase()]; homes.push(Object.assign(r, { cn: r.ph ? r.ph.n : r.n > 0 ? r.n : 0, n: 10000 + lot, villa: lot, a: 'V', district: lot >= 111 ? 'Coral Bay' : 'Central', area: lot >= 111 ? 'Coral Bay #' + (lot - 110) : 'Villa Lane, plot ' + lot, x: 0, z: 0 })); });
   const act = homes.filter(h => h.status !== 'abandoned'); live = act.length;
   pioneers = new Set(act.slice().sort((a, b) => a.n - b.n).slice(0, ST.pioneers));
@@ -554,8 +554,9 @@ function headline(t) { const m = /^(.{12,90}?)([:.!?])\s+(.*)$/s.exec(t); return
 const news = () => notices.filter(n => !/^always$/i.test(n.date));
 // ---------- the lobby (13 Nov, Dev's approved mockup): Home · Map · News · Me ----------
 // One focus card for the week, and the election shown on top of News. Change these two when the week changes.
-const FOCUS = { emoji: '🗳️', title: 'First election: Sunday', sub: 'Who will be Police Chief?', tab: 'news' };
-const ELECTION = { id: 'police-chief-1', when: 'Sunday, 9 AM to 9 PM', title: 'Who will be Police Chief?' };
+const FOCUS = { emoji: '⚽', title: 'District Football Cup: Sat + Sun', sub: 'Penalties at the National Stadium. Every goal counts for your district.', tab: 'map' };
+// 20 Nov: the first election is over. done = show the result card (no reminder button).
+const ELECTION = { id: 'police-chief-1', done: true, k: 'Election result', title: 'Police Chief: @satviksgupta_1110', sub: "Elected by the citizens in Vinland's first election. Congratulations, Chief!" };
 // A real supporter's story, ONLY with that person's OK (Dev gives the name). Empty = the line is not shown.
 const SUPPORT_STORY = '';
 const TOWER = 10000;
@@ -607,8 +608,8 @@ const P = {
   news() {
     const nw = news(), reminded = store.get('vin_remind') === ELECTION.id;
     return `<div class="mast"><b>The Vinland Times</b><span class="sub">Day ${dayNumber()} · only real news</span></div>
-      <div class="doc lob elect"><div class="k">Election · ${esc(ELECTION.when)}</div><div class="h" style="font-size:18px;margin:2px 0 10px">${esc(ELECTION.title)}</div>
-        ${reminded ? `<div class="okbox">✅ Voting opens ${esc(ELECTION.when.split(',')[0])}. We'll remind everyone in our stories.</div>` : `<div class="row"><button class="push p" data-a="remind">🔔 Remind me</button></div>`}</div>
+      ${ELECTION.done ? `<div class="doc lob elect"><div class="k">${esc(ELECTION.k)}</div><div class="h" style="font-size:18px;margin:2px 0 6px;overflow-wrap:anywhere">🏆 ${esc(ELECTION.title)}</div><p class="p" style="margin:0">${esc(ELECTION.sub)}</p></div>` : `<div class="doc lob elect"><div class="k">Election · ${esc(ELECTION.when)}</div><div class="h" style="font-size:18px;margin:2px 0 10px">${esc(ELECTION.title)}</div>
+        ${reminded ? `<div class="okbox">✅ Voting opens ${esc(ELECTION.when.split(',')[0])}. We'll remind everyone in our stories.</div>` : `<div class="row"><button class="push p" data-a="remind">🔔 Remind me</button></div>`}</div>`}
       ${nw.map((n, i) => { const [hd, body] = headline(n.notice), open = newsOpen === i; return `<button class="doc lob nrow" data-a="news-open" data-i="${i}" aria-expanded="${open}"><span class="em">${newsEmoji(hd)}</span><span style="flex:1;min-width:0;text-align:left"><b>${esc(hd)}</b><small>${esc(n.date)}</small>${open && body ? `<span class="nb">${esc(body)}</span>` : ''}</span></button>`; }).join('') || '<p class="load">No news yet today.</p>'}
       <button class="doc lob nrow" data-a="parl-open" aria-expanded="${parlOpen}"><span class="em">🏛️</span><span style="flex:1;min-width:0;text-align:left"><b>Parliament & laws</b><small>Most asked, built, the 10 laws</small></span><span class="gold" aria-hidden="true">${parlOpen ? '−' : '›'}</span></button>
       ${parlOpen ? `<div class="parl">${P.parliament()}</div>` : ''}
@@ -620,7 +621,7 @@ const P = {
     const grp = [['m', 'Market'], ['se', 'New Market'], ['beach', 'Beach shops']].map(([k, name]) => { const list = shops.filter(s => s.area === k), total = ST.market.filter(a => a === k).length; return [name, list, total]; });
     const row = (n, job, h, staff) => `<a class="li" href="map/?shop=${encodeURIComponent(h.user)}" style="text-decoration:none"><span class="n">${n}</span><span style="flex:1;min-width:0"><b style="font:600 14px var(--serif);display:block">${esc(job)}</b><span class="sub" style="overflow-wrap:anywhere">@${esc(h.user)}${staff && staff.length ? ' · with ' + staff.map(w => '@' + esc(w.user)).join(', ') : ''}</span></span>${ic('chev', 16)}</a>`;
     return `<div class="sec" style="margin-top:0">Districts</div>
-      ${['Central', 'Riverside', 'New District', 'Suburb'].map(d => { const o = occ(d), full = o >= CAP[d]; return `<div class="doc"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div class="h" style="font-size:19px">${d}</div><div class="sub">${num(o)} of ${num(CAP[d])} homes lived in</div></div><span class="tag${full ? '' : ' on'}">${full ? 'Full' : 'Moving in now'}</span></div><div class="bar2"><i style="width:${Math.min(100, o / CAP[d] * 100).toFixed(1)}%"></i></div></div>`; }).join('')}
+      ${['Central', 'Riverside', 'Garden District', 'Suburb'].map(d => { const o = occ(d), full = o >= CAP[d]; return `<div class="doc"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div class="h" style="font-size:19px">${d}</div><div class="sub">${num(o)} of ${num(CAP[d])} homes lived in</div></div><span class="tag${full ? '' : ' on'}">${full ? 'Full' : 'Moving in now'}</span></div><div class="bar2"><i style="width:${Math.min(100, o / CAP[d] * 100).toFixed(1)}%"></i></div></div>`; }).join('')}
       <div class="sec">Shops</div>
       ${grp.map(([name, list, total]) => `<details><summary><span class="h">${name}</span><span class="tag">${list.length} open${total - list.length > 0 ? ' · ' + (total - list.length) + ' free' : ''}</span></summary><div class="in">${list.map(s => row('№ ' + s.n, s.job, s.owner, s.staff)).join('') || '<p class="sub" style="padding:10px 0">No shop here yet.</p>'}</div></details>`).join('')}
       ${bigs.length ? `<details><summary><span class="h">Big businesses</span><span class="tag">${bigs.length} open</span></summary><div class="in">${bigs.map(h => `<a class="li" href="${mapLink(h)}" style="text-decoration:none"><span class="n">Lot ${h.bigLot}</span><span style="flex:1;min-width:0"><b style="font:600 14px var(--serif);display:block">${esc(h.job)}</b><span class="sub">@${esc(h.user)}</span></span>${ic('chev', 16)}</a>`).join('')}</div></details>` : ''}
@@ -646,7 +647,7 @@ const P = {
       <p class="sub" style="margin:-4px 2px 0">Ask for a building in the comments of our latest reel.</p>
       ${built.length ? `<div class="sec">Built because citizens asked</div><div class="doc">${built.sort((a, b) => dayOf(b) - dayOf(a)).slice(0, 6).map(d => `<div class="li"><span style="font-size:20px" aria-hidden="true">${esc(d.emoji)}</span><span style="flex:1;min-width:0"><b style="font:600 14px var(--serif)">${esc(d.demand)}</b><span class="sub" style="display:block">${esc(d.status.replace(/^(built|opened):?\s*/i, '').replace(/[()]/g, '') || 'Built')}${d.asked_by ? ' · asked by ' + esc(d.asked_by) : ''}</span></span><span class="tag">Built</span></div>`).join('')}</div>` : ''}
       <div class="sec">Elections</div>
-      <div class="doc"><div class="h">No election is open yet</div><p class="p">Department chiefs are elected by all citizens, never appointed. Roles are jobs, not rulers.</p></div>
+      <div class="doc"><div class="h" style="overflow-wrap:anywhere">👮 Police Chief: @satviksgupta_1110</div><p class="p">Elected by the citizens in Vinland's first election. Department chiefs are always elected, never appointed. Roles are jobs, not rulers. The next election is announced in our stories.</p></div>
       <div class="sec">The laws of Vinland</div>
       <div class="doc"><ol class="laws">${ST.laws.map(l => `<li><div><b>${esc(l[0])}</b><small>${esc(l[1])}</small></div></li>`).join('')}</ol></div>`;
   },
