@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Play Vinland</title><meta name="robots" content="noindex"><meta name="theme-color" content="#9fd3ee">
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#9fd3ee;font-family:Poppins,system-ui,sans-serif;touch-action:none;-webkit-user-select:none;user-select:none}
+canvas#g{display:block;width:100vw;height:100vh}
+#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#9fd3ee;color:#23324a;font-weight:700;font-size:18px;z-index:9}
+#mini{position:fixed;top:calc(12px + env(safe-area-inset-top));left:12px;width:132px;height:132px;border-radius:50%;border:3px solid #fff8e8;box-shadow:0 3px 10px #0003;background:#8fbf62}
+#place{position:fixed;top:calc(150px + env(safe-area-inset-top));left:12px;width:138px;text-align:center;font-size:12px;font-weight:700;color:#23324a;text-shadow:0 1px 0 #fff8}
+#back{position:fixed;top:calc(12px + env(safe-area-inset-top));right:12px;padding:9px 14px;border-radius:20px;background:#fff8e8;color:#23324a;font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 3px 10px #0003}
+#stick{position:fixed;left:calc(28px + env(safe-area-inset-left));bottom:calc(28px + env(safe-area-inset-bottom));width:130px;height:130px;border-radius:50%;background:#fff3;border:3px solid #fff8}
+#knob{position:absolute;left:39px;top:39px;width:52px;height:52px;border-radius:50%;background:#fff8e8;box-shadow:0 2px 8px #0004}
+.btn{position:fixed;width:70px;height:70px;border-radius:50%;background:#fff8e8;color:#23324a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px #0004;border:0}
+.btn.on{background:#ffd76a}
+#run{right:calc(26px + env(safe-area-inset-right));bottom:calc(30px + env(safe-area-inset-bottom))}
+#jump{right:calc(108px + env(safe-area-inset-right));bottom:calc(30px + env(safe-area-inset-bottom))}
+@media (hover:hover) and (pointer:fine){#stick,.btn{display:none}}
+#hint{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);font-size:13px;color:#23324a;background:#fff8e8cc;padding:6px 12px;border-radius:14px;display:none}
+@media (hover:hover) and (pointer:fine){#hint{display:block}}
+</style></head><body>
+<div id="load">Loading Vinland…</div>
+<canvas id="g"></canvas><canvas id="mini" width="264" height="264"></canvas><div id="place"></div>
+<a id="back" href="../map/">🗺️ Map</a>
+<div id="stick"><div id="knob"></div></div><button class="btn" id="run">RUN</button><button class="btn" id="jump">JUMP</button>
+<div id="hint">WASD / arrows to walk · Shift to run · Space to jump · drag to look</div>
+<script src="../vinland-static.js"></script><script src="../map/mapdata.js"></script>
+<script>
+// PLAY VINLAND (test page, 22 Nov). The same Vinland as the map (roads, places, homes come from the map's own exports),
+// built for phones: only what is near you is drawn, no big 3D map, a minimap instead.
+const load = s => new Promise((ok, no) => { const e = document.createElement('script'); e.src = s; e.onload = ok; e.onerror = no; document.head.appendChild(e); });
+(async () => {
+  await load('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'); await load('kit.js').catch(() => null);
+  start();
+})();
+function start() {
+const D = window.VIN_MAPDATA, S = window.VIN_STATIC, PHONE = matchMedia('(pointer:coarse)').matches;
+const cv = document.getElementById('g'), R = new THREE.WebGLRenderer({ canvas: cv, antialias: !PHONE, powerPreference: 'high-performance' });
+R.setPixelRatio(Math.min(devicePixelRatio, PHONE ? 1.5 : 2)); R.setSize(innerWidth, innerHeight);
+const scene = new THREE.Scene(), SKY = new THREE.Color('#9fd3ee'); scene.background = SKY; scene.fog = new THREE.Fog(SKY, 70, PHONE ? 150 : 210);
+const cam = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.3, PHONE ? 160 : 220);
+scene.add(new THREE.HemisphereLight('#fff3df', '#7a6a50', 0.55)); const sun = new THREE.DirectionalLight('#ffe0b4', 0.85); sun.position.set(40, 80, 25); scene.add(sun);
+const grad = new THREE.DataTexture(new Uint8Array([105, 165, 215]), 3, 1, THREE.LuminanceFormat); grad.magFilter = grad.minFilter = THREE.NearestFilter; grad.needsUpdate = true;
+const mats = {}, mat = c => mats[c] || (mats[c] = new THREE.MeshToonMaterial({ color: c, gradientMap: grad }));
+// ---- ground, patches, roads (merged into one mesh each: few draw calls)
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), mat('#8fbf62')); ground.rotation.x = -Math.PI / 2; scene.add(ground);
+function boxes(list, color, y0) { const g = new THREE.BoxGeometry(1, 1, 1).toNonIndexed(), P = g.attributes.position.array, N = g.attributes.normal.array, pos = [], nor = [];
+  list.forEach(([w, h, d, x, y, z]) => { for (let i = 0; i < P.length; i += 3) { pos.push(P[i] * w + x, P[i + 1] * h + y, P[i + 2] * d + z); nor.push(N[i], N[i + 1], N[i + 2]); } });
+  const G = new THREE.BufferGeometry(); G.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); G.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); const m = new THREE.Mesh(G, mat(color)); scene.add(m); return m; }
+const byCol = {}; D.flat.forEach(([k, x, z, w, d, h, c]) => (byCol[c] = byCol[c] || []).push([w, 0.06, d, x + w / 2, 0.03 + (k === 'p' ? 0.02 : 0), z + d / 2]));
+Object.entries(byCol).forEach(([c, l]) => boxes(l, c));
+boxes(D.roads.map(([w, d, x, z]) => [w, 0.08, d, x, 0.06, z]), '#55524d');
+// ---- places: a simple block each (the game will get the real buildings later)
+const solid = [];   // [x0, z0, x1, z1] things you can't walk through
+const PCOL = ['#e9d3a8', '#d7c3e6', '#cfe1ee', '#f0c9b4', '#d9e6c4'];
+D.places.forEach(([n, x, z, w, d], i) => { if (!n || /Avenue|Parking|Field|site|Plaza|Power/.test(n)) return; const h = /Stadium|Parliament/.test(n) ? 16 : 10;
+  boxes([[w * 0.85, h, d * 0.85, x + w / 2, h / 2, z + d / 2]], PCOL[i % PCOL.length]); solid.push([x + w * 0.075, z + d * 0.075, x + w * 0.925, z + d * 0.925]); });
+// ---- homes: every plot of the real map, as one instanced house (body + roof = 2 draw calls for all 7,908)
+const plots = S.plots.trim().split('\n').map(l => l.split(',')).map(([x, z, t]) => [+x, +z, t]);
+const HB = new THREE.InstancedMesh(new THREE.BoxGeometry(6.4, 4.4, 6.4).translate(0, 2.2, 0), new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: grad }), plots.length);
+const roofG = new THREE.ConeGeometry(5.1, 2.6, 4).rotateY(Math.PI / 4).translate(0, 4.4 + 1.3, 0), HR = new THREE.InstancedMesh(roofG, new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: grad }), plots.length);
+const WALL = ['#f4e3c3', '#e9d0b0', '#f6efe2', '#dcc9e8', '#cfe3ef', '#f2d0c0', '#e2ecc9'], ROOF = ['#b5543e', '#7b5a46', '#3f5a7a', '#5f7d4a', '#a8463c'];
+const M4 = new THREE.Matrix4(), C = new THREE.Color();
+plots.forEach(([x, z], i) => { M4.makeTranslation(x, 0, z); HB.setMatrixAt(i, M4); HR.setMatrixAt(i, M4); HB.setColorAt(i, C.set(WALL[(i * 7) % WALL.length])); HR.setColorAt(i, C.set(ROOF[(i * 3) % ROOF.length])); solid.push([x - 3.4, z - 3.4, x + 3.4, z + 3.4]); });
+scene.add(HB, HR);
+// solid lookup on a 16 m grid so collision stays cheap
+const GRID = {}, gk = (a, b) => a + ',' + b; solid.forEach((s, i) => { for (let a = Math.floor(s[0] / 16); a <= Math.floor(s[2] / 16); a++) for (let b = Math.floor(s[1] / 16); b <= Math.floor(s[3] / 16); b++) (GRID[gk(a, b)] = GRID[gk(a, b)] || []).push(s); });
+const blocked = (x, z, r) => (GRID[gk(Math.floor(x / 16), Math.floor(z / 16))] || []).some(s => x > s[0] - r && x < s[2] + r && z > s[1] - r && z < s[3] + r);
+// ---- you: the new toy citizen from the Asset Kit
+const K = window.VinlandKit, me = new THREE.Group(); scene.add(me);
+let body, L = null;
+if (K && K.citizenM) { body = K.make('citizenM', { hairStyle: 'bowl', outfit: 'tee', face: 'smile', pose: 'stand', facialHair: 'none' }); L = body.userData.limbs; }
+else { body = new THREE.Mesh(new THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(0.4, 1, 4, 8) : new THREE.BoxGeometry(0.8, 1.8, 0.5), mat('#3a7a5a')); body.position.y = 0.9; }
+body.scale.setScalar(1.1); me.add(body);
+const blob = new THREE.Mesh(new THREE.CircleGeometry(0.7, 16), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.22, depthWrite: false })); blob.rotation.x = -Math.PI / 2; blob.position.y = 0.13; scene.add(blob);
+const P = { x: 0, z: 60, y: 0, vy: 0, ang: Math.PI, yaw: Math.PI, pitch: 0.32, ph: 0, sp: 0 };
+// ---- controls: keyboard, joystick, run, jump, drag to look
+const keys = {}; addEventListener('keydown', e => { keys[e.key.toLowerCase()] = 1; if (e.key === ' ') jump(); }); addEventListener('keyup', e => keys[e.key.toLowerCase()] = 0);
+const stick = document.getElementById('stick'), knob = document.getElementById('knob'), J = { id: null, x: 0, y: 0 };
+let running = false; const runB = document.getElementById('run'); runB.onpointerdown = e => { running = !running; runB.classList.toggle('on', running); e.stopPropagation(); };
+document.getElementById('jump').onpointerdown = e => { jump(); e.stopPropagation(); };
+function jump() { if (P.y <= 0.001) P.vy = 7.2; }
+stick.onpointerdown = e => { J.id = e.pointerId; stick.setPointerCapture(e.pointerId); moveStick(e); e.stopPropagation(); };
+stick.onpointermove = e => { if (e.pointerId === J.id) moveStick(e); };
+stick.onpointerup = stick.onpointercancel = e => { if (e.pointerId === J.id) { J.id = null; J.x = J.y = 0; knob.style.transform = ''; } };
+function moveStick(e) { const r = stick.getBoundingClientRect(); let dx = e.clientX - r.left - r.width / 2, dy = e.clientY - r.top - r.height / 2; const m = Math.hypot(dx, dy), lim = r.width / 2 - 14;
+  if (m > lim) { dx *= lim / m; dy *= lim / m; } J.x = dx / lim; J.y = dy / lim; knob.style.transform = `translate(${dx}px,${dy}px)`; }
+let look = null; cv.onpointerdown = e => { look = { id: e.pointerId, x: e.clientX, y: e.clientY }; };
+addEventListener('pointermove', e => { if (!look || e.pointerId !== look.id) return; P.yaw -= (e.clientX - look.x) * 0.006; P.pitch = Math.max(0.08, Math.min(0.9, P.pitch + (e.clientY - look.y) * 0.004)); look.x = e.clientX; look.y = e.clientY; });
+addEventListener('pointerup', e => { if (look && e.pointerId === look.id) look = null; });
+// ---- minimap: roads + places around you, turned so "up" is where you look
+const mini = document.getElementById('mini'), mc = mini.getContext('2d'), placeEl = document.getElementById('place');
+function drawMini() { const W = 264, sc = 1.1; mc.save(); mc.clearRect(0, 0, W, W); mc.beginPath(); mc.arc(W / 2, W / 2, W / 2, 0, 7); mc.clip(); mc.fillStyle = '#8fbf62'; mc.fillRect(0, 0, W, W);
+  mc.translate(W / 2, W / 2); mc.rotate(P.yaw - Math.PI); mc.scale(sc, sc); mc.translate(-P.x, -P.z);
+  mc.fillStyle = '#e6d9b8'; D.places.forEach(([n, x, z, w, d]) => { if (n && Math.abs(x - P.x) < 220 && Math.abs(z - P.z) < 220) mc.fillRect(x, z, w, d); });
+  mc.fillStyle = '#5d5a55'; D.roads.forEach(([w, d, x, z]) => { if (Math.abs(x - P.x) < 120 + w && Math.abs(z - P.z) < 120 + d) mc.fillRect(x - w / 2, z - d / 2, w, d); });
+  mc.fillStyle = '#f4e3c3'; plots.forEach(([x, z]) => { if (Math.abs(x - P.x) < 120 && Math.abs(z - P.z) < 120) mc.fillRect(x - 3, z - 3, 6, 6); });
+  mc.restore(); mc.save(); mc.translate(W / 2, W / 2); mc.rotate(P.yaw - P.ang); mc.fillStyle = '#e8473c'; mc.strokeStyle = '#fff'; mc.lineWidth = 3;
+  mc.beginPath(); mc.moveTo(0, -14); mc.lineTo(10, 10); mc.lineTo(0, 5); mc.lineTo(-10, 10); mc.closePath(); mc.stroke(); mc.fill(); mc.restore();
+  const near = D.places.find(([n, x, z, w, d]) => n && P.x > x - 6 && P.x < x + w + 6 && P.z > z - 6 && P.z < z + d + 6); placeEl.textContent = near ? near[0] : ''; }
+// ---- the loop
+let last = performance.now(), mt = 0;
+function frame(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  let ix = J.x, iy = J.y; if (keys.a || keys.arrowleft) ix -= 1; if (keys.d || keys.arrowright) ix += 1; if (keys.w || keys.arrowup) iy -= 1; if (keys.s || keys.arrowdown) iy += 1;
+  const mag = Math.min(1, Math.hypot(ix, iy)), run = running || keys.shift ? 1.9 : 1, speed = 5.2 * run * mag;
+  if (mag > 0.08) { const a = P.yaw + Math.atan2(-ix, -iy); let da = ((a - P.ang + Math.PI * 3) % (Math.PI * 2)) - Math.PI; P.ang += da * Math.min(1, dt * 12);
+    const nx = P.x + Math.sin(a) * speed * dt, nz = P.z + Math.cos(a) * speed * dt; if (!blocked(nx, P.z, 0.5)) P.x = nx; if (!blocked(P.x, nz, 0.5)) P.z = nz; P.ph += dt * 7.5 * run * mag; P.sp = mag; }
+  else { P.sp *= 0.8; P.ph *= 0.9; }
+  P.vy -= 20 * dt; P.y = Math.max(0, P.y + P.vy * dt); if (P.y === 0) P.vy = 0;
+  const sw = Math.sin(P.ph) * Math.min(1, P.sp * 1.2) * (run > 1 ? 1.4 : 1);
+  me.position.set(P.x, 0.12 + P.y + Math.abs(sw) * 0.05, P.z); me.rotation.y = P.ang; blob.position.set(P.x, 0.13, P.z); blob.scale.setScalar(1 - Math.min(0.5, P.y * 0.15));
+  if (L) { L.legL.rotation.x = sw * 0.6; L.legR.rotation.x = -sw * 0.6; L.shinL.rotation.x = 0.06 + Math.max(0, sw) * 0.9; L.shinR.rotation.x = 0.06 + Math.max(0, -sw) * 0.9;
+    L.armL.rotation.x = -sw * 0.6; L.armR.rotation.x = sw * 0.6; L.foreL.rotation.x = -0.22 + Math.min(0, -sw) * 0.5 - (run > 1 && P.sp > 0.1 ? 0.8 : 0); L.foreR.rotation.x = -0.22 + Math.min(0, sw) * 0.5 - (run > 1 && P.sp > 0.1 ? 0.8 : 0);
+    if (P.y > 0.05) { L.legL.rotation.x = -0.5; L.shinL.rotation.x = 0.9; L.armL.rotation.x = L.armR.rotation.x = -2.6; } }
+  const dist = PHONE ? 8.5 : 7.5, tx = P.x - Math.sin(P.yaw) * dist * Math.cos(P.pitch), tz = P.z - Math.cos(P.yaw) * dist * Math.cos(P.pitch), ty = 1.6 + dist * Math.sin(P.pitch) + P.y * 0.5;
+  const k = Math.min(1, dt * 8); cam.position.x += (tx - cam.position.x) * k; cam.position.y += (ty - cam.position.y) * k; cam.position.z += (tz - cam.position.z) * k; cam.lookAt(P.x, 1.7 + P.y * 0.5, P.z);
+  sun.position.set(P.x + 40, 80, P.z + 25); sun.target.position.set(P.x, 0, P.z); sun.target.updateMatrixWorld();
+  if ((mt += dt) > 0.1) { mt = 0; drawMini(); }
+  R.render(scene, cam); requestAnimationFrame(frame); }
+addEventListener('resize', () => { R.setSize(innerWidth, innerHeight); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); });
+cam.position.set(P.x, 5, P.z + 8); window.__P = P; window.__frame = frame;
+document.getElementById('load').remove(); drawMini(); requestAnimationFrame(frame);
+}
+</script></body></html>
