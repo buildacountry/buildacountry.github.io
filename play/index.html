@@ -8,7 +8,6 @@ canvas#g{display:block;width:100vw;height:100vh}
 #load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#9fd3ee;color:#23324a;font-weight:700;font-size:18px;z-index:9}
 #mini{position:fixed;top:calc(12px + env(safe-area-inset-top));left:12px;width:132px;height:132px;border-radius:50%;border:3px solid #fff8e8;box-shadow:0 3px 10px #0003;background:#8fbf62}
 #place{position:fixed;top:calc(150px + env(safe-area-inset-top));left:12px;width:138px;text-align:center;font-size:12px;font-weight:700;color:#23324a;text-shadow:0 1px 0 #fff8}
-#back{position:fixed;top:calc(12px + env(safe-area-inset-top));right:12px;padding:9px 14px;border-radius:20px;background:#fff8e8;color:#23324a;font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 3px 10px #0003}
 #stick{position:fixed;left:calc(28px + env(safe-area-inset-left));bottom:calc(28px + env(safe-area-inset-bottom));width:130px;height:130px;border-radius:50%;background:#fff3;border:3px solid #fff8}
 #knob{position:absolute;left:39px;top:39px;width:52px;height:52px;border-radius:50%;background:#fff8e8;box-shadow:0 2px 8px #0004}
 .btn{position:fixed;width:70px;height:70px;border-radius:50%;background:#fff8e8;color:#23324a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px #0004;border:0}
@@ -21,7 +20,6 @@ canvas#g{display:block;width:100vw;height:100vh}
 </style></head><body>
 <div id="load">Loading Vinland…</div>
 <canvas id="g"></canvas><canvas id="mini" width="264" height="264"></canvas><div id="place"></div>
-<a id="back" href="../map/">🗺️ Map</a>
 <div id="stick"><div id="knob"></div></div><button class="btn" id="run">RUN</button><button class="btn" id="jump">JUMP</button>
 <div id="hint">WASD / arrows to walk · Shift to run · Space to jump · drag to look</div>
 <script src="../vinland-static.js"></script><script src="../map/mapdata.js"></script>
