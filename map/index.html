@@ -4145,7 +4145,56 @@ function powerCard() {
   GD.blds.filter(b => b.sb).forEach(b => { if (b.i % 2 === 0) { const bx = -Math.sin(b.ry) * 11, bz = -Math.cos(b.ry) * 11; tree(g, b.x + bx + (rnd() - 0.5) * 6, 0.1, b.z + bz + (rnd() - 0.5) * 3, rnd() < 0.18 ? 'pink' : 'canopy', 0.7 + rnd() * 0.4); } });
   for (let x = XW + 10; x <= XE - 10; x += 16) [ZN - 9, ZS + 9].forEach(z => { if (z === ZN - 9 && SB.IN.some(c => Math.abs(x - c) < 9)) return; tree(g, x, 0.1, z, 'canopy', 0.95); });
   for (let z = ZN + 10; z <= ZS - 10; z += 16) [XW - 9, XE + 9].forEach(x => tree(g, x, 0.1, z, 'canopy', 0.95));
-  // the green strip stays empty for now (Dev, 17 Nov night: centre, shops, sports and big buildings come later)
+  // THE SUBURB CENTRE (Dev's sketch, 22 Nov) in the green strip (x -380..-296). North of the boulevard: car park (top), sports fields,
+  // the school campus by the boulevard. South of the boulevard: a park, then the SHOPPING PLAZA (2 rows of flat-roof shops facing a
+  // pedestrian square with a fountain; no names yet), then a lake park at the far end. Shops are given out later.
+  const SBC = { x0: -380, x1: -296, cx: -338, park: [631, 672], sport: [678, 776], edu: [782, 888], south: [912, 1169] }, kitT = [];
+  { const [z0, z1] = SBC.park, cz = (z0 + z1) / 2, W = SBC.x1 - SBC.x0 - 4;                 // CAR PARK: asphalt, bays, a middle aisle, parked cars, trees round it
+    B(g, W, 0.1, z1 - z0 - 2, '#55575c', SBC.cx, 0.1, cz, N);
+    [z0 + 8, z1 - 8].forEach((rz, r) => { for (let x = SBC.x0 + 6; x <= SBC.x1 - 6; x += 3.4) B(g, 0.15, 0.02, 5.4, '#f6f3ea', x, 0.21, rz, N);
+      for (let k = 0, x = SBC.x0 + 7.7; x < SBC.x1 - 6; x += 3.4, k++) if ((k * 7 + r * 3) % 5 < 3) carModel(g, x, rz, r ? Math.PI : 0, ['#c8603f', '#3f7fbf', '#f6f0e2', '#2f2b28', '#c9922e', '#2f7a68', '#9aa3a8'][(k + r * 2) % 7]); });
+    [SBC.x0 + 1.5, SBC.x1 - 1.5].forEach(x => { for (let z = z0 + 4; z <= z1 - 4; z += 9) tree(g, x, 0.1, z, 'canopy', 0.8); });
+    B(g, 8, 0.1, 6, '#55575c', SBC.x0 - 2, 0.1, cz, N); }
+  { const [z0, z1] = SBC.sport, pz = z0 + 32;                                                 // SPORTS: football pitch with a running track + a stand, 2 courts below
+    B(g, SBC.x1 - SBC.x0 - 4, 0.1, 60, '#a9cf78', SBC.cx, 0.08, pz, N); B(g, 78, 0.14, 56, '#c8603f', SBC.cx, 0.09, pz, N); B(g, 66, 0.18, 44, '#5a9a4a', SBC.cx, 0.1, pz, N);
+    [[60, 0.2, 0.3, 0, -19], [60, 0.2, 0.3, 0, 19], [0.3, 0.2, 38, -30, 0], [0.3, 0.2, 38, 30, 0], [0.3, 0.2, 38, 0, 0]].forEach(([w, h, d, dx, dz]) => B(g, w, h, d, '#f6f3ea', SBC.cx + dx, 0.18, pz + dz, N));
+    add(g, new THREE.TorusGeometry(5, 0.15, 4, 24), '#f6f3ea', SBC.cx, 0.3, pz, { rx: Math.PI / 2, edge: false });
+    [-1, 1].forEach(sx => { B(g, 0.2, 2.4, 0.2, '#f6f3ea', SBC.cx + sx * 30, 0.2, pz - 3.6); B(g, 0.2, 2.4, 0.2, '#f6f3ea', SBC.cx + sx * 30, 0.2, pz + 3.6); B(g, 0.2, 0.2, 7.4, '#f6f3ea', SBC.cx + sx * 30, 2.5, pz); });
+    for (let r = 0; r < 3; r++) B(g, 30, 0.5, 1.2, r % 2 ? '#3f5866' : '#c9922e', SBC.cx, 0.2 + r * 0.5, z0 + 1.5 + r * 1.2 - 0.6);   // a small stand on the north side
+    kitT.push(['court', { sport: 'basketball', floor: '#3f7fbf' }, SBC.cx - 20, z1 - 16, Math.PI / 2], ['court', { sport: 'tennis', floor: '#c8603f' }, SBC.cx + 20, z1 - 16, Math.PI / 2]); }
+  { const [z0, z1] = SBC.edu;                                                                 // EDUCATION: a school campus facing the boulevard, garden + trees behind
+    kitT.push(['gdSchool', { name: 'SUBURB SCHOOL' }, SBC.cx, z1 - 31, 0]);
+    // (Dev, 22 Nov) behind the school: 2 libraries, back to back, each facing its side road
+    B(g, SBC.x1 - SBC.x0 - 4, 0.1, z1 - z0 - 62, '#a9cf78', SBC.cx, 0.08, z0 + (z1 - z0 - 62) / 2 + 1, N);
+    kitT.push(['library', {}, SBC.x0 + 20, z0 + 22, -Math.PI / 2], ['library', { wall: '#f6f0e2' }, SBC.x1 - 20, z0 + 22, Math.PI / 2]);
+    [SBC.x0 - 3, SBC.x1 + 3].forEach(x => B(g, 5, 0.1, 8, '#e6dccb', x, 0.1, z0 + 22, N)); }
+  { const [z0, z1] = SBC.south, PAVE2 = '#e9dcc0';
+    // north park (by the boulevard): lawn, paths, trees, benches
+    B(g, SBC.x1 - SBC.x0 - 4, 0.1, 48, '#a9cf78', SBC.cx, 0.08, z0 + 25, N); B(g, 4, 0.12, 48, PAVE2, SBC.cx, 0.09, z0 + 25, N); B(g, 76, 0.12, 4, PAVE2, SBC.cx, 0.09, z0 + 25, N);
+    [[-28, 10], [-14, 38], [18, 12], [30, 36], [-30, 34], [14, 40]].forEach(([dx, dz], k) => tree(g, SBC.cx + dx, 0.1, z0 + dz, k % 3 ? 'canopy' : 'pink', 1.05));
+    [-20, 20].forEach(dx => bench(g, SBC.cx + dx, z0 + 22.5, 0)); flowerBed(g, SBC.cx - 10, z0 + 30, C.pink); flowerBed(g, SBC.cx + 10, z0 + 18, C.purple);
+    // the plaza: a paved square, a fountain, trees in planters, benches, lamps; shops on both sides facing in
+    const pz0 = z0 + 52, pz1 = z1 - 50, pc = (pz0 + pz1) / 2, n = Math.floor((pz1 - pz0) / 14);
+    B(g, SBC.x1 - SBC.x0 - 4, 0.12, pz1 - pz0, '#e3d6bd', SBC.cx, 0.08, pc, N);                                     // stone paving
+    B(g, 10, 0.13, pz1 - pz0, '#d8c7a4', SBC.cx, 0.085, pc, N);                                                        // the central walk, darker stone
+    for (let z = pz0 + 3; z < pz1; z += 6) B(g, 10, 0.02, 0.2, '#c9b893', SBC.cx, 0.215, z, N);
+    [-1, 1].forEach(sd => { const lx = SBC.cx + sd * 17;                                                                  // two long garden beds with trees + flowers
+      [[pz0 + 4, pc - 13], [pc + 13, pz1 - 4]].forEach(([a, b]) => { B(g, 9, 0.45, b - a, '#cfc0a0', lx, 0.08, (a + b) / 2, N); B(g, 8, 0.5, b - a - 1, '#8fbf5e', lx, 0.1, (a + b) / 2, N);
+        for (let z = a + 5; z < b - 3; z += 10) { tree(g, lx, 0.55, z, (z / 10 | 0) % 3 === 0 ? 'pink' : 'canopy', 0.95); if ((z / 10 | 0) % 2) add(g, new THREE.IcosahedronGeometry(0.9, 0), (z / 10 | 0) % 4 === 1 ? '#d88fb0' : '#f2c14e', lx + 2.6, 1.0, z + 5, { edge: false }); }
+        for (let z = a + 10; z < b - 6; z += 20) { bench(g, lx - sd * 5.5, z, sd < 0 ? Math.PI / 2 : -Math.PI / 2); lamp(g, lx - sd * 5.2, z + 6); } }); });
+    add(g, new THREE.CylinderGeometry(13, 13, 0.1, 32), '#d8c7a4', SBC.cx, 0.15, pc, N); add(g, new THREE.CylinderGeometry(10.5, 10.5, 0.1, 32), '#e9dcc0', SBC.cx, 0.17, pc, N);   // ring round the fountain
+    add(g, new THREE.CylinderGeometry(7, 7.6, 0.9, 28), '#e9e1cf', SBC.cx, 0.6, pc, { edge: false }); add(g, new THREE.CylinderGeometry(6.2, 6.2, 0.2, 28), '#4aa3cf', SBC.cx, 1.07, pc, N);
+    add(g, new THREE.CylinderGeometry(1.6, 2.0, 1.2, 14), '#e9e1cf', SBC.cx, 1.15, pc, { edge: false }); add(g, new THREE.CylinderGeometry(0.4, 0.6, 2.4, 10), '#e9e1cf', SBC.cx, 2.35, pc, { edge: false }); add(g, new THREE.SphereGeometry(0.9, 10, 8), '#4aa3cf', SBC.cx, 3.75, pc, N);
+    [[-8, -11], [8, 11]].forEach(([dx, dz]) => { const kx = SBC.cx + dx * 0.5, kz = pc + dz * 4.2; B(g, 3.2, 2.4, 3.2, '#f6f0e2', kx, 0.2, kz); B(g, 3.8, 0.3, 3.8, '#c8603f', kx, 2.6, kz); B(g, 3.0, 0.1, 0.1, '#f2c14e', kx, 1.6, kz + 1.62, N); });   // 2 little kiosks
+    const ST = ['gdCafe', 'gdBakery', 'gdBarber', 'gdFlowers', 'gdPizza', 'gdCorner'], zs = pc - (n - 1) * 7; SBC.shops = [];
+    for (let i = 0; i < n; i++) [[SBC.x0 + 7, Math.PI / 2], [SBC.x1 - 7, -Math.PI / 2]].forEach(([x, ry], side) => { const z = zs + i * 14; kitT.push([ST[(i * 2 + side * 3) % 6], { blank: true }, x, z, ry]); SBC.shops.push([x, z, ry]); });
+    // (Dev, 22 Nov) the far end: a second car park for the shoppers (no lake)
+    { const a = pz1 + 2, b = z1 - 1, cz = (a + b) / 2; B(g, SBC.x1 - SBC.x0 - 4, 0.1, b - a, '#55575c', SBC.cx, 0.1, cz, N);
+      [a + 8, b - 8].forEach((rz, r) => { for (let x = SBC.x0 + 6; x <= SBC.x1 - 6; x += 3.4) B(g, 0.15, 0.02, 5.4, '#f6f3ea', x, 0.21, rz, N);
+        for (let k = 0, x = SBC.x0 + 7.7; x < SBC.x1 - 6; x += 3.4, k++) if ((k * 5 + r * 4) % 7 < 4) carModel(g, x, rz, r ? Math.PI : 0, ['#3f7fbf', '#c8603f', '#9aa3a8', '#f6f0e2', '#2f7a68', '#2f2b28', '#c9922e'][(k + r * 3) % 7]); });
+      [SBC.x0 + 1.5, SBC.x1 - 1.5].forEach(x => { for (let z = a + 4; z <= b - 4; z += 9) tree(g, x, 0.1, z, 'canopy', 0.8); }); B(g, 8, 0.1, 6, '#55575c', SBC.x1 + 2, 0.1, cz, N); } }
+  SB.centreObj = SBC;
+  whenKit(() => { const K = window.VinlandKit, T = new THREE.Group(); kitT.forEach(([k, o, x, z, ry]) => { const m = K.make(k, o); m.position.set(x, 0.1, z); m.rotation.y = ry; T.add(m); }); scene.add(bakeGroup(T)); });
   window.SB_OBJ = bakeKeep(g, 'suburb');
 })();
 // ---- the Library, next to the school (Education District) ----
