@@ -4148,7 +4148,11 @@ function powerCard() {
   // THE SUBURB CENTRE (Dev's sketch, 22 Nov) in the green strip (x -380..-296). North of the boulevard: car park (top), sports fields,
   // the school campus by the boulevard. South of the boulevard: a park, then the SHOPPING PLAZA (2 rows of flat-roof shops facing a
   // pedestrian square with a fountain; no names yet), then a lake park at the far end. Shops are given out later.
+  // (Dev, 22 Nov 17:45) swapped up/down: the whole centre is drawn as planned, then turned 180° round the middle of the boulevard (x -338, z 900),
+  // so the SHOPS + plaza are NORTH of the boulevard and the school, libraries, sports and car parks SOUTH. FLIP maps a planned spot to the real one.
+  const FLIP = (x, z) => [2 * -338 - x, 1800 - z], gc = new THREE.Group(); gc.rotation.y = Math.PI; gc.position.set(2 * -338, 0, 1800); g.add(gc);
   const SBC = { x0: -380, x1: -296, cx: -338, park: [631, 672], sport: [678, 776], edu: [782, 888], south: [912, 1169] }, kitT = [];
+  ((g) => {
   { const [z0, z1] = SBC.park, cz = (z0 + z1) / 2, W = SBC.x1 - SBC.x0 - 4;                 // CAR PARK: asphalt, bays, a middle aisle, parked cars, trees round it
     B(g, W, 0.1, z1 - z0 - 2, '#55575c', SBC.cx, 0.1, cz, N);
     [z0 + 8, z1 - 8].forEach((rz, r) => { for (let x = SBC.x0 + 6; x <= SBC.x1 - 6; x += 3.4) B(g, 0.15, 0.02, 5.4, '#f6f3ea', x, 0.21, rz, N);
@@ -4193,8 +4197,9 @@ function powerCard() {
       [a + 8, b - 8].forEach((rz, r) => { for (let x = SBC.x0 + 6; x <= SBC.x1 - 6; x += 3.4) B(g, 0.15, 0.02, 5.4, '#f6f3ea', x, 0.21, rz, N);
         for (let k = 0, x = SBC.x0 + 7.7; x < SBC.x1 - 6; x += 3.4, k++) if ((k * 5 + r * 4) % 7 < 4) carModel(g, x, rz, r ? Math.PI : 0, ['#3f7fbf', '#c8603f', '#9aa3a8', '#f6f0e2', '#2f7a68', '#2f2b28', '#c9922e'][(k + r * 3) % 7]); });
       [SBC.x0 + 1.5, SBC.x1 - 1.5].forEach(x => { for (let z = a + 4; z <= b - 4; z += 9) tree(g, x, 0.1, z, 'canopy', 0.8); }); B(g, 8, 0.1, 6, '#55575c', SBC.x1 + 2, 0.1, cz, N); } }
-  SB.centreObj = SBC;
-  whenKit(() => { const K = window.VinlandKit, T = new THREE.Group(); kitT.forEach(([k, o, x, z, ry]) => { const m = K.make(k, o); m.position.set(x, 0.1, z); m.rotation.y = ry; T.add(m); }); scene.add(bakeGroup(T)); });
+  })(gc);
+  SBC.shops = SBC.shops.map(([x, z, ry]) => [...FLIP(x, z), ry + Math.PI]); SB.centreObj = SBC;
+  whenKit(() => { const K = window.VinlandKit, T = new THREE.Group(); kitT.forEach(([k, o, x, z, ry]) => { const m = K.make(k, o), [fx, fz] = FLIP(x, z); m.position.set(fx, 0.1, fz); m.rotation.y = ry + Math.PI; T.add(m); }); scene.add(bakeGroup(T)); });
   window.SB_OBJ = bakeKeep(g, 'suburb');
 })();
 // ---- the Library, next to the school (Education District) ----
