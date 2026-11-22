@@ -305,6 +305,81 @@ window.__shop = n => { let q;
 
 
 
+if (new URLSearchParams(location.search).get('reel') === 'built') {
+// "Over 6,000 people followed this page and got a house..." trial reel (23 Nov). /map/?reel=built
+// Our real map + our own citizen style (copied from the map's copC, green uniforms). No blocky story cast.
+// Durations = Dev's voice (built/voice.mp3, 23.0 s).
+(() => {
+const ALL = [];
+const keep = o => { scene.add(o); __cast.push(o); return o; };
+// soldier: the map's police citizen (copC) in army green, with a helmet; kept as a normal group so it can march
+function soldier() {
+  const g = new THREE.Group(), sk = wallMat('#e0a77c'), G = '#4b5a2e', GD = '#3a4524';
+  [-0.14, 0.14].forEach(x => { B(g, 0.22, 0.7, 0.24, GD, x, 0, 0, NE); B(g, 0.26, 0.12, 0.34, '#141414', x, 0, 0.05, NE); });
+  B(g, 0.62, 0.72, 0.36, G, 0, 0.7, 0, NE); B(g, 0.64, 0.1, 0.38, '#141414', 0, 0.72, 0, NE);
+  B(g, 0.16, 0.6, 0.18, G, -0.39, 0.8, 0, { edge: false, rz: 0.1 }); B(g, 0.16, 0.6, 0.18, G, 0.39, 0.8, 0, { edge: false, rz: -0.1 });
+  add(g, new THREE.SphereGeometry(0.1, 8, 6), sk, -0.43, 0.5, 0.02, NE); add(g, new THREE.SphereGeometry(0.1, 8, 6), sk, 0.43, 0.5, 0.02, NE);
+  add(g, new THREE.SphereGeometry(0.3, 14, 10), sk, 0, 1.72, 0, NE);
+  add(g, new THREE.SphereGeometry(0.34, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), G, 0, 1.82, 0, NE);   // helmet
+  B(g, 0.72, 0.05, 0.72, GD, 0, 1.83, 0, NE);
+  g.position.y = 0.2; g.scale.setScalar(1.1); return g;
+}
+function watchPost(x, z) {
+  const g = new THREE.Group(), W = '#7a5a3a';
+  [[-1.3, -1.3], [1.3, -1.3], [-1.3, 1.3], [1.3, 1.3]].forEach(([a, b]) => B(g, 0.3, 6, 0.3, W, a, 0, b, NE));
+  B(g, 3.4, 0.25, 3.4, W, 0, 6, 0, NE); B(g, 3.4, 1.0, 0.15, W, 0, 6.2, 1.62, NE); B(g, 3.4, 1.0, 0.15, W, 0, 6.2, -1.62, NE); B(g, 0.15, 1.0, 3.4, W, 1.62, 6.2, 0, NE); B(g, 0.15, 1.0, 3.4, W, -1.62, 6.2, 0, NE);
+  B(g, 4.0, 0.3, 4.0, '#5a4028', 0, 8.6, 0, NE); [[-1.6, -1.6], [1.6, -1.6], [-1.6, 1.6], [1.6, 1.6]].forEach(([a, b]) => B(g, 0.18, 2.4, 0.18, W, a, 6.3, b, NE));
+  B(g, 0.1, 4, 0.1, '#ddd', 0, 8.9, 0, NE); B(g, 1.6, 0.9, 0.05, '#1f2f5a', 0.85, 12.2, 0, NE); B(g, 0.6, 0.35, 0.06, '#f2b33d', 0.85, 12.2, 0, NE);   // Vinland flag colours
+  g.position.set(x, 0, z); return keep(g);
+}
+function goldTag(text, x, y, z) {
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const k = cv.getContext('2d');
+  k.font = '800 56px Poppins, Arial Black'; const w = Math.min(500, k.measureText(text).width + 60);
+  k.fillStyle = '#f2b33d'; k.beginPath(); k.roundRect((512 - w) / 2, 18, w, 92, 46); k.fill(); k.lineWidth = 6; k.strokeStyle = '#14233f'; k.stroke();
+  k.fillStyle = '#14233f'; k.textAlign = 'center'; k.textBaseline = 'middle'; k.fillText(text, 256, 66, 470);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true })); sp.scale.set(9, 2.25, 1); sp.renderOrder = 999; sp.position.set(x, y, z); return keep(sp);
+}
+const A = PLOTS.filter(q => !layout.blocked.some(b => b[0] === q[0] && b[1] === q[1]));
+const lastN = Math.max(...homes.map(h => h.n || 0));
+const free = A[Math.min(A.length - 1, lastN)];   // the first empty plot, right after the newest citizen's home (so a lived-in neighbour is in shot)
+const fr = free[2] !== undefined ? free[2] : 0, ffx = Math.sin(fr), ffz = Math.cos(fr);   // the plot faces its street   // a real empty plot, just past the newest citizen
+const field = A[Math.min(A.length - 1, lastN + 420)], FX = field[0], FZ = field[1];   // open, empty lawns (no homes yet)
+function fogBank(x, z) {   // soft fog wall: stacked see-through layers, thick at the back
+  const cv = document.createElement('canvas'); cv.width = 64; cv.height = 256; const k = cv.getContext('2d'), gr = k.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, 'rgba(235,238,240,0)'); gr.addColorStop(0.35, 'rgba(235,238,240,0.85)'); gr.addColorStop(1, 'rgba(235,238,240,1)'); k.fillStyle = gr; k.fillRect(0, 0, 64, 256);
+  const tex = new THREE.CanvasTexture(cv);
+  for (let i = 0; i < 7; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(90, 26), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.35 + i * 0.09, depthWrite: false, fog: false }));
+    m.rotation.y = Math.PI / 2; m.position.set(x - i * 3, 12, z); keep(m); } }
+const TW = { from: [0, 0, 60, 120, 140, 0], to: [0, 0, 80, 200, 230, 0] };
+
+__reelDefine([
+  // "Over 6,000 people followed this page and got a house in this country..."  town with real name tags
+  { d: 3.3, labels: true, setup() { window.__cam = { from: [-30, 110, -40, 34, 46, 0], to: [-30, 95, -55, 52, 62, 0] }; } },
+  // "...and you're not in it yet."  a real empty plot, gold "@you?" tag drops in
+  { d: 3.3, labels: true, setup() { R.t = goldTag('@you?', free[0], 6, free[1]); window.__cam = { from: [free[0], free[1], -ffx * 40 - ffz * 26, 34, -ffz * 40 + ffx * 26, 1], to: [free[0], free[1], -ffx * 30 - ffz * 20, 24, -ffz * 30 + ffx * 20, 1] }; },
+    step(t) { R.t.position.y = 6 + Math.max(0, 1 - t / 0.5) * 8; } },
+  // "Here, whatever you ask for gets built."  the National Stadium (asked for, built 15 Nov)
+  { d: 2.3, setup() { },
+    step(t, d) { const a = (70 + t / d * 25) * Math.PI / 180; controls.target.set(822, 5, -128); camera.position.set(822 + Math.sin(a) * 300, 170, -128 + Math.cos(a) * 300); camera.lookAt(822, 5, -128); } },
+  // "Someone asked for a Ronaldo statue, we built it..."  the Legend statue (asked by @racheeks_gmp)
+  { d: 2.7, setup() { }, step(t, d) { const a = (-30 + t / d * 60) * Math.PI / 180; controls.target.set(SE.cx, 6, SE.cz); camera.position.set(SE.cx + Math.sin(a) * 26, 9, SE.cz + Math.cos(a) * 26); camera.lookAt(SE.cx, 6, SE.cz); } },
+  // "...a GTA arcade, built."  Dev records the arcade himself; here we only hold the market so the timing stays right
+  { d: 2.0, setup() { window.__cam = { from: [236, 226, 30, 40, 40, 0], to: [236, 226, 30, 40, 40, 0] }; } },
+  // "So many of you want an army, so it's coming next."  soldiers march out of the fog to a watch post
+  { d: 3.4, setup() { R.s = []; for (let i = 0; i < 12; i++) { const s = keep(soldier()); s.userData.row = Math.floor(i / 3); s.userData.col = i % 3; s.rotation.y = Math.PI / 2; R.s.push(s); }
+      fogBank(FX - 14, FZ); watchPost(FX - 8, FZ + 7); window.__cam = { from: [FX - 6, FZ, 30, 7, 9, 3], to: [FX - 6, FZ, 25, 6, 7, 3] }; },
+    step(t) { R.s.forEach(s => { const x = FX - 22 - s.userData.row * 2.2 + t * 5; s.position.set(x, 0.2 + Math.abs(Math.sin(t * 7 + s.userData.row)) * 0.08, FZ - 2 + s.userData.col * 1.8); }); } },
+  // "But only the first 10,000 can become OG citizens..."  wide over the town (the OG stamp is added in the edit)
+  { d: 3.0, labels: true, setup() { window.__cam = { from: [60, 40, 0, 420, 520, 0], to: [60, 40, 0, 380, 470, 0] }; } },
+  // "...so follow, and comment HOME to claim your house."  back to the same empty plot (the reel loops)
+  { d: 3.0, labels: true, setup() { R.t = goldTag('@you?', free[0], 6, free[1]); window.__cam = { from: [free[0], free[1], -ffx * 30 - ffz * 20, 24, -ffz * 30 + ffx * 20, 1], to: [free[0], free[1], -ffx * 40 - ffz * 26, 34, -ffz * 40 + ffx * 26, 1] }; } },
+]);
+var R = {};
+})();
+
+}
+
+
 if (new URLSearchParams(location.search).get('reel') === 'fates') {
 // "I let the game decide what happened to you" — animated scenes for the reel page (/map/?reel=fates).
 // Durations = the sentences of Dev's voice (fates/lines_fixed.json), so the recording lines up with the voice.
