@@ -6718,6 +6718,8 @@ window.VIN3D_API = { wake: () => kick(900), looks: () => { try { homeLooks(); PA
 // Phones (13 Nov, step 4): 3D is for a look-around only. The heavy things (walk, drive, night, auto tour) run on laptops; here they show a small note.
 if (PHONE && !OLDP) { const note = () => { if (BOOT && BOOT.toast) BOOT.toast('Best on laptop 💻 Walk, drive, night and the auto tour run on a laptop. On your phone, look around here or use the 2D map.', 4200); };
   ['tour', 'nightBtn', 'walkBtn', 'driveBtn'].forEach(id => { const b = document.getElementById(id); if (b) { b.onclick = note; b.classList.add('laponly'); b.setAttribute('aria-label', b.textContent.trim() + ' (best on laptop)'); } }); }
+// REEL STUDIO (22 Nov): /map/?reel=<name> plays an animated reel scene for Dev to screen-record; /map/?film adds smooth camera sliders. reel.js is downloaded only then. Visitors never load it.
+if (/[?&](reel|film)\b/.test(location.search)) { const runR = code => eval(code); (function wR() { if (RUN.homes && homes.length) fetch('reel.js?v=1', { cache: 'no-cache' }).then(r => r.text()).then(t => runR(t + '\n//# sourceURL=reel.js')).catch(e => console.error(e)); else setTimeout(wR, 300); })(); }
 if (window.__vinHook) window.__vinHook(code => eval(code));   // only the build tools set this (tools/export_plan.py)
 
 // ----- load the sheet -----
