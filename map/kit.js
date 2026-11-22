@@ -762,6 +762,97 @@
     opts: { awning: colours('Awning', [k.awning, PAL.terra, '#2f7a68', '#3f5866', '#c9922e', '#d88fb0', '#6a4a8c']), wall: colours('Wall', ['#f2e6cc', '#f2cfb3', '#c9d8b6', '#c8dbe6']) },
     make: o => shopFront(o, k) }));
 
+  // ---- GARDEN DISTRICT SHOPS (Dev, 22 Nov): small single-storey corner shops, low-poly, like little dioramas. Made-up names only, no brands.
+  // Each one stands on its own 12 x 12 m pad (front = +z = the street). Not on the map until Dev OKs the preview.
+  function gdStripes(p, w, depth, x, y, z, ry, c1, c2, slope) {           // a striped canvas awning, hinged on the wall at (x, y, z), sloping down and out
+    const h = grp(p, x, y, z, ry), a = grp(h, 0, 0, 0); a.rotation.x = slope == null ? 0.42 : slope;
+    const n = Math.max(3, Math.round(w / 0.62)), sw = w / n;
+    for (let i = 0; i < n; i++) { const cx = -w / 2 + sw * (i + 0.5), c = i % 2 ? c2 : c1;
+      B(a, sw, 0.07, depth, c, cx, -0.035, depth / 2, { edge: i === 0 || i === n - 1 });
+      B(a, sw, 0.38, 0.05, c, cx, -0.38, depth, NE); }                   // the hanging valance at the front edge
+    return h;
+  }
+  function gdAc(p, x, y, z) { B(p, 1.1, 0.6, 0.8, '#d9dcd8', x, y, z); CYL(p, 0.28, 0.28, 0.04, 8, '#5b5f66', x, y + 0.6, z, NE); }
+  let GDO = {};                                                         // the options of the shop being built ({ blank: true } = no name, no theme props)
+  function gdSign(p, text, w, x, y, z, bg, fg, ry) { const g = grp(p, x, y, z, ry); B(g, w + 0.2, 0.9, 0.18, bg, 0, 0, 0); if (!GDO.blank) P(g, w, 0.72, textMat(text, bg, fg), 0, 0.09, 0.1); else P(g, w - 0.4, 0.5, mat('#f6f0e2'), 0, 0.2, 0.1); return g; }
+  function gdPad(g) { B(g, 12, 0.2, 12, '#e4d6b8', 0, 0, 0, { shadow: false }); B(g, 12, 0.22, 1.6, '#d1c3a2', 0, 0, 5.2, { shadow: false });   // plot + pavement strip
+    [[-5.4, 5.2], [5.4, 5.2]].forEach(([x, z]) => { B(g, 0.9, 0.5, 0.9, PAL.terra2, x, 0.2, z); ICO(g, 0.6, 0, PAL.leaf2, x, 1.05, z, NE); }); }
+  function gdGlass(g, w, h, x, y, z) { const W = glowMat(PAL.glassWarm, '#ffcf6a'); P(g, w, h, W, x, y, z); [-w / 2, w / 2].forEach(d => B(g, 0.12, h, 0.12, PAL.iron, x + d, y, z, NE)); B(g, w, 0.12, 0.12, PAL.iron, x, y + h, z, NE); }
+  function gdTable(g, x, z, top, umb) { CYL(g, 0.45, 0.45, 0.06, 8, top || PAL.cream, x, 0.95, z); CYL(g, 0.05, 0.05, 0.75, 6, PAL.iron, x, 0.2, z, { edge: false, open: true });
+    [-0.75, 0.75].forEach(d => { B(g, 0.42, 0.45, 0.42, PAL.wood, x + d, 0.2, z, NE); B(g, 0.42, 0.5, 0.06, PAL.wood, x + d, 0.65, z + (d < 0 ? -0.2 : 0.2) * 0, NE); });
+    if (umb) { CYL(g, 0.04, 0.04, 1.7, 6, PAL.iron, x, 1.0, z, { edge: false, open: true }); CYL(g, 0.02, 1.15, 0.45, 8, umb, x, 2.55, z, { open: true }); } }
+  const GD_SHOPS = [
+    { key: 'gdCafe', name: 'Corner café', make(g) {                       // corner café: awnings wrap two sides, a terrace, a big cup on the roof
+      const W = '#f4ead6', T = '#2f7a68'; B(g, 7.6, 3.6, 6.4, W, -0.8, 0.2, -1.2);
+      B(g, 8.0, 0.5, 6.8, '#6b4f3a', -0.8, 3.8, -1.2); B(g, 7.8, 0.12, 6.6, PAL.sand2, -0.8, 4.3, -1.2, NE);   // brown roof band
+      gdGlass(g, 2.6, 1.8, -3.0, 0.8, 2.03); gdGlass(g, 2.6, 1.8, 1.4, 0.8, 2.03); P(g, 1.2, 2.3, PAL.wood, -0.8, 0.2, 2.03);
+      { const sg = grp(g, 3.11, 0, -1.2, Math.PI / 2); gdGlass(sg, 2.2, 1.8, -1.4, 0.8, 0); gdGlass(sg, 2.2, 1.8, 1.4, 0.8, 0); }
+      gdStripes(g, 7.6, 1.7, -0.8, 3.0, 1.98, 0, T, '#f6f0e2'); gdStripes(g, 6.2, 1.7, 3.14, 3.0, -1.2, Math.PI / 2, T, '#f6f0e2');
+      gdSign(g, 'CAFÉ', 3.2, -0.8, 3.8, 2.1, '#6b4f3a', '#f6d27a');
+      B(g, 6.4, 0.06, 3.6, '#cdb48c', 1.4, 0.2, 3.6, NE);                     // terrace deck
+      [[-0.4, 3.4], [2.4, 3.4], [4.6, 0.8]].forEach(([x, z], i) => gdTable(g, x, z, PAL.cream, i === 2 ? null : null));
+      [-4.6, -3.2].forEach(x => B(g, 0.6, 0.9, 0.6, '#5a6b4a', x, 0.2, 3.0, NE));   // planters by the door
+      gdAc(g, -3.2, 4.42, -2.6); gdAc(g, -1.6, 4.42, -2.6); if (GDO.blank) return;
+      B(g, 0.7, 1.1, 0.08, '#2f2b28', -2.4, 0.2, 3.2, { rx: -0.15 });         // chalk board
+      CYL(g, 0.8, 0.6, 1.0, 10, '#f6f0e2', 1.6, 4.42, -0.4); CYL(g, 0.7, 0.7, 0.04, 10, '#6b4f3a', 1.6, 5.43, -0.4, NE); B(g, 0.2, 0.5, 0.5, '#f6f0e2', 2.45, 4.7, -0.4, NE); } },
+    { key: 'gdBarber', name: 'Barber shop', make(g) {                        // modern barber: big glass front, dark parapet, a pole and a bench
+      const W = '#efe4d2'; B(g, 7.2, 3.4, 6.2, W, 0, 0.2, -1.4); B(g, 7.6, 0.9, 6.6, '#4a3a30', 0, 3.6, -1.4); B(g, 7.2, 0.1, 6.2, '#d9dcd8', 0, 4.5, -1.4, NE);
+      gdGlass(g, 4.4, 2.4, -0.9, 0.6, 1.73); P(g, 1.3, 2.5, '#6b4f3a', 2.6, 0.2, 1.73); B(g, 1.5, 0.12, 0.12, '#4a3a30', 2.6, 2.7, 1.75, NE);   // glass front + the door
+      B(g, 7.8, 0.12, 1.4, '#4a3a30', 0, 3.4, 2.3);                          // flat canopy
+      gdSign(g, 'BARBER SHOP', 5.4, 0, 3.6, 1.95, '#4a3a30', '#f6f0e2');
+      if (!GDO.blank) { const pl = grp(g, 3.5, 0, 2.0); CYL(pl, 0.18, 0.18, 1.8, 8, '#f6f0e2', 0, 0.8, 0, { open: true }); [1.1, 1.6, 2.1].forEach((y, i) => CYL(pl, 0.19, 0.19, 0.2, 8, i === 1 ? '#3f7fbf' : '#d8231f', 0, y, 0, { open: true, edge: false })); CAP(pl, 0.2, '#e2b04a', 0, 2.6, 0, NE); }
+      B(g, 2.0, 0.12, 0.5, PAL.wood, -1.0, 0.65, 3.4); [-1.8, -0.2].forEach(x => B(g, 0.12, 0.45, 0.4, PAL.iron, x, 0.2, 3.4, NE)); B(g, 2.0, 0.5, 0.08, PAL.wood, -1.0, 0.8, 3.62, NE);
+      [-5, 5].forEach(x => { B(g, 0.3, 1.2, 0.3, PAL.wood, x, 0.2, 2.6, NE); ICO(g, 1.0, 0, PAL.leaf2, x, 2.2, 2.6); });
+      gdAc(g, 1.6, 4.6, -2.8); gdAc(g, -0.2, 4.6, -2.8); } },
+    { key: 'gdPizza', name: 'Pizza place', make(g) {                         // pizza place: cream walls, tricolour awning, a pizza on the roof, a delivery scooter
+      const W = '#f3e3c3'; B(g, 7.4, 3.6, 6.2, W, 0, 0.2, -1.4); B(g, 7.8, 0.6, 6.6, '#8a3b2c', 0, 3.8, -1.4); B(g, 7.4, 0.1, 6.2, PAL.sand2, 0, 4.4, -1.4, NE);
+      gdGlass(g, 2.4, 1.7, -2.3, 0.8, 1.72); gdGlass(g, 2.4, 1.7, 2.3, 0.8, 1.72); P(g, 1.2, 2.3, PAL.wood, 0, 0.2, 1.72);
+      { const h = grp(g, 0, 3.0, 1.75), a = grp(h, 0, 0, 0); a.rotation.x = 0.42; const cs = ['#d23b2c', '#f6f0e2', '#2f7a68'];
+        for (let i = 0; i < 12; i++) { const c = cs[i % 3], cx = -3.6 + 0.6 * (i + 0.5); B(a, 0.6, 0.07, 1.6, c, cx, -0.035, 0.8, { edge: i === 0 || i === 11 }); B(a, 0.6, 0.38, 0.05, c, cx, -0.38, 1.6, NE); } }
+      gdSign(g, 'PIZZA', 3.4, 0, 3.75, 1.95, '#8a3b2c', '#f6d27a');
+      if (!GDO.blank) { const z = grp(g, 0, 5.6, -1.6); z.rotation.x = Math.PI / 2 - 0.25; CYL(z, 1.5, 1.5, 0.22, 12, '#e2a24a', 0, 0, 0); CYL(z, 1.3, 1.3, 0.05, 12, '#d23b2c', 0, 0.22, 0, NE);
+        [[0.5, 0.3], [-0.6, 0.4], [0.1, -0.7], [-0.3, -0.1], [0.8, -0.5]].forEach(([x, q]) => CYL(z, 0.2, 0.2, 0.06, 8, '#7a1e1a', x, 0.27, q, NE)); B(g, 0.15, 1.4, 0.15, PAL.iron, 0, 4.4, -1.9, NE); }
+      [-2.8, 2.8].forEach(x => gdTable(g, x, 3.6, '#f6f0e2', x < 0 ? '#d23b2c' : '#2f7a68'));
+      if (!GDO.blank) { const sc = grp(g, 4.9, 0, 3.4, 0.3); WHEEL(sc, 0.3, 0.12, 0, 0.7, 8); WHEEL(sc, 0.3, 0.12, 0, -0.7, 8); B(sc, 0.4, 0.4, 1.3, '#d23b2c', 0, 0.35, 0); B(sc, 0.36, 0.2, 0.7, '#2f2b28', 0, 0.75, -0.25, NE);
+        B(sc, 0.1, 0.8, 0.1, PAL.iron, 0, 0.6, 0.6, NE); B(sc, 0.6, 0.06, 0.06, PAL.iron, 0, 1.4, 0.6, NE); B(sc, 0.6, 0.5, 0.6, '#f6f0e2', 0, 0.95, -0.6); }
+      gdAc(g, -2.4, 4.5, -3.2); } },
+    { key: 'gdCorner', name: 'Corner store', make(g) {                       // the neighbourhood corner store: tin roof, shelves of packets behind bars, crates
+      const W = '#e9e3d6'; B(g, 6.6, 3.8, 5.6, W, 0, 0.2, -1.6); B(g, 2.2, 3.8, 0.1, '#c8603f', -2.2, 0.2, 1.26, NE); B(g, 1.6, 3.8, 0.1, '#3f7fbf', 2.5, 0.2, 1.26, NE);   // painted panels
+      B(g, 7.2, 0.25, 6.2, '#d9dcd8', 0, 4.0, -1.6);
+      const front = grp(g, 0, 0, 1.3); B(front, 3.0, 0.9, 0.9, PAL.wood, -0.1, 0.2, 0.3); P(front, 3.0, 2.2, '#5a4636', -0.1, 1.1, 0.05);   // counter + dark shop inside
+      const cs = ['#f2c14e', '#d8231f', '#3fbf6a', '#3f7fbf', '#e8873a', '#d88fb0'];
+      [1.4, 2.0, 2.6].forEach((y, r) => { B(front, 2.9, 0.06, 0.4, '#8a6a4a', -0.1, y - 0.06, 0.25, NE); for (let i = 0; i < 9; i++) B(front, 0.24, 0.36, 0.2, cs[(i + r) % cs.length], -1.4 + i * 0.32, y, 0.25, NE); });
+      for (let i = 0; i < 8; i++) B(front, 0.05, 2.2, 0.05, PAL.iron, -1.5 + i * 0.4, 1.1, 0.5, NE);   // the bars
+      { const a = grp(g, 0, 3.4, 1.32); a.rotation.x = 0.35; for (let i = 0; i < 12; i++) B(a, 0.6, 0.1, 2.0, i % 2 ? '#b5543a' : '#c8603f', -3.3 + i * 0.6, 0, 1.0, { edge: i === 0 || i === 11 }); }   // corrugated tin awning
+      [-2.2, 2.2].forEach(x => B(g, 0.12, 2.6, 0.12, PAL.wood, x, 0.2, 3.2, NE));
+      gdSign(g, 'CORNER STORE', 4.6, 0, 3.95, 1.4, '#2f7a68', '#f6f0e2');
+      B(g, 2.0, 0.12, 0.5, PAL.wood, -3.4, 0.65, 3.4); [-4.2, -2.6].forEach(x => B(g, 0.12, 0.45, 0.4, PAL.wood, x, 0.2, 3.4, NE));
+      [[2.6, '#d8231f'], [3.5, '#3f7fbf']].forEach(([x, c]) => { B(g, 0.8, 0.5, 0.6, c, x, 0.2, 2.9); for (let i = 0; i < 6; i++) CYL(g, 0.07, 0.07, 0.35, 6, '#3fbf6a', x - 0.25 + (i % 3) * 0.25, 0.7, 2.75 + Math.floor(i / 3) * 0.28, NE); });
+      B(g, 0.8, 0.5, 0.6, '#3f7fbf', 3.0, 0.7, 2.9); gdAc(g, 2.0, 4.25, -3.0); } },
+    { key: 'gdFlowers', name: 'Flower shop', make(g) {                       // the florist: a little cottage shop with a blue roof, vines, pots and a post box
+      const W = '#f4efe4'; B(g, 6.4, 3.2, 5.6, W, 0, 0.2, -1.6); GABLE(g, 7.2, 2.0, 6.4, '#6fa6c8', 0, 3.4, -1.6, { ry: Math.PI / 2 });
+      B(g, 7.2, 0.16, 6.4, '#5a8fb2', 0, 3.3, -1.6, NE);
+      gdGlass(g, 2.6, 1.6, -1.6, 0.9, 1.22); P(g, 1.1, 2.3, '#b98a5a', 1.6, 0.2, 1.22); B(g, 1.3, 0.1, 0.1, PAL.wood, 1.6, 2.5, 1.25, NE);
+      gdSign(g, 'FLOWERS', 3.0, -0.6, 2.75, 1.3, '#f4efe4', '#c8603f');
+      for (let i = 0; i < 16; i++) { const x = -3.2 + gdR(i) * 6.4, y = 2.0 + gdR(i + 40) * 1.6; ICO(g, 0.35 + gdR(i + 9) * 0.2, 0, i % 3 ? PAL.leaf : PAL.leaf2, x, y, 1.3, NE); if (i % 2) ICO(g, 0.14, 0, i % 4 === 1 ? PAL.pink : '#e8473a', x + 0.1, y + 0.15, 1.6, NE); }
+      B(g, 4.0, 0.08, 2.2, '#cdb48c', -0.4, 0.2, 2.5, NE);                     // wooden deck
+      ['#d88fb0', '#a084c8', '#f2c14e', '#e8473a', '#f6f0e2', '#d88fb0'].forEach((c, i) => { const x = -3.4 + i * 0.75, z = 2.8 + (i % 2) * 0.6; CYL(g, 0.3, 0.22, 0.5, 6, PAL.terra2, x, 0.2, z, { open: true, edge: false }); ICO(g, 0.34, 0, PAL.leaf2, x, 0.85, z, NE); ICO(g, 0.22, 0, c, x, 1.05, z + 0.12, NE); });
+      B(g, 1.0, 0.6, 0.5, '#f2c14e', 2.6, 0.2, 2.6); [0, 1, 2].forEach(i => ICO(g, 0.2, 0, i === 1 ? '#a084c8' : PAL.pink, 2.3 + i * 0.3, 0.95, 2.6, NE));   // a yellow flower crate
+      { const pb = grp(g, 3.9, 0, 2.6); B(pb, 0.12, 0.9, 0.12, '#2f2b28', 0, 0.2, 0, NE); B(pb, 0.55, 0.9, 0.45, '#d23b2c', 0, 1.1, 0); B(pb, 0.4, 0.05, 0.05, '#2f2b28', 0, 1.7, 0.24, NE); } } },
+    { key: 'gdBakery', name: 'Bakery', make(g) {                             // the bakery: butter-yellow walls, a brown and cream awning, bread in the window
+      const W = '#f2dca0'; B(g, 7.2, 3.6, 6.0, W, 0, 0.2, -1.4); B(g, 7.6, 0.5, 6.4, '#7a4f34', 0, 3.8, -1.4); B(g, 7.2, 0.1, 6.0, PAL.sand2, 0, 4.3, -1.4, NE);
+      gdGlass(g, 2.4, 1.7, -2.2, 0.8, 1.62); gdGlass(g, 2.4, 1.7, 2.2, 0.8, 1.62); P(g, 1.2, 2.3, '#7a4f34', 0, 0.2, 1.62);
+      if (!GDO.blank) [-2.2, 2.2].forEach(x => { B(g, 2.3, 0.08, 0.3, '#8a6a4a', x, 1.0, 1.75, NE); for (let i = 0; i < 4; i++) CAP(g, 0.24, '#c98a4a', x - 0.8 + i * 0.53, 1.08, 1.78, { edge: false, s: [0.28, 0.2, 0.18] }); });
+      gdStripes(g, 7.2, 1.5, 0, 3.0, 1.65, 0, '#7a4f34', '#f6f0e2');
+      gdSign(g, 'BAKERY', 3.4, 0, 3.75, 1.85, '#7a4f34', '#f2dca0');
+      if (!GDO.blank) CAP(g, 1, '#c98a4a', 0, 4.4, -0.8, { s: [1.7, 1.0, 0.9] }); if (!GDO.blank) [-0.7, 0, 0.7].forEach(x => B(g, 0.1, 0.06, 0.9, '#f3e1b8', x, 5.32, -0.8, FLAT));   // a big loaf on the roof
+      B(g, 0.7, 1.1, 0.08, '#2f2b28', 3.2, 0.2, 3.0, { rx: -0.15 }); B(g, 2.0, 0.12, 0.5, PAL.wood, -2.6, 0.65, 3.3); [-3.4, -1.8].forEach(x => B(g, 0.12, 0.45, 0.4, PAL.iron, x, 0.2, 3.3, NE));
+      gdAc(g, 2.4, 4.4, -3.0); } },
+  ];
+  function gdR(i) { const x = Math.sin(i * 12.9898 + 4.1) * 43758.5453; return x - Math.floor(x); }
+  GD_SHOPS.forEach(k => def({ key: k.key, name: k.name, cat: 'Shops', part: 2, budget: 1600, size: 'Garden District shop · 12 × 12 m', night: true,
+    make: o => { GDO = o || {}; const g = new THREE.Group(); gdPad(g); k.make(g); GDO = {}; return g; } }));
+
   // ---- party kit (Night: everything lights up) ----
   const oct = (p, r, m, x, y, z, o) => put(p, geo('oct', () => new THREE.OctahedronGeometry(1, 0)), m, x, y, z, Object.assign({ edge: false, shadow: false, s: [r, r, r] }, o));
   const BULBS = ['#ffd98a', '#e8473a', '#5fbf6a', '#3f7fbf', '#f2c14e', '#d88fb0'];
@@ -2493,6 +2584,39 @@
 
   // 5. gdShopParade: 4 small shops on the ground floor (awnings, shop windows, sign panels) with 2 floors of flats above (8 flats).
   //    32 x 12 m + a 5 m pavement. o.signs = ['BAKERY', ...] (made-up names only); blank panels if not given, so copies batch.
+  // gdShopHouse (Dev, 22 Nov): a Garden District shop in the same style as the homes, but bigger: 2 floors, 12 x 11 m on a 16 x 16 m plot.
+  // Ground floor = the shop (big window, door, awning, a blank sign board until the shop is given out), first floor with shuttered windows,
+  // tiled gable roof + chimney, a paved forecourt with planters and a bench. o.v (0..5) picks the awning type + colours. Front = +z.
+  const GDSH = [['stripe', '#2f7a68'], ['canopy', '#4a3a30'], ['stripe', '#c8603f'], ['tile', null], ['stripe', '#3f5866'], ['canopy', '#7a4f34']];
+  def({ key: 'gdShopHouse', name: 'Shop (Garden District)', cat: 'Garden District', part: 2, budget: 900, size: '12 × 11 m · 16 × 16 m plot · 2 floors · 1 shop', night: true,
+    opts: gdOpts,
+    make(o) {
+      const v = (o.v | 0) % GDSH.length, [aw, ac] = GDSH[v], g = new THREE.Group(), W = slot('wall', o.wall || GD.walls[v % GD.walls.length]), R = slot('roof', o.roof || GD.roofs[v % GD.roofs.length]);
+      const zc = -1.5, zf = 4.0, FH = 3.2, y0 = 0.2, top = y0 + 2 * FH + 0.2, SW = glowMat(PAL.glassWarm, '#ffcf6a');
+      B(g, 16, 0.2, 16, '#e4d6b8', 0, 0, 0, { shadow: false }); B(g, 16, 0.04, 3.4, GD.PAVE, 0, 0.2, 6.2, FLAT);          // plot + forecourt
+      B(g, 12, 2 * FH + 0.2, 11, W, 0, y0, zc); B(g, 12.1, 0.4, 11.1, GD.BASE, 0, y0, zc, NE);                             // building + plinth
+      B(g, 12.2, 0.25, 11.2, GD.FRAME, 0, y0 + FH, zc, NE);                                                                // band between the floors
+      GABLE(g, 13.6, 3.0, 12.2, R, 0, top, zc, { ry: Math.PI / 2 }); B(g, 0.8, 1.8, 0.8, GD.BASE, 3.6, top + 1.1, zc - 2);  // roof + chimney
+      // the shop front: two big windows, a glass door, the sign board (blank until the shop is given out)
+      [-3.4, 3.0].forEach(x => { P(g, 4.0, 2.2, GD.FRAME, x, y0 + 0.45, zf + 0.02); P(g, 3.7, 1.95, SW, x, y0 + 0.58, zf + 0.05); B(g, 4.2, 0.12, 0.35, GD.BASE, x, y0 + 0.4, zf + 0.15, NE); });
+      P(g, 1.5, 2.55, GD.FRAME, -0.3, y0, zf + 0.02); P(g, 1.2, 2.35, SW, -0.3, y0 + 0.05, zf + 0.05); B(g, 0.06, 0.4, 0.06, PAL.iron, 0.2, y0 + 1.1, zf + 0.1, NE);
+      B(g, 10.6, 0.8, 0.2, '#3a2f28', 0, y0 + 2.75, zf + 0.05); P(g, 10.0, 0.5, mat('#f6f0e2'), 0, y0 + 2.9, zf + 0.17);
+      if (aw === 'stripe') gdStripes(g, 11.6, 1.8, 0, y0 + 2.7, zf + 0.12, 0, ac, '#f6f0e2', 0.4);
+      else if (aw === 'canopy') { B(g, 12.4, 0.18, 1.8, ac, 0, y0 + 2.6, zf + 0.9); [-5.8, 5.8].forEach(x => B(g, 0.08, 0.06, 1.8, PAL.iron, x, y0 + 3.0, zf + 0.9, { rx: -0.5, edge: false })); }
+      else { const t = grp(g, 0, y0 + 2.75, zf + 0.1); t.rotation.x = 0.45; B(t, 12.2, 0.16, 1.9, R, 0, 0, 0.95); }
+      // first floor: 3 shuttered windows; the sides and back get plain windows
+      [-4, 0, 4].forEach(x => { gdWin(g, x, y0 + FH + 0.8, zf + 0.02, 1.4, 1.5); gdShut(g, x, y0 + FH + 0.8, zf + 0.02, 1.4, 1.5); });
+      B(g, 1.9, 0.12, 0.5, GD.BASE, 0, y0 + FH + 0.65, zf + 0.25, NE); [-0.6, 0, 0.6].forEach((x, i) => plant(g, x, y0 + FH + 0.77, zf + 0.25, i === 1 ? '#f2c14e' : PAL.pink));   // window box
+      [-1, 1].forEach(s => { gdWin(g, s * 6.02, y0 + 1.0, zc, 1.3, 1.4, s * Math.PI / 2); gdWin(g, s * 6.02, y0 + FH + 0.8, zc, 1.3, 1.4, s * Math.PI / 2); });
+      [-3, 3].forEach(x => gdWin(g, x, y0 + FH + 0.8, zc - 5.52, 1.3, 1.4, Math.PI));
+      // forecourt: planters, a bench, a bike stand; small back yard with a fence
+      [-7.2, 7.2].forEach(x => { B(g, 1.2, 0.6, 1.2, PAL.terra2, x, 0.2, 6.6); gdTree(g, x, 0.8, 6.6, 0.6); });
+      gdBench(g, -4.6, 7.2, Math.PI); [3.6, 4.4, 5.2].forEach(x => B(g, 0.06, 0.7, 0.9, PAL.iron, x, 0.2, 7.0, NE));
+      [-1, 1].forEach(s => B(g, 0.08, 1.2, 4.2, GD.FENCE, s * 7.96, 0.2, -5.8, NE)); B(g, 16, 1.2, 0.08, GD.FENCE, 0, 0.2, -7.96, NE);
+      B(g, 0.6, 1.0, 0.6, '#3f5e42', 5.6, 0.2, -6.6, NE);
+      return g;
+    } });
+
   def({ key: 'gdShopParade', name: 'Shop parade + flats', cat: 'Garden District', part: 2, budget: 1200, size: '32 × 12 m · 4 shops + 8 flats · 3 floors', night: true,
     opts: { wall: colours('Walls', GD.walls), roof: colours('Roof', GD.roofs), awnings: choices('Awnings', Object.keys(CP.awnings)), signs: choices('Signs', ['blank', 'sample']) },
     make(o) {

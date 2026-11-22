@@ -2518,6 +2518,11 @@ MLANE.lots.forEach(([x, z], k) => { LOTS[101 + k] = { x, z, ry: Math.PI, sg: 1, 
 // CORAL BAY (Dev, 20 Nov): 6 big beachfront mansion plots on the strip between Beach Lane and the sand (x 645..1075). #1 sits by The Club.
 const CB = { X0: 645, X1: 1075, PZ: -737, xs: [690, 760, 830, 900, 970, 1040] };
 CB.xs.forEach((x, i) => { LOTS[111 + i] = { x, z: CB.PZ, ry: Math.PI, sg: 1, mansion: true, cb: true, mz: CB.PZ + 4, sc: 1.3 }; });
+// LAKESIDE MANSIONS (Dev, 22 Nov): 12 mansion plots in the Garden District, in the middle band beside the lake park (west + east, north + south
+// of the boulevard), 3 per strip, the gate on the boulevard (z 0), the garden and pool towards the lane. Lots 121..132. Same rules as Coral Bay.
+const LKM = { xs: [-869.5, -822.5, -775.5, -507.5, -460.5, -413.5], gate: 6, sc: 0.95 };
+[-1, 1].forEach((hs, h) => LKM.xs.forEach((x, i) => { const mz = hs * (LKM.gate + 30.9 * LKM.sc);
+  LOTS[121 + h * 6 + i] = { x, z: hs * 38, ry: hs < 0 ? Math.PI : 0, sg: 1, mansion: true, cb: true, lk: true, mz, sc: LKM.sc }; }));
 const isMansion = lot => lot >= 101;
 (function drawNorth() {
   const hide = new THREE.Matrix4().makeScale(0, 0, 0);
@@ -3370,7 +3375,7 @@ PLOTS.push(...RS.flats);
 // the name tag goes up when someone moves in. Appended after every existing home: nobody's number or home changes. Area code 'L'.
 // 16 Nov (evening, Dev): stretched north-south so the perimeter roads continue the end lanes of the Central District next to it
 // (north edge = the beach road z -758, south edge = the last Central lane z 572). The boulevard stays on z 0, so the north half is deeper.
-const GD = { XW: -897, XE: -386, SX: -641.5, RZ: 130, ZN: 758, ZS: 572, BELT: -290, ST: 28, nN: 16, nS: 11, blds: [], kit: [], parks: [], roads: [], lots: [] };
+const GD = { SHOPS: true, MANSIONS: true, XW: -897, XE: -386, SX: -641.5, RZ: 130, ZN: 758, ZS: 572, BELT: -290, ST: 28, nN: 16, nS: 11, blds: [], kit: [], parks: [], roads: [], lots: [] };
 GD.ze = hs => (hs < 0 ? GD.ZN : GD.ZS); GD.nh = hs => (hs < 0 ? GD.nN : GD.nS);
 GD.cols = [[-893.5, -773.5], [-766.5, -646.5], [-636.5, -516.5], [-509.5, -389.5]];              // the four housing columns (120 m)
 GD.bands = [[-893.5, -751.5], [-531.5, -389.5]];                                                   // middle band, west and east of the park ring
@@ -3416,7 +3421,7 @@ GD.gate = [GD.XE, 0];
   }));
   { const [x0, x1] = GD.bands[1], cx = (x0 + x1) / 2;                                    // HIGH STREET: 3 shop parades facing the boulevard
     [-36, 0, 36].forEach(dx => put('LP', cx + dx, -15, 0, UNITS.LP)); }
-  [[GD.bands[1][0] + 52, 19], [GD.bands[1][0] + 82, 19], [GD.bands[1][0] + 112, 19], [GD.bands[0][0] + 33, -38], [GD.bands[0][0] + 71, -38], [GD.bands[0][0] + 109, -38]].forEach(p => GD.parks.push(p));
+  [[GD.bands[1][0] + 52, 19], [GD.bands[1][0] + 82, 19], [GD.bands[1][0] + 112, 19], [GD.bands[0][0] + 33, -38], [GD.bands[0][0] + 71, -38], [GD.bands[0][0] + 109, -38]].forEach(p => { if (!GD.MANSIONS) GD.parks.push(p); });
   // ---- roads: perimeter + collectors (7 m), boulevard, spine and park ring (10 m), corridors (5.5 m) added above
   const ZN = GD.ZN, ZS = GD.ZS, XW = GD.XW, XE = GD.XE, R = GD.RZ, RW = GD.SX - 105, RE = GD.SX + 105;
   rd(7, ZN + ZS + 7, XW, (ZS - ZN) / 2); rd(7, ZN + ZS + 7, XE, (ZS - ZN) / 2); rd(XE - XW + 7, 7, (XW + XE) / 2, -ZN); rd(XE - XW + 7, 7, (XW + XE) / 2, ZS);
@@ -3438,7 +3443,13 @@ GD.gate = [GD.XE, 0];
   // services on the old apartment land (front to the collector), a pocket park and trees on the second row
   { const [w0] = GD.bands[0], [e0] = GD.bands[1], N = Math.PI;
     // (Dev, 16 Nov night) the middle band stays open green: sports ground + pocket parks only, no buildings
-    GD.bands.forEach(([x0]) => [-1, 1].forEach(hs => GD.parks.push([x0 + 71, hs * 92]))); }
+    if (!GD.SHOPS) GD.bands.forEach(([x0]) => [-1, 1].forEach(hs => GD.parks.push([x0 + 71, hs * 92])));
+    // (Dev, 22 Nov) SHOP STRIPS: the 4 strips at the ends of the middle band (z ±77..±126.5, by the lake park) become shop rows: one row faces the
+    // outer road, one row faces the lane, back to back, with a green belt of trees between them. No names yet: shops are given out later.
+    // (Dev, 22 Nov evening) the shops are gdShopHouse: the homes' style but bigger (2 floors, 12 x 11 m on 16 x 16 m), 7 per row
+    if (GD.SHOPS) { let n = 0; GD.shopSpots = [];
+      GD.bands.forEach(([x0, x1]) => [-1, 1].forEach(hs => [118, 85.5].forEach(zz => { const ry = (hs < 0) === (zz > 100) ? Math.PI : 0, P = 18.5, k = Math.floor((x1 - x0 - 6) / P), xs = (x0 + x1) / 2 - (k - 1) * P / 2;
+        for (let i = 0; i < k; i++) { const x = xs + i * P, z = hs * zz, v = (n * 2 + i * 5) % 6; GD.kit.push(['gdShopHouse', { v, wall: ['#f3e6cc', '#f3e2a0', '#f2cfb3', '#e3d8c4', '#efd9b4', '#e9e2d0'][(i + n) % 6], roof: ['#c8603f', '#5b5f66', '#b5543a', '#8a5a3a'][(i * 3 + n) % 4] }, x, z, ry]); GD.shopSpots.push([x, z, ry]); } n++; }))); } }
   GD.n0 = PLOTS.length; GD.homes = out.length; PLOTS.push(...out); }
 // ---- THE SUBURB (Dev's sketch, 17 Nov night): box south of the city (x -897..320, z 625..1175). A wide boulevard east-west through the
 // middle; a green strip down the middle (x -343..-233) for the centre (plaza, shops, supermarket, sports, big-building lots); 8 housing
@@ -3929,7 +3940,7 @@ function powerCard() {
   const N = { edge: false, shadow: false }, g = new THREE.Group(), palms = [];
   // MANSION ROW plots: lawn over the old shop blocks, then per plot a sand pad, white outline and a sign by the back road (hidden once built)
   [[80.5, 181.5], [186.5, 287.5]].forEach(([a, b]) => B(g, b - a, 0.12, 62, '#a9cf78', (a + b) / 2, 0.03, -719.5, N));
-  Object.keys(LOTS).filter(k => +k >= 101).forEach(k => { const L = LOTS[k], sg = new THREE.Group();
+  Object.keys(LOTS).filter(k => +k >= 101 && !LOTS[k].lk).forEach(k => { const L = LOTS[k], sg = new THREE.Group();
     B(sg, 48, 0.14, 57, '#f3e3bd', L.x, 0.05, L.z, { edge: false });
     [[0, -29.3, 49, 0.4], [0, 29.3, 49, 0.4], [-24.5, 0, 0.4, 58.6], [24.5, 0, 0.4, 58.6]].forEach(([dx, dz, w, d]) => B(sg, w, 0.5, d, '#f6f3ea', L.x + dx, 0.05, L.z + dz, { edge: false }));
     signBoard(sg, 'MANSION PLOT ' + (k - 100), L.x, 1.6, -692, 6.4, 1.1, '#3a2a20', '#f6d27a', 0); scene.add(sg); L.sign = sg; });
@@ -4013,7 +4024,7 @@ function powerCard() {
   // MIDDLE BAND greens: lawn under the apartment clusters, the high street green, the west garden and the sports ground
   GD.bands.forEach(([x0, x1]) => [-1, 1].forEach(hs => { B(g, x1 - x0, 0.1, 54, '#a9cf78', (x0 + x1) / 2, 0.02, hs * 101, N);
   }));
-  { const [x0, x1] = GD.bands[1], cx = (x0 + x1) / 2;
+  if (!GD.MANSIONS) { const [x0, x1] = GD.bands[1], cx = (x0 + x1) / 2;
     B(g, x1 - x0, 0.06, 4, '#e6dccb', cx, 0.03, -5, N);                                                        // high street pavement
     B(g, x1 - x0, 0.12, 44, '#a9cf78', cx, 0.03, -48, N); B(g, x1 - x0, 0.14, 3, '#e6dccb', cx, 0.04, -48, N); B(g, 3, 0.14, 44, '#e6dccb', cx, 0.04, -48, N);   // the green behind the shops
     add(g, new THREE.CylinderGeometry(4.2, 4.6, 0.8, 20), '#e9e1cf', cx, 0.4, -48, { edge: false }); add(g, new THREE.CylinderGeometry(3.6, 3.6, 0.2, 20), '#4aa3cf', cx, 0.82, -48, N); add(g, new THREE.CylinderGeometry(0.4, 0.6, 2.6, 10), '#e9e1cf', cx, 1.5, -48, { edge: false });
@@ -4021,7 +4032,7 @@ function powerCard() {
     [-30, 30].forEach(dx => { bench(g, cx + dx, -45.8, Math.PI); bench(g, cx + dx, -50.2, 0); flowerBed(g, cx + dx * 0.5, -48, C.pink); });
     B(g, x1 - x0, 0.12, 62, '#a9cf78', cx, 0.03, 38, N);                                                        // lawn round the community centre
     for (let k = 0; k < 9; k++) tree(g, x0 + 8 + k * 15.5, 0.1, 57, k % 4 ? 'canopy' : 'pink', 0.9 + (k % 3) * 0.1); }
-  { const [x0, x1] = GD.bands[0], cx = (x0 + x1) / 2;
+  if (!GD.MANSIONS) { const [x0, x1] = GD.bands[0], cx = (x0 + x1) / 2;
     B(g, x1 - x0, 0.12, 62, '#a9cf78', cx, 0.03, -38, N); for (let k = 0; k < 5; k++) tree(g, x0 + 10 + k * 30.6, 0.1, -64 + (k % 2) * 3, k % 3 ? 'canopy' : 'pink', 0.95);
     for (let k = 0; k < 5; k++) tree(g, x0 + 25 + k * 30.6, 0.1, -12 - (k % 2) * 2, k % 3 ? 'cypress' : 'canopy', 0.9);
     // SPORTS GROUND: running track, football pitch, a small stand, trees
@@ -4031,6 +4042,21 @@ function powerCard() {
     [-1, 1].forEach(s => { B(g, 0.2, 2.4, 0.2, '#f6f3ea', cx + s * 50, 0.2, sz - 3.6); B(g, 0.2, 2.4, 0.2, '#f6f3ea', cx + s * 50, 0.2, sz + 3.6); B(g, 0.2, 0.2, 7.4, '#f6f3ea', cx + s * 50, 2.5, sz); });
     for (let r = 0; r < 4; r++) B(g, 40, 0.5, 1.2, r % 2 ? '#3f5866' : '#c9922e', cx, 0.2 + r * 0.5, sz + 27.5 + r * 1.2);   // little stand on the south side
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => tree(g, cx + a * 66, 0.1, sz + b * 26, 'canopy', 1.1)); }
+  if (GD.MANSIONS) { GD.bands.forEach(([x0, x1]) => [-1, 1].forEach(hs => B(g, x1 - x0, 0.1, 64, '#a9cf78', (x0 + x1) / 2, 0.02, hs * 38, N)));
+    for (let n = 121; n <= 132; n++) { const L = LOTS[n], hs = L.z < 0 ? -1 : 1, W = 44, D = 60, zc = hs * 37, zg = hs * 7.5, sg = new THREE.Group();
+      B(g, W, 0.12, D, '#b7d98a', L.x, 0.04, zc, N);                                                            // the plot lawn
+      [-1, 1].forEach(sx => B(g, 0.6, 0.9, D, '#f7f3ea', L.x + sx * W / 2, 0.04, zc, N));                       // side walls
+      B(g, W, 0.9, 0.6, '#f7f3ea', L.x, 0.04, zc + hs * D / 2, N);                                               // back wall (lane side)
+      [-1, 1].forEach(sx => { B(g, W / 2 - 4, 0.9, 0.6, '#f7f3ea', L.x + sx * (W / 4 + 2), 0.04, zg, N); B(g, 1.2, 2.2, 1.2, '#efe6d2', L.x + sx * 4, 0.04, zg, N); });   // front wall + gate piers
+      B(g, 6.4, 0.16, 6, '#e9dcc0', L.x, 0.05, zg - hs * 3.4, N);                                                // the drive apron to the boulevard
+      [-1, 1].forEach(sx => tree(g, L.x + sx * (W / 2 + 1.5), 0.1, zc + hs * 6, sx > 0 ? 'cypress' : 'canopy', 0.95));
+      flowerBed(sg, L.x - 7, zc, C.pink); flowerBed(sg, L.x + 7, zc, C.purple); add(sg, new THREE.CylinderGeometry(5, 5, 0.1, 24), '#e9dcc0', L.x, 0.14, zc, { edge: false });
+      signBoard(sg, 'LAKESIDE ' + (n - 120), L.x, 1.6, zg + hs * 2.2, 6.4, 1.1, '#2f5d4a', '#f6d27a', hs < 0 ? 0 : Math.PI); scene.add(sg); L.sign = sg; } }
+  if (GD.SHOPS) GD.bands.forEach(([x0, x1]) => [-1, 1].forEach(hs => {   // (22 Nov) the green belt behind the shop rows: a footpath, trees, bushes, flowers
+    const zc = hs * 101.75; B(g, x1 - x0 - 6, 0.1, 2.6, '#e9dcc0', (x0 + x1) / 2, 0.06, zc, { edge: false, shadow: false });
+    for (let x = x0 + 6; x < x1 - 4; x += 7.5) [-1, 1].forEach(sd => { const q = Math.abs(Math.sin(x * 12.9 + sd * 7 + hs)) ; const z = zc + sd * (3 + q * 3.5);
+      if (q < 0.62) tree(g, x + q * 3, 0.1, z, q < 0.12 ? 'pink' : q < 0.22 ? 'cypress' : 'canopy', 0.85 + q * 0.5); else if (q < 0.8) bush(x + 1, z); else flowerBed(g, x, z, q < 0.9 ? C.pink : C.purple); });
+    for (let x = x0 + 14; x < x1 - 8; x += 26) bench(g, x, zc + 1.9, Math.PI); }));
   // the edge of the district: hedge-and-tree line outside the perimeter road, so the suburb has a clean border
   for (let x = GD.XW; x <= GD.XE; x += 18) [-1, 1].forEach(hs => tree(g, x, 0.1, hs * (GD.ze(hs) + 7), ((x / 18) | 0) % 3 ? 'canopy' : 'cypress', 0.95));
   for (let z = -ZN; z <= ZS; z += 18) tree(g, GD.XW - 7, 0.1, z, ((z / 18) | 0) % 3 ? 'canopy' : 'cypress', 0.95);
