@@ -853,6 +853,147 @@
   GD_SHOPS.forEach(k => def({ key: k.key, name: k.name, cat: 'Shops', part: 2, budget: 1600, size: 'Garden District shop · 12 × 12 m', night: true,
     make: o => { GDO = o || {}; const g = new THREE.Group(); gdPad(g); k.make(g); GDO = {}; return g; } }));
 
+  // ================= BUILD MODE ASSETS (22 Nov): low-poly game pieces for map/?build. Metres, ground y = 0, front = +z. =================
+  // Nature pieces are single, light objects (no ground pad) for the paint brush; buildings stand on their own paved pad.
+  const bmS = (p, m, x, y, z, s, o) => put(p, geo('ico0', () => new THREE.IcosahedronGeometry(1, 0)), m, x, y, z, Object.assign({}, o, { s }));   // a squashed low-poly blob
+  const bmD = (p, m, x, y, z, s, o) => put(p, geo('dode', () => new THREE.DodecahedronGeometry(1, 0)), m, x, y, z, Object.assign({}, o, { s }));    // a chunky rock
+  function bmVan(p, x, z, ry, body, cab, stripe) {                       // a simple service vehicle (ambulance / police car / fire truck / bin lorry)
+    const g = grp(p, x, 0, z, ry); [-0.85, 0.85].forEach(wx => [-1.6, 1.4].forEach(wz => WHEEL(g, 0.42, 0.3, wx, wz, 8)));
+    B(g, 2.0, 1.0, 4.8, body, 0, 0.35, 0); TAPER(g, 2.0, 0.9, 1.7, cab || body, 0, 1.35, 1.45, { tw: 0.92, td: 0.75, tz: -0.1 });
+    P(g, 1.7, 0.6, PAL.glass, 0, 1.55, 2.31); if (stripe) B(g, 2.04, 0.22, 4.84, stripe, 0, 0.85, 0, NE); return g; }
+  function bmGlassRow(p, n, w, h, x0, step, y, z) { for (let i = 0; i < n; i++) P(p, w, h, glowMat(PAL.glass, PAL.lampOn), x0 + i * step, y, z); }
+  function bmPave(g, w, d, c) { B(g, w, 0.15, d, c || '#d9d2c2', 0, 0, 0, { shadow: false }); }
+
+  // ---- Nature ----
+  def({ key: 'bmTreeRound', name: 'Round tree', cat: 'Nature', part: 2, budget: 120, size: '4 × 4 m · 6 m tall', opts: { leaf: colours('Leaves', ['#4f8a42', '#6aa84f', '#d88fb0', '#e2a24a']) },
+    make(o) { const g = new THREE.Group(), L = slot('leaf', o.leaf || '#4f8a42');
+      CYL(g, 0.22, 0.32, 2.6, 6, PAL.wood, 0, 0, 0, { open: true });
+      bmS(g, L, 0, 3.6, 0, [1.9, 1.6, 1.9]); bmS(g, L, 0.7, 4.7, 0.3, [1.2, 1.0, 1.2], NE); bmS(g, L, -0.8, 3.3, -0.4, [1.0, 0.9, 1.0], NE); return g; } });
+  def({ key: 'bmTreePine', name: 'Pine tree', cat: 'Nature', part: 2, budget: 90, size: '3.5 × 3.5 m · 7 m tall',
+    make() { const g = new THREE.Group(); CYL(g, 0.18, 0.26, 1.4, 6, PAL.wood, 0, 0, 0, { open: true });
+      [[1.75, 2.4, 1.0], [1.35, 2.1, 2.6], [0.9, 1.9, 4.0]].forEach(([r, h, y], i) => CYL(g, 0.001, r, h, 7, i % 2 ? '#3d6b3a' : '#467a42', 0, y, 0, { open: true })); return g; } });
+  def({ key: 'bmRockBig', name: 'Big rock', cat: 'Nature', part: 2, budget: 80, size: '3 × 2.4 m · 1.6 m tall', opts: { stone: colours('Stone', ['#9a958c', '#b7ad9c', '#7d7a74']) },
+    make(o) { const g = new THREE.Group(), S = slot('stone', o.stone || '#9a958c');
+      bmD(g, S, 0, 0.7, 0, [1.5, 0.95, 1.15], { ry: 0.4 }); bmS(g, S, 0.9, 0.35, 0.6, [0.6, 0.45, 0.55], { ry: 1.1 }); bmS(g, '#6f9a4e', -0.2, 1.45, 0.1, [0.75, 0.18, 0.55], NE); return g; } });
+  def({ key: 'bmRocks', name: 'Rocks (small)', cat: 'Nature', part: 2, budget: 80, size: '2 × 1.6 m',
+    make() { const g = new THREE.Group(); [[0, 0.32, 0, 0.55, '#a39d92'], [0.75, 0.22, 0.35, 0.38, '#8f8a80'], [-0.6, 0.2, 0.45, 0.32, '#b4ab9b'], [0.2, 0.16, -0.6, 0.28, '#8f8a80']]
+      .forEach(([x, y, z, r, c], i) => bmD(g, c, x, y, z, [r, r * 0.7, r * 0.9], { ry: i * 0.9 })); return g; } });
+  def({ key: 'bmBush', name: 'Bush with flowers', cat: 'Nature', part: 2, budget: 110, size: '2.2 × 1.8 m · 1.3 m tall', opts: { flower: colours('Flowers', ['#d88fb0', '#f2c14e', '#e8473a', '#f6f0e2', '#a084c8']) },
+    make(o) { const g = new THREE.Group(), F = slot('flower', o.flower || '#d88fb0');
+      bmS(g, '#4f8a42', 0, 0.55, 0, [0.9, 0.7, 0.8]); bmS(g, '#5e9a4e', 0.65, 0.45, 0.2, [0.6, 0.5, 0.55], NE); bmS(g, '#467a42', -0.6, 0.4, 0.1, [0.55, 0.45, 0.5], NE);
+      [[0.2, 1.1, 0.5], [-0.4, 0.9, 0.6], [0.8, 0.85, 0.5], [-0.1, 1.2, -0.2], [0.5, 1.0, -0.3]].forEach(([x, y, z]) => bmS(g, F, x, y, z, [0.13, 0.13, 0.13], NE)); return g; } });
+
+  // ---- Hospital ----
+  def({ key: 'bmHospital', name: 'Hospital', cat: 'Hospital', part: 2, budget: 1600, size: '32 × 26 m · 3 floors', night: true, opts: { trim: colours('Trim', ['#3f8f8a', '#3f7fbf', '#2f7a68']) },
+    make(o) { const g = new THREE.Group(), T = slot('trim', o.trim || '#3f8f8a'), W = '#f4f1ea', H = 3.4;
+      bmPave(g, 32, 26); B(g, 32, 0.16, 6, '#55575c', 0, 0.02, 10, FLAT);                                     // drop-off road in front
+      B(g, 24, 3 * H, 14, W, 0, 0.15, -3); B(g, 10, 2 * H, 8, W, -8, 0.15, 6.5);                                 // main block + the emergency wing
+      [1, 2].forEach(f => B(g, 24.3, 0.3, 14.3, T, 0, 0.15 + f * H - 0.15, -3, NE)); B(g, 24.6, 0.5, 14.6, T, 0, 0.15 + 3 * H, -3); B(g, 10.3, 0.4, 8.3, T, -8, 0.15 + 2 * H, 6.5);
+      for (let f = 0; f < 3; f++) bmGlassRow(g, 7, 2.0, 1.6, -9, 3, 0.15 + f * H + 1.0, 4.02);
+      bmGlassRow(g, 2, 2.4, 1.6, -10.5, 5, 0.15 + H + 1.0, 10.52);
+      P(g, 4.4, 2.6, glowMat(PAL.glass, PAL.lampOn), 6, 0.15, 4.03); B(g, 7, 0.3, 3.6, T, 6, 3.0, 5.6); [-3.2, 3.2].forEach(dx => B(g, 0.25, 2.9, 0.25, '#dcd6c8', 6 + dx, 0.15, 7.2, NE));   // glass doors + canopy
+      P(g, 6, 1.0, textMat('HOSPITAL', '#f4f1ea', '#3f8f8a'), 6, 3.35, 7.42);
+      P(g, 6, 1.0, textMat('EMERGENCY', '#e8473a', '#ffffff'), -8, 2.7, 10.53);
+      const cx = grp(g, 4, 0.15 + 3 * H + 0.5, 4.2); B(cx, 3.2, 1.0, 0.4, '#e8473a', 0, 1.1, 0); B(cx, 1.0, 3.2, 0.4, '#e8473a', 0, 0, 0); B(cx, 3.6, 0.25, 0.6, '#f4f1ea', 0, -0.25, 0, NE);   // red cross on the roof edge
+      CYL(g, 4, 4, 0.12, 16, '#5b5f66', -6, 0.15 + 3 * H + 0.5, -4); P(g, 2.4, 2.4, textMat('H', '#5b5f66', '#f2c14e'), -6, 0.15 + 3 * H + 0.65, -4, { rx: -Math.PI / 2 });   // helipad
+      bmVan(g, -8, 13.5, Math.PI, '#f4f1ea', '#f4f1ea', '#e8473a'); B(g, 0.4, 0.25, 1.2, '#3f7fbf', -8, 2.25, 13.5, NE);
+      [[-14, 11.5], [14, 11.5], [14, 4]].forEach(([x, z]) => tree(g, x, 0.15, z, 'canopy', 0.8)); return g; } });
+
+  // ---- Police ----
+  def({ key: 'bmPolice', name: 'Police station', cat: 'Police', part: 2, budget: 1300, size: '24 × 20 m · 2 floors', night: true,
+    make() { const g = new THREE.Group(), W = '#eef0f2', N = '#2f4f8a', H = 3.4;
+      bmPave(g, 24, 20); B(g, 18, 2 * H, 11, W, -1, 0.15, -3.5); B(g, 18.4, 0.5, 11.4, N, -1, 0.15 + 2 * H, -3.5); B(g, 18.2, 1.0, 0.3, N, -1, 0.15, 2.1, NE);
+      B(g, 6, 2 * H + 2.2, 6, N, 7, 0.15, -1.5); B(g, 6.4, 0.4, 6.4, '#eef0f2', 7, 0.15 + 2 * H + 2.2, -1.5);                // the blue tower
+      for (let f = 0; f < 2; f++) bmGlassRow(g, 4, 2.0, 1.5, -8, 3.2, 0.15 + f * H + 1.0, 2.02);
+      P(g, 3.0, 2.6, glowMat(PAL.glass, PAL.lampOn), 7, 0.15, 1.52); B(g, 4.4, 0.25, 2.2, N, 7, 3.0, 2.6); P(g, 4.8, 1.1, textMat('POLICE', N, '#ffffff'), 7, 4.4, 1.53);
+      CYL(g, 1.05, 1.05, 0.2, 12, '#f2c14e', 7, 7.0, 1.55, { rx: Math.PI / 2 }); CYL(g, 0.7, 0.7, 0.22, 6, N, 7, 7.0, 1.62, { rx: Math.PI / 2, edge: false });   // badge
+      B(g, 1.2, 0.4, 0.6, '#3f7fbf', 6.4, 0.15 + 2 * H + 2.6, -1.5, NE); B(g, 1.2, 0.4, 0.6, '#e8473a', 7.6, 0.15 + 2 * H + 2.6, -1.5, NE);   // roof lights
+      CYL(g, 0.08, 0.08, 9, 6, '#d9dcd8', -11, 0.15, 6, { open: true }); B(g, 2.0, 1.2, 0.05, N, -10, 7.7, 6, NE);                      // flag
+      bmVan(g, -5, 6.5, 0, '#f6f6f6', '#2f2b28', N); bmVan(g, -1, 6.5, 0, '#f6f6f6', '#2f2b28', N);
+      [-5, -1].forEach(x => { B(g, 0.4, 0.2, 0.6, '#3f7fbf', x - 0.25, 2.25, 7.9, NE); B(g, 0.4, 0.2, 0.6, '#e8473a', x + 0.25, 2.25, 7.9, NE); });
+      [-3, 1, 5].forEach(x => B(g, 0.12, 0.02, 5.2, '#ffffff', x, 0.16, 6.5, FLAT)); return g; } });
+
+  // ---- Fire ----
+  def({ key: 'bmFire', name: 'Fire station', cat: 'Fire', part: 2, budget: 1400, size: '26 × 20 m · 2 floors + tower', night: true,
+    make() { const g = new THREE.Group(), R = '#b8432f', T = '#f2e6cc', H = 3.6;
+      bmPave(g, 26, 20); B(g, 16, 0.16, 6, '#c9c2b0', -3, 0.02, 7, FLAT);
+      B(g, 18, 2 * H, 12, R, -3, 0.15, -3); B(g, 18.4, 0.5, 12.4, T, -3, 0.15 + 2 * H, -3); B(g, 18.2, 0.3, 12.2, T, -3, 0.15 + H, -3, NE);
+      [-8.5, -3, 2.5].forEach(x => { B(g, 4.4, 4.2, 0.2, T, x, 0.15, 3.0, NE); for (let k = 0; k < 7; k++) B(g, 3.8, 0.5, 0.12, k % 2 ? '#d9dcd8' : '#c3c8cc', x, 0.3 + k * 0.52, 3.12, NE); });   // 3 roll-up doors
+      bmGlassRow(g, 5, 2.0, 1.4, -10, 3.5, 0.15 + H + 1.0, 3.02);
+      P(g, 9, 1.0, textMat('FIRE STATION', T, R), -3, 0.15 + 2 * H - 1.2, 3.03);
+      B(g, 4.5, 15, 4.5, R, 9.5, 0.15, -5); B(g, 5.2, 0.5, 5.2, T, 9.5, 15.15, -5); HIP(g, 5.4, 2.2, 5.4, '#5b5f66', 9.5, 15.65, -5);   // hose tower
+      [6, 10].forEach(y => P(g, 1.4, 1.8, glowMat(PAL.glass, PAL.lampOn), 9.5, y, -2.73));
+      CYL(g, 0.45, 0.45, 0.6, 8, '#e8473a', -3, 0.15 + 2 * H + 0.5, 2.5, { edge: false });                                                   // siren
+      const tr = bmVan(g, -3, 8.2, 0, '#e8473a', '#e8473a', '#f6f0e2'); B(tr, 1.6, 0.25, 3.6, '#d9dcd8', 0, 1.4, -0.6, NE); B(tr, 0.3, 0.3, 4.2, '#c3c8cc', 0, 1.7, -0.4, NE);   // ladder on the truck
+      [[-11.5, 7.5], [-12, 0]].forEach(([x, z]) => { CYL(g, 0.25, 0.3, 0.8, 8, '#e8473a', x, 0.15, z); CAP(g, 0.25, '#e8473a', x, 0.95, z, NE); });   // hydrants
+      tree(g, 11, 0.15, 7, 'canopy', 0.8); return g; } });
+
+  // ---- Education ----
+  def({ key: 'bmSchool', name: 'School', cat: 'Education', part: 2, budget: 1600, size: '32 × 24 m · 2 floors', night: true, opts: { wall: colours('Wall', ['#f2dca0', '#f2cfb3', '#f6f0e2']), roof: colours('Roof', ['#c8603f', '#4f9a86', '#5b5f66']) },
+    make(o) { const g = new THREE.Group(), W = slot('wall', o.wall || '#f2dca0'), R = slot('roof', o.roof || '#c8603f'), H = 3.4;
+      bmPave(g, 32, 24, '#e4d6b8'); B(g, 32, 0.16, 7, '#6aa84f', 0, 0.02, 8.5, FLAT);                                  // front lawn / yard
+      [-9, 9].forEach(x => { B(g, 11, 2 * H, 10, W, x, 0.15, -4); HIP(g, 12, 2.6, 11, R, x, 0.15 + 2 * H, -4);
+        for (let f = 0; f < 2; f++) for (let i = 0; i < 3; i++) win(g, x - 3.5 + i * 3.5, 0.15 + f * H + 0.9, 1.02, 0, 1.4, 1.5, { warm: true, shutters: false }); });
+      B(g, 7, 2 * H + 1.2, 11, '#f6f0e2', 0, 0.15, -3.5); GABLE(g, 7.4, 2.4, 11.4, R, 0, 0.15 + 2 * H + 1.2, -3.5, { ry: Math.PI / 2 });     // middle hall
+      B(g, 3, 4, 3, '#f6f0e2', 0, 0.15 + 2 * H + 2.2, -3.5); HIP(g, 3.6, 2.2, 3.6, R, 0, 0.15 + 2 * H + 6.2, -3.5);                          // bell tower
+      CYL(g, 1.0, 1.0, 0.15, 14, '#ffffff', 0, 0.15 + 2 * H + 4.2, -1.95, { rx: Math.PI / 2 }); B(g, 0.1, 0.7, 0.05, PAL.iron, 0, 0.15 + 2 * H + 4.2, -1.85, NE); B(g, 0.5, 0.1, 0.05, PAL.iron, 0.25, 0.15 + 2 * H + 4.2, -1.85, NE);   // clock
+      door(g, 0, 0.15, 2.02, 0, 2.2, 2.6, '#7a4f34'); P(g, 5, 0.9, textMat('SCHOOL', '#f6f0e2', '#c8603f'), 0, 0.15 + H + 0.6, 2.03);
+      CYL(g, 0.08, 0.08, 9, 6, '#d9dcd8', -13.5, 0.15, 9, { open: true }); B(g, 1.8, 1.1, 0.05, '#3f7fbf', -12.6, 7.8, 9, NE);
+      [[13, 9], [13, 6], [5, 10]].forEach(([x, z], i) => i < 2 ? tree(g, x, 0.15, z, 'canopy', 0.75) : null);
+      [-4, -2, 2, 4].forEach(x => B(g, 1.4, 0.45, 0.5, '#7a4f34', x, 0.15, 7.5)); B(g, 3, 1.6, 0.3, '#2f2b28', 7, 0.15, 10, NE);   // benches + a notice board
+      return g; } });
+
+  // ---- Garbage ----
+  def({ key: 'bmGarbage', name: 'Recycling depot', cat: 'Garbage', part: 2, budget: 1300, size: '30 × 22 m', night: true,
+    make() { const g = new THREE.Group(), G = '#4f7a5a', T = '#d9dcd8';
+      bmPave(g, 30, 22, '#bdb8ad');
+      B(g, 18, 6.5, 12, G, -5, 0.15, -4); const rf = grp(g, -5, 6.65, -4); for (let i = 0; i < 9; i++) B(rf, 2.0, 0.25, 12.6, i % 2 ? '#8b9399' : '#a3abb1', -8 + i * 2, 0, 0, { rz: 0, edge: i === 0 || i === 8 });   // shed + ribbed roof
+      [-10, -4.5].forEach(x => { B(g, 4.4, 4.6, 0.2, T, x, 0.15, 2.02, NE); for (let k = 0; k < 8; k++) B(g, 4.0, 0.5, 0.12, k % 2 ? '#b9bec2' : '#a3abb1', x, 0.25 + k * 0.55, 2.13, NE); });
+      P(g, 5.6, 1.0, textMat('RECYCLING', '#f6f0e2', G), 1.2, 4.6, 2.03);
+      CYL(g, 1.6, 1.6, 4, 10, '#c3c8cc', 9, 0.15, -6); CAP(g, 1.6, '#a3abb1', 9, 4.15, -6, NE); CYL(g, 1.2, 1.2, 3, 10, '#c3c8cc', 12, 0.15, -3);   // silos
+      [['#2f7a68', 0], ['#3f7fbf', 1], ['#f2c14e', 2], ['#8a5a3a', 3]].forEach(([c, i]) => { const x = 5 + i * 2.2; B(g, 1.6, 1.4, 1.4, c, x, 0.15, 5); B(g, 1.7, 0.15, 1.5, c, x, 1.55, 4.95, NE); });   // big bins
+      for (let i = 0; i < 4; i++) bmS(g, ['#6b6f78', '#8a6a4a', '#5e7a5a', '#7a7a72'][i], 11 + (i % 2) * 2.2, 0.6, 2 + i * 1.4, [1.1, 0.7, 0.9], { ry: i });   // sorted piles
+      const lorry = bmVan(g, -6, 8, 0, '#2f7a68', '#f6f0e2'); B(lorry, 2.1, 1.4, 3.0, '#2f7a68', 0, 1.35, -0.9);
+      for (let x = -14.6; x <= 14.6; x += 2.92) B(g, 0.1, 1.8, 0.1, PAL.iron, x, 0.15, -10.8, NE); B(g, 29.4, 0.08, 0.08, PAL.iron, 0, 1.9, -10.8, NE);   // back fence
+      return g; } });
+
+  // ---- Park ----
+  def({ key: 'bmFountain', name: 'Fountain', cat: 'Park', part: 2, budget: 600, size: '10 × 10 m · 4 m tall', night: true,
+    make() { const g = new THREE.Group(), S = '#e9e1cf', Wt = '#5ab4d0';
+      CYL(g, 5, 5, 0.12, 20, '#d9c49a', 0, 0, 0, { shadow: false });                                       // paved circle
+      CYL(g, 3.6, 3.9, 0.8, 16, S, 0, 0.12, 0); CYL(g, 3.2, 3.2, 0.1, 16, Wt, 0, 0.86, 0, NE);
+      CYL(g, 0.5, 0.8, 1.4, 8, S, 0, 0.9, 0); CYL(g, 1.6, 1.2, 0.35, 12, S, 0, 2.3, 0); CYL(g, 1.4, 1.4, 0.08, 12, Wt, 0, 2.62, 0, NE);
+      CYL(g, 0.25, 0.35, 0.9, 8, S, 0, 2.65, 0); bmS(g, Wt, 0, 3.75, 0, [0.35, 0.45, 0.35], NE);
+      CYL(g, 1.5, 1.25, 0.9, 12, Wt, 0, 1.75, 0, { open: true, edge: false });                                   // water spilling over the top bowl
+      bmS(g, '#e9f6fb', 0, 4.3, 0, [0.22, 0.6, 0.22], NE);                                                         // the spray
+      [0, Math.PI / 2, Math.PI, Math.PI * 1.5].forEach(a => B(g, 1.6, 0.45, 0.5, PAL.wood, Math.sin(a) * 4.6, 0.12, Math.cos(a) * 4.6, { ry: a })); return g; } });
+  def({ key: 'bmPlayground', name: 'Playground', cat: 'Park', part: 2, budget: 900, size: '14 × 10 m',
+    make() { const g = new THREE.Group();
+      B(g, 14, 0.14, 10, '#c8603f', 0, 0, 0, { shadow: false }); B(g, 4, 0.18, 4, '#e8d5a0', 4.6, 0.02, 2.4, FLAT);   // soft floor + sand pit
+      const sl = grp(g, -3.5, 0, -1.5); [-0.9, 0.9].forEach(x => [-0.9, 0.9].forEach(z => B(sl, 0.18, 2.6, 0.18, '#3f7fbf', x, 0.14, z, NE)));
+      B(sl, 2.1, 0.2, 2.1, '#f2c14e', 0, 2.2, 0); HIP(sl, 2.4, 1.2, 2.4, '#e8473a', 0, 2.75, 0); B(sl, 1.2, 0.12, 3.6, '#2f7a68', 1.9, 0.9, 0.0, { rz: -0.55 });   // tower + roof + slide
+      for (let k = 0; k < 5; k++) B(sl, 1.0, 0.1, 0.25, '#f6f0e2', -1.5, 0.3 + k * 0.42, 0, NE); [-1.0, -2.0].forEach(x => B(sl, 0.1, 2.3, 0.1, '#f6f0e2', x, 0.14, 0, NE));   // ladder
+      const sw = grp(g, 2.6, 0, -3); [-2, 2].forEach(x => { B(sw, 0.16, 2.6, 0.16, '#e8473a', x, 0.14, -0.6, { rx: -0.22 }); B(sw, 0.16, 2.6, 0.16, '#e8473a', x, 0.14, 0.6, { rx: 0.22 }); });
+      B(sw, 4.3, 0.18, 0.18, '#e8473a', 0, 2.6, 0); [-0.9, 0.9].forEach(x => { B(sw, 0.03, 1.8, 0.03, PAL.iron, x - 0.25, 0.8, 0, NE); B(sw, 0.03, 1.8, 0.03, PAL.iron, x + 0.25, 0.8, 0, NE); B(sw, 0.7, 0.08, 0.35, '#f2c14e', x, 0.75, 0); });   // swings
+      const ss = grp(g, -4, 0, 3); B(ss, 0.5, 0.5, 0.5, '#f2c14e', 0, 0.14, 0); B(ss, 3.6, 0.12, 0.35, '#3f7fbf', 0, 0.6, 0, { rz: 0.15 }); [-1.5, 1.5].forEach(x => B(ss, 0.08, 0.35, 0.3, '#e8473a', x, 0.62 + x * 0.15, 0, NE));   // seesaw
+      CYL(g, 0.04, 0.04, 0.35, 6, '#f2c14e', 4.6, 0.2, 2.4, NE); bmS(g, '#3f7fbf', 3.9, 0.35, 2.0, [0.3, 0.2, 0.3], NE);   // toys in the sand
+      [[-6.4, -4.4], [6.4, -4.4], [6.4, 4.4], [-6.4, 4.4]].forEach(([x, z]) => B(g, 0.3, 0.7, 0.3, '#7a4f34', x, 0.14, z, NE));
+      B(g, 1.6, 0.45, 0.5, PAL.wood, 0.5, 0.14, 4.4); return g; } });
+
+  // ---- Unique ----
+  def({ key: 'bmObservatory', name: 'Star Observatory', cat: 'Unique', part: 2, budget: 1100, size: '22 × 22 m · 16 m tall', night: true,
+    make() { const g = new THREE.Group(), S = '#ece4d2', D = '#e9eef2', T = '#c9922e';
+      CYL(g, 11, 11.5, 1.2, 16, '#cfc5b0', 0, 0, 0); for (let k = 0; k < 4; k++) B(g, 4, 0.3, 1.2, '#cfc5b0', 0, k * 0.3, 11.6 + k * 0.0 - k * 0.3 + 0.6, NE);   // round stone base + steps
+      CYL(g, 6.5, 6.5, 7, 16, S, 0, 1.2, 0); CYL(g, 6.8, 6.8, 0.5, 16, T, 0, 8.2, 0, NE);
+      const dome = put(g, geo('dome16', () => new THREE.SphereGeometry(1, 16, 6, 0, Math.PI * 2, 0, Math.PI / 2)), D, 0, 8.7, 0, { s: [6.6, 6.6, 6.6] });
+      B(g, 1.6, 6.8, 6.8, '#3f5866', 0, 9.6, 1.0, { rx: -0.85, edge: false });                                                  // the open slit
+      const tel = grp(g, 0, 12.5, 3.6); tel.rotation.x = -0.7; CYL(tel, 0.55, 0.7, 4.5, 10, '#5b5f66', 0, 0, 0); CYL(tel, 0.75, 0.75, 0.4, 10, T, 0, 4.4, 0, NE);   // telescope
+      for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + Math.PI / 8; P(g, 1.2, 2.2, glowMat(PAL.glass, PAL.lampOn), Math.sin(a) * 6.52, 3.8, Math.cos(a) * 6.52, { ry: a }); }
+      door(g, 0, 1.2, 6.52, 0, 2.0, 2.8, '#2f4f8a');
+      [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(([sx, sz]) => { CYL(g, 0.12, 0.12, 3, 6, PAL.iron, sx * 9, 1.2, sz * 9, { open: true }); bmS(g, glowMat('#f2c14e', '#fff3c4'), sx * 9, 4.4, sz * 9, [0.35, 0.35, 0.35], NE); });
+      CYL(g, 0.6, 0.6, 0.3, 8, T, 0, 15.2, -1.5, NE); B(g, 0.08, 1.6, 0.08, PAL.iron, 0, 15.4, -1.5, NE); bmS(g, '#f2c14e', 0, 17.1, -1.5, [0.3, 0.3, 0.3], NE);   // a little gold star on a rod at the top
+      return g; } });
+
   // ---- party kit (Night: everything lights up) ----
   const oct = (p, r, m, x, y, z, o) => put(p, geo('oct', () => new THREE.OctahedronGeometry(1, 0)), m, x, y, z, Object.assign({ edge: false, shadow: false, s: [r, r, r] }, o));
   const BULBS = ['#ffd98a', '#e8473a', '#5fbf6a', '#3f7fbf', '#f2c14e', '#d88fb0'];
