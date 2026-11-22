@@ -900,18 +900,28 @@
       [[-14, 11.5], [14, 11.5], [14, 4]].forEach(([x, z]) => tree(g, x, 0.15, z, 'canopy', 0.8)); return g; } });
 
   // ---- Police ----
-  def({ key: 'bmPolice', name: 'Police station', cat: 'Police', part: 2, budget: 1300, size: '24 × 20 m · 2 floors', night: true,
-    make() { const g = new THREE.Group(), W = '#eef0f2', N = '#2f4f8a', H = 3.4;
-      bmPave(g, 24, 20); B(g, 18, 2 * H, 11, W, -1, 0.15, -3.5); B(g, 18.4, 0.5, 11.4, N, -1, 0.15 + 2 * H, -3.5); B(g, 18.2, 1.0, 0.3, N, -1, 0.15, 2.1, NE);
-      B(g, 6, 2 * H + 2.2, 6, N, 7, 0.15, -1.5); B(g, 6.4, 0.4, 6.4, '#eef0f2', 7, 0.15 + 2 * H + 2.2, -1.5);                // the blue tower
-      for (let f = 0; f < 2; f++) bmGlassRow(g, 4, 2.0, 1.5, -8, 3.2, 0.15 + f * H + 1.0, 2.02);
-      P(g, 3.0, 2.6, glowMat(PAL.glass, PAL.lampOn), 7, 0.15, 1.52); B(g, 4.4, 0.25, 2.2, N, 7, 3.0, 2.6); P(g, 4.8, 1.1, textMat('POLICE', N, '#ffffff'), 7, 4.4, 1.53);
-      CYL(g, 1.05, 1.05, 0.2, 12, '#f2c14e', 7, 7.0, 1.55, { rx: Math.PI / 2 }); CYL(g, 0.7, 0.7, 0.22, 6, N, 7, 7.0, 1.62, { rx: Math.PI / 2, edge: false });   // badge
-      B(g, 1.2, 0.4, 0.6, '#3f7fbf', 6.4, 0.15 + 2 * H + 2.6, -1.5, NE); B(g, 1.2, 0.4, 0.6, '#e8473a', 7.6, 0.15 + 2 * H + 2.6, -1.5, NE);   // roof lights
-      CYL(g, 0.08, 0.08, 9, 6, '#d9dcd8', -11, 0.15, 6, { open: true }); B(g, 2.0, 1.2, 0.05, N, -10, 7.7, 6, NE);                      // flag
-      bmVan(g, -5, 6.5, 0, '#f6f6f6', '#2f2b28', N); bmVan(g, -1, 6.5, 0, '#f6f6f6', '#2f2b28', N);
-      [-5, -1].forEach(x => { B(g, 0.4, 0.2, 0.6, '#3f7fbf', x - 0.25, 2.25, 7.9, NE); B(g, 0.4, 0.2, 0.6, '#e8473a', x + 0.25, 2.25, 7.9, NE); });
-      [-3, 1, 5].forEach(x => B(g, 0.12, 0.02, 5.2, '#ffffff', x, 0.16, 6.5, FLAT)); return g; } });
+  def({ key: 'bmPolice', name: 'Police station', cat: 'Police', part: 2, budget: 1500, size: '26 × 22 m · 2 floors', night: true,
+    make() { const g = new THREE.Group(), W = '#f1f2f4', N = '#22386a', N2 = '#2f4f8a', H = 3.6, G = glowMat('#5f7f98', PAL.lampOn);
+      bmPave(g, 26, 22, '#d6d2c8'); B(g, 26, 0.16, 7, '#55575c', 0, 0.02, 7.5, FLAT);                                   // forecourt + parking
+      B(g, 20, 2 * H, 11, W, -2, 0.15, -4.5); B(g, 20.4, 0.6, 11.4, N, -2, 0.15 + 2 * H, -4.5);                         // main block, navy roof band
+      B(g, 20.2, 0.5, 11.2, N2, -2, 0.15 + H - 0.25, -4.5, NE);                                                           // stripe between the floors
+      for (let i = 0; i < 4; i++) P(g, 2.4, 1.8, G, -9.5 + i * 3.4, 0.15 + H + 1.0, 1.02);                               // first floor windows
+      [-9.5, -6.1].forEach(x => P(g, 2.4, 1.8, G, x, 0.15 + 0.9, 1.02));
+      B(g, 8, 2 * H + 1.4, 3, N, 4.5, 0.15, 0.5); B(g, 8.4, 0.4, 3.4, W, 4.5, 0.15 + 2 * H + 1.4, 0.5);                    // the navy entrance block
+      P(g, 6.2, 5.6, G, 4.5, 0.15, 2.02); for (let k = 1; k < 4; k++) B(g, 0.12, 5.6, 0.12, N, 4.5 - 3.1 + k * 1.55, 0.15, 2.05, NE);   // tall glass lobby
+      P(g, 6.4, 1.1, textMat('POLICE', N, '#ffffff'), 4.5, 0.15 + 2 * H - 0.2, 2.03);
+      CYL(g, 1.0, 1.0, 0.18, 6, '#f2c14e', 4.5, 0.15 + 2 * H + 2.4, 2.1, { rx: Math.PI / 2 }); CYL(g, 0.55, 0.55, 0.2, 6, N, 4.5, 0.15 + 2 * H + 2.4, 2.2, { rx: Math.PI / 2, edge: false });   // star badge on top
+      B(g, 10, 0.35, 4, W, 4.5, 4.0, 3.6); [-4.6, 4.6].forEach(dx => B(g, 0.3, 3.85, 0.3, N, 4.5 + dx, 0.15, 5.3, NE));    // canopy over the door
+      B(g, 2.2, 0.3, 0.5, '#3f7fbf', 3.4, 4.35, 5.2, NE); B(g, 2.2, 0.3, 0.5, '#e8473a', 5.6, 4.35, 5.2, NE);               // light bar on the canopy
+      B(g, 4.6, 4.4, 0.2, '#c3c8cc', 10.5, 0.15, 1.0, NE); B(g, 5.6, 4.8, 3, W, 10.5, 0.15, -0.6);                          // garage
+      for (let k = 0; k < 7; k++) B(g, 4.2, 0.5, 0.12, k % 2 ? '#d9dcd8' : '#c3c8cc', 10.5, 0.4 + k * 0.55, 0.95, NE);
+      CYL(g, 0.1, 0.12, 6, 6, '#9aa3a8', -9, 0.15 + 2 * H + 0.6, -7, { open: true }); B(g, 1.6, 0.1, 0.1, '#9aa3a8', -9, 0.15 + 2 * H + 5, -7, NE);   // radio mast
+      CYL(g, 0.08, 0.08, 9, 6, '#d9dcd8', -12, 0.15, 2.5, { open: true }); B(g, 2.0, 1.2, 0.05, N, -11, 7.7, 2.5, NE);          // flag
+      for (let i = 0; i < 5; i++) CYL(g, 0.18, 0.18, 0.8, 6, '#d9dcd8', 0.5 + i * 1.6, 0.15, 4.8, NE);                       // bollards
+      bmVan(g, -8, 7.8, 0, '#f6f6f6', '#2f2b28', N); bmVan(g, -4, 7.8, 0, '#f6f6f6', '#2f2b28', N);
+      [-8, -4].forEach(x => { B(g, 0.4, 0.2, 0.6, '#3f7fbf', x - 0.25, 2.25, 9.2, NE); B(g, 0.4, 0.2, 0.6, '#e8473a', x + 0.25, 2.25, 9.2, NE); });
+      [-10, -6, -2].forEach(x => B(g, 0.12, 0.02, 5.2, '#ffffff', x, 0.19, 7.8, FLAT));
+      [[12, 9], [-12.2, 9.5]].forEach(([x, z]) => tree(g, x, 0.15, z, 'canopy', 0.7)); return g; } });
 
   // ---- Fire ----
   def({ key: 'bmFire', name: 'Fire station', cat: 'Fire', part: 2, budget: 1400, size: '26 × 20 m · 2 floors + tower', night: true,
@@ -3681,6 +3691,100 @@
     const ls = new THREE.LineSegments(lg, ink); ls.frustumCulled = false; out.add(ls);
     return out;
   };
+
+  // ================= BUILD MODE, round 2 (22 Nov 20:10, Dev: "options in every category") =================
+  // the Police HQ from the map (Government Row), as one piece: classic cream stone, navy slate roofs, a portico and the gold star
+  def({ key: 'bmPoliceHQ', name: 'Police headquarters', cat: 'Police', part: 2, budget: 2200, size: '46 × 30 m · 3 floors', night: true,
+    make() { const g = new THREE.Group(), WALL = '#f6ead3', TRIM = '#e3d2ae', SLATE = '#2c3d63', STONE = '#e9dcc0', hq = grp(g, 0, 0, -3); hq.scale.setScalar(0.82);
+      bmPave(g, 46, 30, '#e2d6bb'); B(g, 12, 0.16, 8, '#4f5259', 0, 0.02, 11, FLAT);
+      B(hq, 52, 0.6, 22, STONE, 0, 0.1, 0); B(hq, 48, 12, 16, WALL, 0, 0.7, 0); B(hq, 48.6, 0.5, 16.6, TRIM, 0, 4.9, 0, NE); B(hq, 48.8, 0.8, 16.8, TRIM, 0, 12.7, 0);
+      HIP(hq, 49.6, 4.2, 17.6, SLATE, 0, 13.5, 0);
+      [-1, 1].forEach(sd => { B(hq, 9, 14, 18, WALL, sd * 21, 0.7, 0.5); B(hq, 9.6, 0.9, 18.6, TRIM, sd * 21, 14.7, 0.5); HIP(hq, 10.2, 3.4, 19.2, SLATE, sd * 21, 15.6, 0.5);
+        for (const fl of [0, 1, 2]) [-2.2, 2.2].forEach(dx => win(hq, sd * 21 + dx, 2 + fl * 4.2, 9.52, 0, 1.3, 1.9, { shutters: false })); });
+      for (const fl of [0, 1, 2]) for (const x of [-13.5, -10, -6.5, 6.5, 10, 13.5]) win(hq, x, 2 + fl * 4.1, 8.02, 0, 1.3, 1.9, { shutters: false });
+      B(hq, 16, 13, 3, WALL, 0, 0.7, 9.2); for (let i = 0; i < 6; i++) CYL(hq, 0.55, 0.62, 10.6, 10, '#fbf6ec', -6.25 + i * 2.5, 0.7, 13.2);
+      B(hq, 17, 1.3, 4.2, TRIM, 0, 11.3, 12.6); GABLE(hq, 17.6, 3.4, 4.2, TRIM, 0, 12.6, 12.6, { ry: 0 });
+      P(hq, 14, 1.0, textMat('POLICE HEADQUARTERS', SLATE, '#f7f0e1'), 0, 11.45, 14.75);
+      CYL(hq, 1.25, 1.25, 0.2, 5, '#e2b04a', 0, 13.9, 14.75, { rx: Math.PI / 2, edge: false });
+      B(hq, 5, 6, 5, WALL, 0, 17.7, 0); HIP(hq, 5.8, 3.2, 5.8, SLATE, 0, 23.7, 0); CYL(hq, 1.4, 1.4, 0.2, 14, '#ffffff', 0, 20.7, 2.52, { rx: Math.PI / 2 });   // clock tower
+      [-14, -10, 10, 14].forEach(x => { bmVan(g, x, 11, Math.PI, '#f2efe8', '#f2efe8', '#24375e'); });
+      CYL(g, 0.08, 0.08, 10, 6, '#d9dcd8', -4, 0.15, 13, { open: true }); B(g, 2.2, 1.3, 0.05, '#24375e', -2.9, 8.5, 13, NE); return g; } });
+
+  // modern school: flat roofs, colour panels, a glass stair hall, a sports court and solar panels
+  def({ key: 'bmSchoolModern', name: 'Modern school', cat: 'Education', part: 2, budget: 1600, size: '34 × 26 m · 2 floors', night: true, opts: { accent: colours('Colour panels', ['#e8873a', '#3f8f8a', '#d8564a', '#6a8fc8']) },
+    make(o) { const g = new THREE.Group(), A = slot('accent', o.accent || '#e8873a'), W = '#f4f3ef', G = glowMat('#5f7f98', PAL.lampOn), H = 3.6;
+      bmPave(g, 34, 26, '#dcd6c8'); B(g, 12, 0.18, 9, '#3f7fbf', 10, 0.02, 7.5, FLAT); B(g, 11, 0.02, 0.15, '#ffffff', 10, 0.21, 7.5, FLAT);   // sports court
+      B(g, 22, 2 * H, 10, W, -5, 0.15, -6); B(g, 22.3, 0.4, 10.3, '#d9dcd8', -5, 0.15 + 2 * H, -6);
+      B(g, 10, 2 * H, 8, W, 10, 0.15, -7); B(g, 10.3, 0.4, 8.3, '#d9dcd8', 10, 0.15 + 2 * H, -7);
+      for (let f = 0; f < 2; f++) { P(g, 19, 1.6, G, -5, 0.15 + f * H + 1.0, -0.98); for (let i = 0; i < 6; i++) B(g, 0.9, 1.9, 0.25, i % 2 ? A : W, -14 + i * 3.6, 0.15 + f * H + 0.85, -0.85, NE); }   // window band + colour fins
+      for (let f = 0; f < 2; f++) P(g, 8, 1.6, G, 10, 0.15 + f * H + 1.0, -2.98);
+      B(g, 5, 2 * H + 1.2, 5, '#8fb3c8', 3.5, 0.15, -1.5); B(g, 5.3, 0.4, 5.3, A, 3.5, 0.15 + 2 * H + 1.2, -1.5);       // glass stair hall
+      P(g, 2.4, 2.6, '#2f3a40', 3.5, 0.15, 1.02); P(g, 6, 1.0, textMat('SCHOOL', W, '#2f3a40'), -5, 0.15 + 2 * H - 0.4, -0.95);
+      for (let i = 0; i < 6; i++) B(g, 2.2, 0.12, 1.4, '#2f4f6a', -13 + i * 3, 0.15 + 2 * H + 0.6, -7.5, { rx: -0.3 });   // solar panels
+      [-14, -10, -6].forEach(x => tree(g, x, 0.15, 6, 'canopy', 0.75)); for (let i = 0; i < 6; i++) B(g, 0.12, 0.9, 1.3, '#7d8a93', -3 + i * 0.6, 0.15, 6.5, NE);   // bike racks
+      [-1, 1].forEach(sd => B(g, 0.15, 3, 9, '#ffffff', 10 + sd * 6, 0.15, 7.5, NE)); return g; } });
+
+  // ---- more park pieces ----
+  def({ key: 'bmGazebo', name: 'Bandstand', cat: 'Park', part: 2, budget: 500, size: '9 × 9 m · 6 m tall', night: true,
+    make() { const g = new THREE.Group(); CYL(g, 4.5, 4.5, 0.1, 8, '#d9c49a', 0, 0, 0, { shadow: false }); CYL(g, 3.6, 3.8, 0.8, 8, '#f6f0e2', 0, 0.1, 0);
+      for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + Math.PI / 8; CYL(g, 0.14, 0.14, 3.2, 6, '#f6f0e2', Math.sin(a) * 3.3, 0.9, Math.cos(a) * 3.3, { open: true }); }
+      CYL(g, 3.45, 3.45, 0.12, 8, '#f6f0e2', 0, 1.8, 0, { open: true, edge: false });                                  // the rail ring
+      CYL(g, 0.001, 4.3, 2.0, 8, '#2f7a68', 0, 4.1, 0); CYL(g, 4.3, 4.3, 0.3, 8, '#f6f0e2', 0, 3.95, 0, NE); bmS(g, '#e2b04a', 0, 6.3, 0, [0.3, 0.3, 0.3], NE);
+      B(g, 2.2, 0.4, 1.2, '#d9c49a', 0, 0.1, 4.1); return g; } });
+  def({ key: 'bmPicnic', name: 'Picnic lawn', cat: 'Park', part: 2, budget: 600, size: '12 × 10 m',
+    make() { const g = new THREE.Group(); B(g, 12, 0.1, 10, '#7fb85a', 0, 0, 0, { shadow: false });
+      const tbl = (x, z, ry) => { const t = grp(g, x, 0, z, ry); B(t, 2.2, 0.12, 0.9, PAL.wood, 0, 0.75, 0); [-1, 1].forEach(sd => { B(t, 2.2, 0.08, 0.35, PAL.wood, 0, 0.45, sd * 0.75); B(t, 0.12, 0.75, 1.9, '#5a3a24', sd * 0.8, 0.1, 0, NE); }); };
+      tbl(-2.5, 1.5, 0.2); tbl(2.5, -1.5, -0.3); B(g, 2.2, 0.03, 1.8, '#e8473a', 2.8, 0.1, 2.6, FLAT); B(g, 0.6, 0.35, 0.4, '#c98a4a', 2.5, 0.13, 2.4, NE);   // a picnic blanket + basket
+      [[-4.5, -3.5], [4.5, 3.8], [-4.8, 3.6]].forEach(([x, z], i) => tree(g, x, 0.1, z, i === 1 ? 'pink' : 'canopy', 0.85));
+      B(g, 0.6, 0.9, 0.6, '#5b5f66', 0, 0.1, -4.2); CYL(g, 0.35, 0.35, 0.8, 8, '#2f7a68', 4.8, 0.1, -4, NE); return g; } });
+  def({ key: 'bmFlowerGarden', name: 'Flower garden', cat: 'Park', part: 2, budget: 1100, size: '12 × 12 m', opts: { flower: colours('Flowers', ['#d88fb0', '#f2c14e', '#e8473a', '#a084c8']) },
+    make(o) { const g = new THREE.Group(), F = slot('flower', o.flower || '#d88fb0'); B(g, 12, 0.1, 12, '#7fb85a', 0, 0, 0, { shadow: false });
+      B(g, 2, 0.12, 12, '#e2d0a6', 0, 0.02, 0, FLAT); B(g, 12, 0.12, 2, '#e2d0a6', 0, 0.02, 0, FLAT); CYL(g, 2.2, 2.2, 0.13, 12, '#e2d0a6', 0, 0.02, 0, FLAT);
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz], k) => { const x = sx * 3.5, z = sz * 3.5; B(g, 4, 0.4, 4, '#b7a27a', x, 0.1, z, NE); B(g, 3.6, 0.3, 3.6, '#5e4636', x, 0.2, z, NE);
+        [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]].forEach(([qx, qz], i) => { const fx = x + qx * 1.0, fz = z + qz * 1.0; bmS(g, '#4f8a42', fx, 0.65, fz, [0.4, 0.3, 0.4], NE); bmS(g, (i + k) % 3 ? F : '#f6f0e2', fx, 0.95, fz, [0.22, 0.22, 0.22], NE); }); });
+      CYL(g, 0.5, 0.7, 1.2, 8, '#e9e1cf', 0, 0.1, 0); bmS(g, F, 0, 1.6, 0, [0.5, 0.4, 0.5], NE); return g; } });
+  def({ key: 'bmPond', name: 'Pond with bridge', cat: 'Park', part: 2, budget: 850, size: '14 × 10 m',
+    make() { const g = new THREE.Group(); B(g, 14, 0.08, 10, '#7fb85a', 0, 0, 0, { shadow: false });
+      put(g, geo('disc16', () => new THREE.CylinderGeometry(1, 1, 1, 16)), '#d9c49a', 0, 0.08, 0, { s: [6, 0.1, 4], edge: false }); put(g, geo('disc16', () => new THREE.CylinderGeometry(1, 1, 1, 16)), PAL.water, 0, 0.12, 0, { s: [5.4, 0.1, 3.5], edge: false });
+      const br = grp(g, 0, 0, 0); for (let i = 0; i < 9; i++) { const t = (i - 4) / 4, y = 0.3 + (1 - t * t) * 0.6; B(br, 0.7, 0.12, 1.4, PAL.wood, t * 3, y, 0, { rz: -t * 0.25 }); }   // arched wooden bridge
+      [-1, 1].forEach(sd => { for (let i = 0; i < 5; i++) { const t = (i - 2) / 2; B(br, 0.08, 0.6, 0.08, '#5a3a24', t * 3, 0.4 + (1 - t * t) * 0.6, sd * 0.65, NE); } B(br, 6, 0.08, 0.08, '#5a3a24', 0, 1.3, sd * 0.65, NE); });
+      [[-3, 1.8], [3.5, -1.5], [1.5, 2.2]].forEach(([x, z]) => put(g, geo('disc8', () => new THREE.CylinderGeometry(1, 1, 1, 8)), '#5e9a4e', x, 0.2, z, { s: [0.6, 0.04, 0.6], edge: false }));   // lily pads
+      bmD(g, '#9a958c', -5.6, 0.3, -2.8, [0.6, 0.4, 0.5]); bmD(g, '#9a958c', 5.8, 0.25, 3, [0.5, 0.35, 0.45]); tree(g, -5.5, 0.1, 3.5, 'pink', 0.8); tree(g, 5.5, 0.1, -3.5, 'canopy', 0.8); return g; } });
+  def({ key: 'bmMonument', name: 'Torch monument', cat: 'Park', part: 2, budget: 400, size: '8 × 8 m · 7 m tall', night: true,
+    make() { const g = new THREE.Group(); CYL(g, 4, 4, 0.1, 8, '#d9c49a', 0, 0, 0, { shadow: false }); B(g, 4, 0.6, 4, '#e9e1cf', 0, 0.1, 0); B(g, 3, 0.6, 3, '#e9e1cf', 0, 0.7, 0);
+      B(g, 1.6, 3.2, 1.6, '#e9dcc0', 0, 1.3, 0); P(g, 1.4, 0.5, textMat('VINLAND', '#e9dcc0', '#8a6a3a'), 0, 3.4, 0.82);
+      CYL(g, 0.35, 0.2, 1.6, 8, '#c9922e', 0, 4.5, 0); CYL(g, 0.6, 0.35, 0.5, 8, '#c9922e', 0, 6.1, 0); bmS(g, glowMat('#f2a03a', '#ffd27a'), 0, 7.0, 0, [0.45, 0.75, 0.45], NE);
+      [[-3, -3], [3, -3], [-3, 3], [3, 3]].forEach(([x, z]) => bmS(g, '#4f8a42', x, 0.5, z, [0.6, 0.5, 0.6])); return g; } });
+
+  // ---- garbage: a small street recycling point ----
+  def({ key: 'bmBinPoint', name: 'Recycling point', cat: 'Garbage', part: 2, budget: 300, size: '7 × 3 m',
+    make() { const g = new THREE.Group(); B(g, 7, 0.12, 3, '#cfc8b8', 0, 0, 0, { shadow: false });
+      [['#2f7a68', 'GLASS'], ['#3f7fbf', 'PAPER'], ['#f2c14e', 'PLASTIC'], ['#5b5f66', 'WASTE']].forEach(([c, t], i) => { const x = -2.4 + i * 1.6; B(g, 1.3, 1.4, 1.2, c, x, 0.12, 0); B(g, 1.4, 0.15, 1.3, c, x, 1.52, -0.05, NE);
+        P(g, 1.0, 0.3, textMat(t, c, '#ffffff'), x, 0.9, 0.61); });
+      B(g, 7, 2.0, 0.1, '#7a4f34', 0, 0.12, -1.3, NE); return g; } });
+
+  // ---- unique ----
+  def({ key: 'bmFerrisWheel', name: 'Ferris wheel', cat: 'Unique', part: 2, budget: 1500, size: '24 × 12 m · 26 m tall', night: true,
+    make() { const g = new THREE.Group(), R = 11, Y = 13.5, C = ['#e8473a', '#f2c14e', '#3f7fbf', '#2f7a68', '#d88fb0', '#e8873a'];
+      bmPave(g, 24, 12, '#d9c49a'); B(g, 8, 1.0, 4, '#f6f0e2', 0, 0.15, 3.5); B(g, 3, 2.6, 2.5, '#e8473a', 7, 0.15, 3.5); P(g, 2.4, 0.6, textMat('RIDE', '#e8473a', '#ffffff'), 7, 2.0, 4.76);
+      [-1, 1].forEach(sd => [-1, 1].forEach(lg => B(g, 0.5, Y + 0.6, 0.5, '#d9dcd8', lg * 3.0, 0.15, sd * 1.4, { rz: lg * 0.29 })));
+      const wh = grp(g, 0, Y, 0); wh.userData.spin = true;
+      [-0.9, 0.9].forEach(z => put(wh, geo('ring24', () => new THREE.TorusGeometry(1, 0.03, 4, 24)), '#f6f0e2', 0, 0, z, { s: [R, R, R], edge: false }));
+      for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; B(wh, 0.18, R, 0.18, '#f6f0e2', Math.sin(a) * R / 2, Math.cos(a) * R / 2 - R / 2, 0, { rz: -a, edge: false });
+        const cx = Math.sin(a) * R, cy = Math.cos(a) * R; B(wh, 1.8, 1.5, 1.8, glowMat(C[i % 6], '#ffe9a8'), cx, cy - 2.0, 0); B(wh, 2.0, 0.2, 2.0, '#f6f0e2', cx, cy - 0.5, 0, NE); B(wh, 0.1, 0.6, 0.1, PAL.iron, cx, cy - 0.5, 0, NE); }
+      CYL(wh, 0.9, 0.9, 2.4, 10, '#c9922e', 0, -1.2, 0, { rx: Math.PI / 2 }); return g; } });
+  def({ key: 'bmLighthouse', name: 'Lighthouse', cat: 'Unique', part: 2, budget: 900, size: '16 × 14 m · 24 m tall', night: true,
+    make() { const g = new THREE.Group(); bmPave(g, 16, 14, '#cfc5b0'); bmD(g, '#9a958c', -6, 0.5, 5, [1.4, 0.9, 1.2]); bmD(g, '#8f8a80', 6.4, 0.4, -5, [1.2, 0.8, 1.0]);
+      for (let i = 0; i < 6; i++) { const r0 = 3.2 - i * 0.28, h = 3.2; CYL(g, r0 - 0.28, r0, h, 12, i % 2 ? '#e8473a' : '#f6f0e2', 2, 0.15 + i * h, -1); }   // red + white bands
+      const top = 0.15 + 6 * 3.2; CYL(g, 2.3, 2.3, 0.35, 12, '#2f2b28', 2, top, -1); for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; B(g, 0.06, 0.9, 0.06, '#2f2b28', 2 + Math.sin(a) * 2.15, top + 0.35, -1 + Math.cos(a) * 2.15, NE); }
+      CYL(g, 1.3, 1.3, 2.0, 8, glowMat('#f6e7a8', '#fff3c4'), 2, top + 0.35, -1); CYL(g, 0.001, 1.6, 1.6, 8, '#e8473a', 2, top + 2.35, -1); bmS(g, '#2f2b28', 2, top + 4.1, -1, [0.25, 0.25, 0.25], NE);
+      door(g, 2, 0.15, 2.18, 0, 1.2, 2.0, '#2f7a68'); [5, 9, 13].forEach(y => P(g, 0.7, 1.1, glowMat(PAL.glass, PAL.lampOn), 2, y, 1.9 - y * 0.03));
+      B(g, 6, 3.2, 5, '#f6f0e2', -4, 0.15, -2); GABLE(g, 6.6, 2.0, 5.6, '#e8473a', -4, 3.35, -2, { ry: Math.PI / 2 }); door(g, -4, 0.15, 0.52, 0, 1.1, 2.0, '#2f7a68'); win(g, -5.8, 1.2, 0.52, 0, 1.0, 1.2); return g; } });
+
+  // ---- the same map pieces, listed under the Build mode categories too (so every category has options) ----
+  [['bmPolicePost', 'svPolicePost', 'Police post (small)', 'Police'], ['bmClinic', 'svClinic', 'Clinic', 'Hospital'], ['bmHospitalCity', 'dtHospital', 'City hospital', 'Hospital'],
+   ['bmSchoolPrimary', 'gdSchool', 'Primary school (Garden District)', 'Education']]
+    .forEach(([key, src, name, cat]) => { const e = KIT.list.find(x => x.key === src); if (e) def(Object.assign({}, e, { key, name, cat })); });
 
   root.VinlandKit = KIT;
 })(typeof window !== 'undefined' ? window : this);
