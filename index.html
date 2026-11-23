@@ -296,7 +296,7 @@ function lrRender() {
       <div class="col">${LR.home ? `${h ? `<a class="push g" href="${mapLink(h)}" data-a="go-map">Go to my home</a>` : '<button class="push g" data-a="lr-close">Look around Vinland</button>'}${h ? '<button class="push" data-a="lr-passport">Open my passport</button>' : ''}` : `${h ? `<button class="push g" data-a="lr-passport">Open my passport</button>` : ''}<button class="push${h ? '' : ' g'}" data-a="lr-close">Go to my page</button>`}</div>`;
   else if (failed) { const w = WHY[LR.why] || WHY.server, retry = LR.why === 'network' || LR.why === 'server';
     body = `<div style="font-size:40px;line-height:1" aria-hidden="true">🔑</div><h2 id="lrT">${w[0]}</h2><p>${w[1]}</p>${list}
-      <div class="col">${retry ? '<button class="push g" data-a="lr-retry">Try again</button>' : ''}<a class="push${retry ? '' : ' g'}" href="https://ig.me/m/buildacountry" target="_blank" rel="noopener" data-a="go-ig">DM KEY on Instagram</a><button class="push" data-a="lr-close">Close</button></div>
+      <div class="col">${retry ? '<button class="push g" data-a="lr-retry">Try again</button>' : ''}<a class="push${retry ? '' : ' g'}" href="#" data-a="code-new">Log in with a code</a><button class="push" data-a="lr-close">Close</button></div>
       <p class="lrdet">Stopped at step ${st.indexOf('bad') + 1}: ${esc(LR.det)}</p>`; }
   else body = `<div class="lrcover" aria-hidden="true"></div><h2 id="lrT">Opening your door…</h2>${list}`;
   $('#lrIn').innerHTML = body; el.hidden = false; document.body.style.overflow = 'hidden';
@@ -617,7 +617,7 @@ const P = {
       ${found ? homeCard(found) + `<div class="row" style="margin-top:10px"><button class="push sm" style="flex:1" data-a="code-me">This is me: log in</button></div>` : ''}
       ${miss ? `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--rule)"><div class="h" style="overflow-wrap:anywhere">@${esc(miss)} isn't on the map yet</div>
         ${suggest.length ? `<p class="sub" style="margin:6px 0 0">Did you mean:</p><div class="who" style="margin-top:4px">${suggest.map(o => `<button data-a="find" data-u="${esc(o.user)}">@${esc(o.user)}</button>`).join('')}</div>` : ''}
-        <p class="p" style="margin-top:8px">Comment <b>HOME</b> on any of our reels. Your home shows up right here in about a minute. No need to wait for our DM.</p>
+        <p class="p" style="margin-top:8px">Comment <b>HOME</b> on any of our reels. Your home shows up right here in about a minute. (We can't reply in DMs right now, so just check here.)</p>
         <div class="row" style="margin-top:10px"><a class="push g" href="${IG}" target="_blank" rel="noopener" data-a="go-ig">Open @buildacountry</a></div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:12px;padding:10px 12px;border-radius:12px;background:#e3eedb;color:#1f5446;font-size:13.5px"><span class="cldot"></span>Checking for your home… keep this page open</div></div>` : ''}</div>
       ${beachStrip()}
@@ -653,7 +653,7 @@ const P = {
       ${nw.map((n, i) => { const [hd, body] = headline(n.notice), open = newsOpen === i; return `<button class="doc lob nrow" data-a="news-open" data-i="${i}" aria-expanded="${open}"><span class="em">${newsEmoji(hd)}</span><span style="flex:1;min-width:0;text-align:left"><b>${esc(hd)}</b><small>${esc(n.date)}</small>${open && body ? `<span class="nb">${esc(body)}</span>` : ''}</span></button>`; }).join('') || '<p class="load">No news yet today.</p>'}
       <button class="doc lob nrow" data-a="parl-open" aria-expanded="${parlOpen}"><span class="em">🏛️</span><span style="flex:1;min-width:0;text-align:left"><b>Parliament & laws</b><small>Most asked, built, the 10 laws</small></span><span class="gold" aria-hidden="true">${parlOpen ? '−' : '›'}</span></button>
       ${parlOpen ? `<div class="parl">${P.parliament()}</div>` : ''}
-      <div class="doc lob" style="background:var(--navy);color:var(--goldlt);border-color:var(--navy);display:flex;gap:12px;align-items:center"><span class="em">📮</span><span><b style="color:#fff">Got news?</b><small style="color:var(--goldlt)">DM NEWS to @buildacountry</small></span></div>`;
+      <div class="doc lob" style="background:var(--navy);color:var(--goldlt);border-color:var(--navy);display:flex;gap:12px;align-items:center"><span class="em">📮</span><span><b style="color:#fff">Got news or an idea?</b><small style="color:var(--goldlt)">Post it in the Ideas tab</small></span></div>`;
   },
   town() {
     if (!dataOK) return wait();
@@ -676,7 +676,7 @@ const P = {
     return `<div class="mast"><b>The Vinland Times</b><span class="sub">Day ${today} edition · only real news</span></div>
       ${nw.map((n, i) => { const [hd, body] = headline(n.notice); return `<article class="doc${i ? '' : ' frame'}"><span class="pill">${esc(n.date)}</span><div class="h" style="font-size:${i ? 16 : 20}px;margin:2px 0 4px">${esc(hd)}</div>${body ? `<p class="p">${esc(body)}</p>` : ''}</article>`; }).join('') || '<p class="load">No news yet today.</p>'}
       ${dataOK ? `<div class="doc" style="text-align:center"><span class="pill">Today's number</span><div class="h" style="font-size:34px;line-height:1.1">${joined ? '+' + num(joined) : num(live)}</div><div class="sub">${joined ? 'new citizens moved in today' : 'citizens live in Vinland'}</div></div>` : ''}
-      <div class="doc" style="background:var(--navy);color:var(--goldlt);border-color:var(--navy)"><div class="h" style="color:#fff">Got news?</div><div style="font-size:13px;margin-top:2px">DM NEWS to @buildacountry</div><div class="row" style="margin-top:12px"><a class="push g" href="${IG}" target="_blank" rel="noopener" data-a="go-ig">Open Instagram</a></div></div>`;
+      <div class="doc" style="background:var(--navy);color:var(--goldlt);border-color:var(--navy)"><div class="h" style="color:#fff">Got news or an idea?</div><div style="font-size:13px;margin-top:2px">Post it in the Ideas tab</div><div class="row" style="margin-top:12px"><a class="push g" href="${IG}" target="_blank" rel="noopener" data-a="go-ig">Open Instagram</a></div></div>`;
   },
   parliament() {
     const isBuilt = d => /^(built|opened|done)/i.test(d.status.trim()), todo = demands.filter(d => !isBuilt(d)).slice(0, 8), built = demands.filter(isBuilt), max = Math.max(1, ...todo.map(d => d.count + d.likes));
@@ -843,11 +843,18 @@ window.__vinStoryURL = async u => { const h = lookup(u); return h ? (await story
 const CL = { code: '', poll: '', exp: 0, st: '', timer: 0 };
 const IG_DM = 'https://ig.me/m/buildacountry';
 function clSave() { store.set('vin_code', CL.code ? JSON.stringify({ code: CL.code, poll: CL.poll, exp: CL.exp }) : ''); }
-function clHTML() {   // 20 Nov (Dev): login = DM KEY, the link comes in a few hours. No codes on the site.
+function clHTML() {   // 23 Nov: Instagram paused our replies, so login = the code: the person DMs it, the bot only READS it, the page logs in by itself
+  if ((CL.st === 'wait' || CL.st === 'building' || CL.st === 'nofollow') && CL.code) return `<div class="h" id="lcT" style="font-size:19px">Send this code to @buildacountry</div>
+    <div style="font:700 38px/1 var(--serif);letter-spacing:4px;text-align:center;margin:14px 0 6px;color:var(--ink)">VIN-${esc(CL.code)}</div>
+    <p class="sub" style="text-align:center">Copy it, send it in an Instagram DM, then come back here. You're logged in within seconds. We won't reply in DMs for now: this page does it.</p>
+    <div class="row" style="margin-top:14px"><a class="push g" href="${IG_DM}" target="_blank" rel="noopener" data-a="code-go">Copy code + open Instagram</a></div>
+    <p class="sub" style="text-align:center;margin-top:10px">${CL.st === 'nofollow' ? '👋 Got your code! Follow @buildacountry first, then send it again.' : CL.st === 'building' ? '🏗️ Got it! Building your home…' : '⏳ Waiting for your message… (the code works for 10 minutes)'}</p>`;
+  if (CL.st === 'getting') return `<div class="h" id="lcT" style="font-size:19px">Getting your code…</div>`;
+  const why = CL.st === 'expired' ? '<p class="err">That code expired. Get a new one.</p>' : CL.st === 'error' ? '<p class="err">Could not reach Vinland. Check your internet and try again.</p>' : '';
   return `<div class="h" id="lcT" style="font-size:19px">Log in with Instagram</div>
-    <p class="p">Send <b>KEY</b> to @buildacountry in DM. We'll send you a login link, usually within a few hours. Tap it, and this phone stays logged in for 90 days.</p>
-    <div class="row" style="margin-top:14px"><a class="push g" href="${IG_DM}" target="_blank" rel="noopener" data-a="key-go">Send KEY on Instagram</a></div>
-    <p class="sub" style="margin-top:10px">Already got the link in your DMs? Just tap it.</p>`;
+    <p class="p">We show you a short code. You send it to @buildacountry in a DM, and this page logs you in by itself. It takes 10 seconds.</p>${why}
+    <div class="row" style="margin-top:14px"><button class="push g" data-a="code-new">Get my code</button></div>
+    <p class="sub" style="margin-top:10px">Our DM replies are paused for a few days, so you won't get a message back. Just keep this page open.</p>`;
 }
 function clShow() { const box = $('#clBox'); if (box) box.innerHTML = clHTML(); const bi = $('#clIn'); if (bi) bi.innerHTML = clHTML(); if (!$('#lc').hidden && !session()) lcOpen(); }
 async function clNew() {
