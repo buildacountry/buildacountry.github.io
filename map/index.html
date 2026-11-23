@@ -1712,7 +1712,7 @@ function drawGardenBuildings(hs, lineParts) {
     const M = list.map(b => new THREE.Matrix4().compose(new THREE.Vector3(b.x, 0, b.z), q.clone().setFromAxisAngle(up, b.ry), one));
     TPL.list.forEach(part => {
       const im = new THREE.InstancedMesh(part.geo, new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: grad }), list.length);
-      list.forEach((b, j) => { im.setMatrixAt(j, M[j]);
+      list.forEach((b, j) => { im.setMatrixAt(j, M[j]); if (b.t !== 'LP') fxAdd('b' + b.i, TPL, im, j, M[j]);
         if (part.slot) { const r0 = Math.sin((b.i + 1) * 12.9898) * 43758.5453, rr = r0 - Math.floor(r0), kind = part.slot.replace(/\d$/, ''), n = +((part.slot.match(/\d$/) || [1])[0]), pal = GD_COL[kind] || GD_COL.wall;
           let base = pal[(Math.floor(rr * 997) + (n - 1) * 2) % pal.length];
           if (t === 'LD') { const h = byB.get(b.i), st = h && h.status !== 'abandoned' ? styleOf(h.user) : null; if (st && kind === 'wall' && st.wall) base = st.wall; if (st && kind === 'roof' && st.roof) base = st.roof; }
@@ -1722,16 +1722,84 @@ function drawGardenBuildings(hs, lineParts) {
       im.castShadow = part.shadow; im.receiveShadow = true; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true;
       im.frustumCulled = false; scene.add(im); homeBatches.push(im); });
     const L = TPL.lines, out = new Float32Array(L.length * list.length);
-    M.forEach((m, j) => { const o = j * L.length; for (let k = 0; k < L.length; k += 3) { v.set(L[k], L[k + 1], L[k + 2]).applyMatrix4(m); out[o + k] = v.x; out[o + k + 1] = v.y; out[o + k + 2] = v.z; } });
+    M.forEach((m, j) => { const o = j * L.length; fxLine('b' + list[j].i, out, o, L.length); for (let k = 0; k < L.length; k += 3) { v.set(L[k], L[k + 1], L[k + 2]).applyMatrix4(m); out[o + k] = v.x; out[o + k + 1] = v.y; out[o + k + 2] = v.z; } });
     lineParts.push(out); });
 }
 const homeBatches = []; let homeLines = null, homePick = null;
+// ================= BUILD-UP ANIMATION (Dev, 23 Nov): a new home builds itself, ~1.6 s =================
+// A grey box pops up, wobbles and poofs into little tiles; the walls pop in, the roof drops from above with a bounce, the details pop,
+// then the trees/bushes. Plays when a home appears on a sheet refresh (new citizen), from "▶ Replay build" on a home's card, and for
+// filming with ?film=1 ("Build this area": every home near the centre of the screen builds in a wave). Homes are drawn in instanced
+// batches, so during the animation the real copy is hidden (scale 0 + its outline cleared) and a stand-in plays, then it is put back.
+const FX = { reg: new Map(), prev: null, live: [], parts: [], wave: false, first: true };
+const fxKey = h => h.fp && /^L/.test(h.kind || '') ? 'b' + h.fp.bid : 'h' + h.n;
+function fxBegin() { FX.live.slice().forEach(a => fxEnd(a, true)); FX.reg.clear(); FX.lineRef = []; }
+function fxAdd(key, tpl, im, j, m) { let e = FX.reg.get(key); if (!e) FX.reg.set(key, e = { tpl, m, inst: [], lines: [] }); if (e.tpl === tpl) e.inst.push([im, j]); }
+function fxLine(key, arr, off, len) { const e = FX.reg.get(key); if (e) e.lines.push([arr, off, len]); }
+function fxLinesDone(parts) { const base = new Map(); let k = 0; parts.forEach(a => { base.set(a, k); k += a.length; }); FX.reg.forEach(e => { e.lines = e.lines.map(([a, o, l]) => [base.get(a) + o, l]); }); }
+const FXZ = new THREE.Matrix4().makeScale(0, 0, 0), backOut = t => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+const bounceOut = x => { const n = 7.5625, d = 2.75; if (x < 1 / d) return n * x * x; if (x < 2 / d) return n * (x -= 1.5 / d) * x + 0.75; if (x < 2.5 / d) return n * (x -= 2.25 / d) * x + 0.9375; return n * (x -= 2.625 / d) * x + 0.984375; };
+function fxHide(e, on) {   // hide / show the real instanced copy + its outline
+  if (on) { e.saved = e.inst.map(([im, j]) => { const m = new THREE.Matrix4(); im.getMatrixAt(j, m); im.setMatrixAt(j, FXZ); im.instanceMatrix.needsUpdate = true; return m; });
+    if (homeLines) { const P = homeLines.geometry.attributes.position; e.savedL = e.lines.map(([o, l]) => { const c = P.array.slice(o, o + l); P.array.fill(0, o, o + l); return c; }); P.needsUpdate = true; } }
+  else if (e.saved) { e.inst.forEach(([im, j], k) => { im.setMatrixAt(j, e.saved[k]); im.instanceMatrix.needsUpdate = true; }); e.saved = null;
+    if (homeLines && e.savedL) { const P = homeLines.geometry.attributes.position; e.lines.forEach(([o], k) => P.array.set(e.savedL[k], o)); P.needsUpdate = true; } e.savedL = null; } }
+function fxPlay(key, delay) {
+  const e = FX.reg.get(key); if (!e || e.busy) return false; e.busy = true; fxHide(e, true);
+  const g = new THREE.Group(), pos = new THREE.Vector3(), qq = new THREE.Quaternion(), sc = new THREE.Vector3(); e.m.decompose(pos, qq, sc); g.position.copy(pos); g.quaternion.copy(qq); g.scale.copy(sc); scene.add(g);
+  const bb = new THREE.Box3(), c = new THREE.Color(), phases = { walls: [], roof: [], det: [], nat: [] };
+  e.tpl.list.forEach(p => { p.geo.boundingBox || p.geo.computeBoundingBox(); bb.union(p.geo.boundingBox); });
+  const H = Math.max(1, bb.max.y);
+  e.tpl.list.forEach((p, k) => { const [im, j] = e.inst[k] || []; if (im && im.instanceColor) im.getColorAt(j, c); else c.copy(p.color);
+    const m = new THREE.Mesh(p.geo, new THREE.MeshToonMaterial({ color: c.clone(), gradientMap: grad })); m.castShadow = p.shadow; m.receiveShadow = true; m.visible = false;
+    const pb = p.geo.boundingBox, sl = p.slot || '', green = c.g > c.r * 1.08 && c.g > c.b * 1.05;
+    const kind = p.wall || /^wall/.test(sl) ? 'walls' : p.roofSlot || /^roof/.test(sl) || (pb.min.y > H * 0.5 && !green) ? 'roof' : green && pb.max.y > 0.6 ? 'nat' : 'det';
+    const w = new THREE.Group(); w.add(m); g.add(w); phases[kind].push(w); });
+  const ph = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), new THREE.MeshToonMaterial({ color: '#c2c2c2', gradientMap: grad }));
+  const sx = bb.max.x - bb.min.x, sz = bb.max.z - bb.min.z; ph.position.set((bb.min.x + bb.max.x) / 2, 0, (bb.min.z + bb.max.z) / 2); ph.userData.s = [sx * 0.55, H * 0.7, sz * 0.5]; ph.visible = false; ph.castShadow = true; g.add(ph);
+  const a = { e, g, ph, phases, t: -(delay || 0), done: false, burst: false }; FX.live.push(a); kick(3000 + (delay || 0) * 1000); return true; }
+function fxEnd(a, cancel) { if (a.done) return; a.done = true; scene.remove(a.g); a.g.traverse(o => { if (o.material) o.material.dispose(); if (o === a.ph) o.geometry.dispose(); }); fxHide(a.e, false); a.e.busy = false;
+  const i = FX.live.indexOf(a); if (i >= 0) FX.live.splice(i, 1); }
+function fxFrame(dt) {
+  if (FX.manual || (!FX.live.length && !FX.parts.length)) return; kick(500);
+  FX.live.slice().forEach(a => { a.t += dt; const t = a.t; if (t < 0) return;
+    const ph = a.ph, [w, h, d] = ph.userData.s;                                                   // 0 .. 0.65 s: the grey box
+    if (t < 0.65) { ph.visible = true; if (t < 0.32) ph.scale.set(w, Math.max(0.001, h * backOut(t / 0.32)), d); else if (t < 0.5) { const q = Math.sin((t - 0.32) * 40) * 0.07; ph.scale.set(w * (1 + q), h * (1 - q), d * (1 + q)); }
+      else { if (!a.burst) { a.burst = true; fxBurst(a.g, w, h, d, ph.position); } const k = Math.max(0.001, 1 - (t - 0.5) / 0.15); ph.scale.set(w * k, h * k, d * k); } } else ph.visible = false;
+    const pop = (list, t0, dur, step, mode) => list.forEach((o, i) => { const q = (t - t0 - i * step) / dur; if (q < 0) { o.children[0].visible = false; return; } o.children[0].visible = true; const k = Math.min(1, q);
+      if (mode === 'drop') { o.position.y = (1 - bounceOut(k)) * h * 1.6; } else if (mode === 'rise') o.scale.set(1, Math.max(0.001, backOut(k)), 1); else o.scale.setScalar(Math.max(0.001, backOut(k))); });
+    pop(a.phases.walls, 0.5, 0.45, 0, 'rise'); pop(a.phases.det, 0.62, 0.4, 0.03, 'pop'); pop(a.phases.roof, 0.75, 0.6, 0.05, 'drop'); pop(a.phases.nat, 1.05, 0.4, 0.08, 'pop');
+    if (t > 1.7 + a.phases.nat.length * 0.08) fxEnd(a); });
+  for (let k = FX.parts.length - 1; k >= 0; k--) { const p = FX.parts[k]; p.userData.life += dt; p.userData.v.y -= 30 * dt; p.position.addScaledVector(p.userData.v, dt);
+    p.scale.setScalar(Math.max(0.001, 1 - p.userData.life / 0.8)); if (p.userData.life > 0.8 || p.position.y < 0) { scene.remove(p); FX.parts.splice(k, 1); } }
+}
+const FX_TILE = new THREE.BoxGeometry(0.7, 0.7, 0.7);
+function fxBurst(g, w, h, d, c) { const wp = new THREE.Vector3(); g.updateMatrixWorld(true);
+  for (let k = 0; k < 14; k++) { const m = new THREE.Mesh(FX_TILE, mat(k % 3 ? '#8fd16a' : '#c7c7c7')); wp.set(c.x + (Math.random() - 0.5) * w, Math.random() * h * 0.6 + 0.5, c.z + (Math.random() - 0.5) * d).applyMatrix4(g.matrixWorld);
+    m.position.copy(wp); m.userData = { v: new THREE.Vector3((Math.random() - 0.5) * 12, 8 + Math.random() * 8, (Math.random() - 0.5) * 12), life: 0 }; scene.add(m); FX.parts.push(m); } }
+function fxNewHomes() {   // after a redraw: homes that were not there last time build themselves (not on the first load)
+  if (!window.VinlandKit) return;   // the Garden District + Suburb homes are drawn only once the kit has loaded: start counting from there
+  const keys = new Set(FX.reg.keys()); if (FX.prev && !FX.wave) { let n = 0; keys.forEach(k => { if (!FX.prev.has(k) && n < 12) { fxPlay(k, 0.4 + n * 0.25); n++; } }); } FX.prev = keys; }
+function fxArea(r) {   // film mode: every home near the screen centre, in a wave from the middle outwards
+  const c = controls.target, list = []; FX.reg.forEach((e, k) => { const x = e.m.elements[12], z = e.m.elements[14], d = Math.hypot(x - c.x, z - c.z); if (d < r) list.push([d, k]); });
+  list.sort((p, q) => p[0] - q[0]); list.slice(0, 160).forEach(([d, k], i) => fxPlay(k, 0.3 + d * 0.018 + (i % 3) * 0.05)); return list.length; }
+window.VinBuildFX = { play: k => fxPlay(k, 0), area: fxArea, key: fxKey, live: () => FX.live.length,
+  manual: on => { FX.manual = !!on; }, step: dt => { FX.manual = false; fxFrame(dt); FX.manual = true; renderer.render(scene, camera); },
+  shot: dt => { FX.manual = false; fxFrame(dt); FX.manual = true; renderer.render(scene, camera); return renderer.domElement.toDataURL('image/jpeg', 0.92); } };   // step(): frame-exact renders for the reel clip
+// ?film=1: a "Build this area" button for filming (hides itself while the wave plays); ?fps=1: a small FPS counter for phone tests
+const FXQ = (() => { try { return new URLSearchParams(location.search); } catch (e) { return { get: () => null }; } })();
+if (FXQ.get('film')) { const b = document.createElement('button'); b.textContent = '🏗 Build this area';
+  b.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom,0px));z-index:30;font:700 15px system-ui,sans-serif;padding:12px 20px;border-radius:999px;border:0;background:#2f2b28;color:#fff8ef;box-shadow:0 6px 18px rgba(0,0,0,.3)';
+  b.onclick = () => { b.hidden = true; FX.wave = true; const n = fxArea(+FXQ.get('r') || 140); setTimeout(() => { b.hidden = false; FX.wave = false; }, 4000 + Math.min(n, 160) * 40); }; document.body.appendChild(b); }
+if (FXQ.get('fps')) { const f = document.createElement('div'); f.style.cssText = 'position:fixed;left:8px;top:calc(8px + env(safe-area-inset-top,0px));z-index:99;font:700 12px monospace;background:rgba(0,0,0,.6);color:#9f9;padding:3px 6px;border-radius:6px;pointer-events:none';
+  document.body.appendChild(f); let n = 0, t0 = performance.now(); const tick = t => { n++; if (t - t0 > 1000) { f.textContent = Math.round(n * 1000 / (t - t0)) + ' fps'; n = 0; t0 = t; } requestAnimationFrame(tick); }; requestAnimationFrame(tick); }
+
 let pioneerMesh = null; const PIONEERS = 1000, PLATE = { x: -0.25, y: 2.1, z: 3.1 };
 let PIONEER_SET = new Set();   // the first 1,000 people living here (empty homes don't take a Pioneer place)
 function computePioneers(hs) { PIONEER_SET = new Set(hs.filter(h => h.status !== 'abandoned').sort((x, y) => x.n - y.n).slice(0, PIONEERS)); }
 const isPioneer = h => PIONEER_SET.has(h);
 function drawHomes(hs) {
-  homeBatches.forEach(m => { scene.remove(m); m.dispose && m.dispose(); }); homeBatches.length = 0;
+  fxBegin(); homeBatches.forEach(m => { scene.remove(m); m.dispose && m.dispose(); }); homeBatches.length = 0;
   if (homeLines) { scene.remove(homeLines); homeLines.geometry.dispose(); homeLines = null; }
   if (homePick) { scene.remove(homePick); const i = pickables.indexOf(homePick); if (i >= 0) pickables.splice(i, 1); homePick = null; }
   if (!hs.length) return;
@@ -1750,7 +1818,7 @@ function drawHomes(hs) {
   const M = hs[idx[0]].fp ? idx.map(i => bmat(hs[i])) : null;   // a fourplex is drawn once, at the building
   TPL.list.forEach(part => {
     const im = new THREE.InstancedMesh(part.geo, new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: grad }), idx.length);
-    idx.forEach((i, j) => { const h = hs[i]; im.setMatrixAt(j, M ? M[j] : mats[i]);
+    idx.forEach((i, j) => { const h = hs[i]; im.setMatrixAt(j, M ? M[j] : mats[i]); fxAdd(fxKey(h), TPL, im, j, M ? M[j] : mats[i]);
       const st = h.status === 'abandoned' ? null : styleOf(h.user), roof = !part.wall && part.color.getHexString() === new THREE.Color(C.terra).getHexString();
       if (KITT[h.kind] && h.status !== 'abandoned') {   // New District: a few base colours, each home a slightly different shade (16 Nov)
         const v = Math.sin(h.n * 12.9898) * 43758.5453, rr = v - Math.floor(v), base = part.wall ? (st && st.wall) || ND_WALLS[Math.floor(rr * ND_WALLS.length)] : part.roofSlot ? (st && st.roof) || ND_ROOFS[Math.floor(rr * 7) % ND_ROOFS.length] : null;
@@ -1761,14 +1829,14 @@ function drawHomes(hs) {
   });
   // outlines
   const L = TPL.lines, out = new Float32Array(L.length * idx.length), v = new THREE.Vector3();
-  idx.forEach((i, j) => { const m = M ? M[j] : mats[i], o = j * L.length; for (let k = 0; k < L.length; k += 3) { v.set(L[k], L[k + 1], L[k + 2]).applyMatrix4(m); out[o + k] = v.x; out[o + k + 1] = v.y; out[o + k + 2] = v.z; } });
+  idx.forEach((i, j) => { const m = M ? M[j] : mats[i], o = j * L.length; fxLine(fxKey(hs[i]), out, o, L.length); for (let k = 0; k < L.length; k += 3) { v.set(L[k], L[k + 1], L[k + 2]).applyMatrix4(m); out[o + k] = v.x; out[o + k + 1] = v.y; out[o + k + 2] = v.z; } });
   lineParts.push(out); });
   if (window.VinlandKit) drawGardenBuildings(hs, lineParts);   // Garden District: a building once someone lives in it (shops always)
   if (window.VinlandKit) placeTowerBuild(hs);   // Vinland Tower rises with the real citizen count (16 Nov)
   // all outlines in one piece
   const out = new Float32Array(lineParts.reduce((t, a) => t + a.length, 0)); { let k = 0; lineParts.forEach(a => { out.set(a, k); k += a.length; }); }
   const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(out, 3)); lg.computeBoundingSphere();
-  homeLines = new THREE.LineSegments(lg, ink); scene.add(homeLines);
+  homeLines = new THREE.LineSegments(lg, ink); scene.add(homeLines); fxLinesDone(lineParts);
   // golden Pioneer plates by the front door: the first 1,000 citizens keep theirs forever
   if (pioneerMesh) { scene.remove(pioneerMesh); pioneerMesh.dispose && pioneerMesh.dispose(); pioneerMesh = null; }
   computePioneers(hs);
@@ -1782,6 +1850,7 @@ function drawHomes(hs) {
   hs.forEach((h, i) => homePick.setMatrixAt(i, mats[i])); homePick.instanceMatrix.needsUpdate = true; homePick.userData.homes = hs;
   homePick.computeBoundingSphere && homePick.computeBoundingSphere();
   scene.add(homePick); pickables.push(homePick);
+  fxNewHomes();
 }
 // ================= MARKET (ring 2) =================
 // Small shops for citizens whose job fits a shop (2 per plot), the 4 corner plots are kept for
@@ -2297,6 +2366,7 @@ function selectHome(h) {
     `${h.villa ? (isMansion(h.villa) ? `<div class="vip">🏰 Mansion owner${h.villa === 101 ? " · Mansion Lane's first owner" : ''} ⭐</div>` : `<div class="vip">🏡 Villa owner${villaRank(h.user) === 1 ? " · Villa Lane's first owner" : ''} ⭐</div>`) : ''}<dl class="facts"><dt>Home</dt><dd>${h.villa ? '🏡 Villa · Villa Lane, plot ' + h.villa : h.flat ? esc(h.flat.label) + ' · Building R' + h.flat.bid + ' · #' + h.n : (h.founder ? 'Founder home' : 'Home') + ' #' + h.n}</dd>${isPioneer(h) ? '<dt>Pioneer</dt><dd>🏅 One of the first 1,000 citizens</dd>' : ''}${h.status !== 'hidden' && supRank(h.user) ? `<dt>Supporter</dt><dd>⭐ ${supRank(h.user) >= 2 ? 'Supporter of Vinland' : "Name on the Supporters' Wall"}</dd>` : ''}${h.job ? `<dt>Profession</dt><dd>${esc(h.job)}</dd>` : ''}${h.staffOf ? `<dt>Works at</dt><dd>@${esc(h.staffOf.owner.user)}'s ${esc(h.staffOf.job.toLowerCase().replace(/\s*(owner|landlord)$/, ''))} · ${h.staffOf.area === 'se' ? 'New Market' : 'Market'} shop ${h.staffOf.n}</dd>` : ''}<dt>Joined</dt><dd>Day ${h.joined}</dd></dl>
      <div class="row2"><button class="btn ghost" id="shareHome">Copy link to this home</button>${h.shopRef || h.staffOf ? `<button class="btn ghost" id="visitShop">${h.shopRef ? 'Visit their shop' : 'Visit their workplace'}</button>` : ''}${link}</div>`);
   const vs = document.getElementById('visitShop'); if (vs) vs.onclick = () => selectShop(h.shopRef || h.staffOf);
+  { const row = cardBody.querySelector('.row2'); if (row && FX.reg.has(fxKey(h))) { const rb = document.createElement('button'); rb.className = 'btn ghost'; rb.textContent = '▶ Replay build'; rb.onclick = () => { track('replay-build'); fxPlay(fxKey(h), 0.2); }; row.appendChild(rb); } }
   { const row = cardBody.querySelector('.row2'); if (row && h.status !== 'hidden') { const pb = document.createElement('button'); pb.className = 'btn'; pb.textContent = (window.VSOC && window.VSOC.user && h.user && h.user.toLowerCase() === window.VSOC.user) ? '🛂 My passport' : '🛂 Passport'; pb.onclick = () => openPassport(h, where); row.prepend(pb); } }
   { const row = PHONE && !OLDP ? null : cardBody.querySelector('.row2'); if (row) { const wb = document.createElement('button'); wb.className = 'btn ghost'; wb.textContent = '🚶 Walk from this home'; wb.onclick = () => startWalk(h); row.prepend(wb); const db = document.createElement('button'); db.className = 'btn ghost'; db.textContent = '🚗 Drive from here'; db.onclick = () => startDrive(h); wb.after(db); } }
   { const S5 = window.VSOC, se = S5 && S5.user, u = h.status === 'active' ? h.user.toLowerCase() : '', row = cardBody.querySelector('.row2'), p = S5 && u ? S5.byHost.get(u) : null;   // step 5: knock + party (fixed buttons only)
@@ -5138,7 +5208,7 @@ controls.addEventListener('change', () => kick(350));
 function frame(now) {
   if (window.PEN_ON) { RUN.stopped = true; return; }   // the penalty game is open: the map sleeps
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
-  nightFrame(now); plazaFrame(now); crackFrame(now); dsquareFrame(now);
+  nightFrame(now); plazaFrame(now); crackFrame(now); dsquareFrame(now); fxFrame(dt);
   if (WALK.on) walkFrame(dt, now); else if (DRV.on) driveFrame(dt, now); else {
   if (fly) { const k = ease(Math.min(1, (now - fly.t0) / fly.ms)); controls.target.lerpVectors(fly.fT, fly.tT, k); camera.position.lerpVectors(fly.fP, fly.tP, k); if (k >= 1) fly = null; }
   if (touring) { const t = controls.target, dx = camera.position.x - t.x, dz = camera.position.z - t.z, a = dt * 0.12;
