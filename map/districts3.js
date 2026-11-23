@@ -412,10 +412,7 @@
         const q = [vtx(t0, a0), vtx(t0, a1), vtx(t1, a0), vtx(t1, a1)]; [0, 2, 1, 1, 2, 3].forEach(n => { pos.push(q[n][0], q[n][1], q[n][2]); col.push(q[n][3].r, q[n][3].g, q[n][3].b); }); }
       const G = new T.BufferGeometry(); G.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); G.setAttribute('color', new T.Float32BufferAttribute(col, 3)); G.computeVertexNormals();
       const m = new T.Mesh(G, new T.MeshLambertMaterial({ vertexColors: true, side: T.DoubleSide })); m.receiveShadow = true; g.add(m);
-      const fp = []; for (let i = 0; i < SN; i++) { const a0 = i / SN * Math.PI * 2, a1 = (i + 1) / SN * Math.PI * 2, P0 = vtx(1, a0), P1 = vtx(1, a1), O0 = vtx(1.035, a0), O1 = vtx(1.035, a1);
-        fp.push(P0[0], 0.7, P0[2], O0[0], 0.7, O0[2], P1[0], 0.7, P1[2], P1[0], 0.7, P1[2], O0[0], 0.7, O0[2], O1[0], 0.7, O1[2]); }
-      const F = new T.BufferGeometry(); F.setAttribute('position', new T.Float32BufferAttribute(fp, 3)); F.computeVertexNormals();
-      g.add(new T.Mesh(F, new T.MeshBasicMaterial({ color: '#f4fbf8', side: T.DoubleSide }))); }
+      }   // (Dev 24 Nov) no white surf line round the shallows
     // ---- homes ----
     homes.forEach((p, i) => { const toL = Math.atan2(HALL.x - p.x, HALL.z + 60 - p.z);   // face roughly toward the lagoon side
       p.ry = toL + (r() - 0.5) * 1.2; p.type = i % 5 === 2 ? 'a' : i % 5 === 4 ? 'c' : 'l';
