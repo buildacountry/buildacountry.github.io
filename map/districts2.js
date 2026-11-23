@@ -237,5 +237,95 @@
     g.userData = { homes: built, spots: homes, length: Ln, width: Wd, height: h };
     return g;
   }
-  root.VinlandDistricts = { introvertIsland, introvertIsland2 };
+
+  // =====================================================================================================================
+  // NAP VALLEY v2 (Dev, 24 Nov: "realistic, logical, like a good city builder"). The valley between the new hills west of the city.
+  // Layout follows what is really there: the old village road crosses the valley; the Dream Lodge faces it with a driveway; a footpath runs
+  // the length of the valley; lavender fields + windmill to the north; a fenced sheep pasture + hay field to the south; the hammock grove
+  // behind the lodge; a NAP VALLEY sign where the road comes in. NO houses yet: spots are saved along the footpath (o.built builds them).
+  // o.ground(x, z) = the map's hill height at a LOCAL point, so nothing floats or sinks. Local frame: long axis = z.
+  // =====================================================================================================================
+  function napValley(o = {}) {
+    const r = rng(o.seed || 2411), g = new T.Group(), fast = !!o.fast, B = Batch(), G = o.ground || (() => 0);
+    const gy = (x, z) => Math.max(0.3, G(x, z) + 0.06), slope = (x, z) => Math.abs(G(x + 4, z) - G(x - 4, z)) + Math.abs(G(x, z + 4) - G(x, z - 4));
+    const P0 = [0, -156], D = [-0.715, 0.699], NN = [0.699, 0.715], roadAt = t => [P0[0] + D[0] * t, P0[1] + D[1] * t];   // the village road (painted by the map)
+    const roadDist = (x, z) => Math.abs((x - P0[0]) * NN[0] + (z - P0[1]) * NN[1]);
+    const rects = [], inRect = (x, z, m = 0) => rects.some(([cx, cz, w, d, ry]) => { const dx = x - cx, dz = z - cz, c = Math.cos(ry), s2 = Math.sin(ry), u = dx * c - dz * s2, v = dx * s2 + dz * c; return Math.abs(u) < w / 2 + m && Math.abs(v) < d / 2 + m; });
+    const drape = (pts, w, c, lift) => { const pos = [], idx = []; pts.forEach((p, i) => { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], dx = b.x - a.x, dz = b.z - a.z, l = Math.hypot(dx, dz) || 1, nx = -dz / l * w / 2, nz = dx / l * w / 2;
+        pos.push(p.x + nx, gy(p.x + nx, p.z + nz) + lift, p.z + nz, p.x - nx, gy(p.x - nx, p.z - nz) + lift, p.z - nz); if (i) { const k = (i - 1) * 2; idx.push(k, k + 2, k + 1, k + 1, k + 2, k + 3); } });
+      const Gm = new T.BufferGeometry(); Gm.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); Gm.setIndex(idx); B.add(Gm, c, null); };
+    const curve = (pts, n) => new T.CatmullRomCurve3(pts.map(p => new T.Vector3(p[0], 0, p[1]))).getSpacedPoints(n);
+    // ---- the footpath: south end → crosses the road → north end (keeps to the flat west side of the valley in the north) ----
+    const FP = curve([[-40, -620], [-50, -400], [-20, -250], [0, -156], [-45, 20], [-60, 200], [-55, 380], [-75, 600]], 220);
+    drape(FP, 2.8, '#c4b48c', 0.04); const nearPath = (x, z, m) => FP.some(p => Math.hypot(p.x - x, p.z - z) < m);
+    // ---- THE DREAM LODGE, 38 m off the road, front + porch facing it, gravel forecourt + driveway ----
+    const L = [P0[0] + NN[0] * 38, P0[1] + NN[1] * 38], LRY = Math.atan2(NN[0], NN[1]), LY = gy(L[0], L[1]); rects.push([L[0], L[1], 40, 40, -LRY]);
+    { const M = at(L[0], LY, L[1], LRY);
+      B.add(UB(), '#9a8f80', M, 0, -1.2, 0, 30, 1.9, 14); B.add(UB(), '#b5774a', M, 0, 0.7, 0, 28, 6, 12); B.add(UP(), '#4a5a7a', M, 0, 6.7, 0, 31, 6, 15, 0, Math.PI / 2);
+      for (let k = -3; k <= 3; k++) if (k) { B.add(UB(), '#f6f0e2', M, k * 3.6, 2.2, -6.05, 2, 2.4, 0.2); B.add(UB(), 'glow', M, k * 3.6, 2.35, -6.12, 1.5, 1.9, 0.12); }
+      B.add(UB(), '#5a3a24', M, 0, 0.7, -6.15, 2.6, 4, 0.2); B.add(UB(), '#f6f0e2', M, 0, 4.7, -6.15, 3.2, 0.3, 0.25);
+      B.add(UB(), '#a87a4a', M, 0, 0.3, -9, 30, 0.4, 6); B.add(UB(), '#4a5a7a', M, 0, 5.6, -9.2, 30, 0.4, 6.6, -0.18);
+      for (let k = -2; k <= 2; k++) B.add(UB(), '#7a4a2c', M, k * 7, 0.7, -11.6, 0.5, 5, 0.5);
+      [-10, -6, 6, 10].forEach(dx => { B.add(UB(), '#7a4a2c', M, dx, 0.7, -8.5, 1.4, 1, 1.4); B.add(UB(), '#7a4a2c', M, dx, 1.7, -7.9, 1.4, 1.6, 0.2); });
+      B.add(UB(), '#8a7a6a', M, 11, 6, 2, 1.6, 7, 1.6);
+      B.add(UC(16), '#f4e7a1', M, 0, 9.4, -7.7, 1.5, 0.3, 1.5, Math.PI / 2); B.add(UC(16), '#b5774a', M, 0.7, 9.6, -7.8, 1.3, 0.35, 1.3, Math.PI / 2);   // moon on the gable
+      B.add(UB(), '#cfc2a4', M, 0, -0.25, -18, 26, 0.4, 12);                                                          // gravel forecourt
+      [[-9, -18, '#c8402f'], [-3, -19, '#3f7fbf']].forEach(([cx, cz, c]) => { B.add(UB(), c, M, cx, 0, cz, 2.2, 1.3, 4.4); B.add(UB(), c, M, cx, 1.3, cz + 0.3, 2, 0.9, 2.4); });   // two parked cars
+      for (let k = 0; k < 6; k++) B.add(UK(6), ['#9b7fd1', '#f2c14e', '#e8473a'][k % 3], M, -13 + k * 1.2 + (k > 2 ? 22 : 0), 0, -12.4, 0.8, 1, 0.8); }   // flower beds
+    drape(curve([[P0[0] + NN[0] * 3, P0[1] + NN[1] * 3], [L[0] - NN[0] * 24, L[1] - NN[1] * 24]], 12), 5, '#cfc2a4', 0.05);   // driveway
+    // ---- the HAMMOCK GROVE behind the lodge: a shady clump of big round trees, hammocks slung between pairs ----
+    const trees = [], HG = [L[0] + NN[0] * 40 - D[0] * 14, L[1] + NN[1] * 40 - D[1] * 14];
+    for (let k = 0; k < 7; k++) { const a = k / 7 * 6.283, cx = HG[0] + Math.cos(a) * 17, cz = HG[1] + Math.sin(a) * 17, ry = a + Math.PI / 2, dx = Math.cos(ry) * 4.6, dz = Math.sin(ry) * 4.6;
+      trees.push({ x: cx - dx, y: gy(cx - dx, cz - dz), z: cz - dz, r: r() * 6, s: 1.5, k: 'r', c: k }, { x: cx + dx, y: gy(cx + dx, cz + dz), z: cz + dz, r: r() * 6, s: 1.5, k: 'r', c: k + 1 });
+      const M = at(cx, gy(cx, cz), cz, -ry); B.add(UB(), ['#e8473a', '#f2c14e', '#3f7fbf', '#a084c8', '#f6f0e2', '#5fb39a', '#f28b5a'][k], M, 0, 1.2, 0, 6.8, 0.3, 1.8); B.add(UB(), '#d9c6a0', M, -3.9, 1.5, 0, 1.2, 0.12, 0.12); B.add(UB(), '#d9c6a0', M, 3.9, 1.5, 0, 1.2, 0.12, 0.12); }
+    for (let k = 0; k < 14; k++) { const a = r() * 6.283, d = 26 + r() * 10; trees.push({ x: HG[0] + Math.cos(a) * d, y: 0, z: HG[1] + Math.sin(a) * d, r: r() * 6, s: 1.3 + r() * 0.4, k: 'r', c: k }); }
+    B.add(UC(12), '#7a5a3a', null, HG[0], gy(HG[0], HG[1]) - 0.2, HG[1], 2.2, 0.5, 2.2); B.add(UC(8), '#3a3330', null, HG[0], gy(HG[0], HG[1]) + 0.1, HG[1], 1.4, 0.4, 1.4);   // fire pit
+    rects.push([HG[0], HG[1], 60, 60, 0]);
+    // ---- NORTH: two lavender fields either side of the footpath, a hedgerow behind them, the windmill + a lavender shed ----
+    const field = (cx, cz, w, d, ry, rowC, soil) => { rects.push([cx, cz, w, d, -ry]); const M = at(cx, gy(cx, cz) - 0.15, cz, ry); B.add(UB(), soil, M, 0, -0.4, 0, w, 0.7, d);
+      for (let z2 = -d / 2 + 2.5; z2 < d / 2 - 1; z2 += 3.6) { B.add(UB(), '#6f8a4e', M, 0, 0.2, z2, w - 3, 0.5, 1.7); B.add(UB(), rowC[(z2 * 7 | 0) & 1], M, 0, 0.6, z2, w - 4, 0.8, 1.3); } };
+    field(-112, 230, 52, 110, 0, ['#9b7fd1', '#8a6cc4'], '#a8875a'); field(-5, 230, 58, 110, 0, ['#8a6cc4', '#a68ae0'], '#a8875a');
+    field(-112, 360, 52, 80, 0, ['#9b7fd1', '#8a6cc4'], '#a8875a');
+    for (let x = -138; x <= 24; x += 7) trees.push({ x, y: 0, z: 405 + r() * 3, r: r() * 6, s: 0.9 + r() * 0.3, k: 'r', c: (r() * 12) | 0 });   // hedgerow
+    { const W0 = [-20, 470], y = gy(W0[0], W0[1]), M = at(W0[0], y, W0[1], 0.5); rects.push([W0[0], W0[1], 30, 30, 0]);            // WINDMILL (stone tower, cap, 4 sails facing the valley)
+      B.add(UC(10), '#efe2c6', M, 0, -0.5, 0, 5.2, 16, 5.2); B.add(UK(10), '#8a4a32', M, 0, 15.5, 0, 6, 5, 6); B.add(UB(), '#5a3a24', M, 0, 0, 5.1, 2, 3.4, 0.3); B.add(UB(), '#3f4a52', M, 0, 8, 4.6, 1.2, 1.4, 0.3);
+      const S = M.clone().multiply(new T.Matrix4().makeTranslation(0, 14, 6));
+      for (let k = 0; k < 4; k++) { const R2 = S.clone().multiply(new T.Matrix4().makeRotationZ(k * Math.PI / 2 + 0.35)); B.add(UB(), '#7a4a2c', R2, 0, 0, 0, 0.4, 13, 0.3); B.add(UB(), '#f6f0e2', R2, 1.3, 2.5, 0, 2.4, 10, 0.12); }
+      B.add(UC(8), '#7a4a2c', S, 0, 0, -0.6, 0.9, 1.2, 0.9, Math.PI / 2); }
+    { const M = at(36, gy(36, 200), 200, 0); rects.push([36, 200, 14, 12, 0]); B.add(UB(), '#a8683f', M, 0, 0, 0, 9, 4, 7); B.add(UP(), '#6b3f2c', M, 0, 4, 0, 10, 3, 8, 0, Math.PI / 2); B.add(UB(), '#5a3a24', M, -4.6, 0, 0, 0.2, 3, 2.6); }   // lavender shed
+    // ---- SOUTH: hay field (bales in rows) + fenced sheep pasture with a shelter and a trough ----
+    { const cx = -100, cz = -300, w = 64, d = 80; rects.push([cx, cz, w, d, 0]); const M = at(cx, gy(cx, cz) - 0.1, cz, 0); B.add(UB(), '#d9c27a', M, 0, -0.4, 0, w, 0.6, d);
+      for (let z2 = -d / 2 + 4; z2 < d / 2; z2 += 5) B.add(UB(), '#cdb366', M, 0, 0.2, z2, w - 2, 0.1, 2);
+      for (let k = 0; k < 12; k++) { const bx = -24 + (k % 4) * 16, bz = -28 + ((k / 4) | 0) * 26 + (k % 2) * 4; B.add(UC(10), '#e6c86a', M, bx, 1.3, bz, 1.3, 2.4, 1.3, Math.PI / 2, 0.3); } }
+    { const cx = 58, cz = -470, w = 100, d = 110; rects.push([cx, cz, w, d, 0]); const by = gy(cx, cz);   // pasture EAST of the footpath (the path never goes through it)
+      for (let k = 0; k <= 2 * (w + d) / 6; k++) { let t = k * 6, x, z; if (t < w) { x = cx - w / 2 + t; z = cz - d / 2; } else if ((t -= w) < d) { x = cx + w / 2; z = cz - d / 2 + t; } else if ((t -= d) < w) { x = cx + w / 2 - t; z = cz + d / 2; } else { t -= w; x = cx - w / 2; z = cz + d / 2 - t; }
+        if (Math.hypot(x - (cx - w / 2), z - (cz + 10)) < 4) continue; const y = gy(x, z); B.add(UB(), '#7a5236', null, x, y, z, 0.3, 1.5, 0.3); }   // posts (gate gap on the path side)
+      [[cx, cz - d / 2, w, 0.15], [cx, cz + d / 2, w, 0.15], [cx + w / 2, cz, 0.15, d], [cx - w / 2, cz - 17, 0.15, d / 2 - 14], [cx - w / 2, cz + 37, 0.15, d / 2 - 14]].forEach(([x, z, sx, sz]) => { [0.6, 1.2].forEach(h2 => B.add(UB(), '#a87a4a', null, x, by + h2, z, Math.max(sx, 0.15), 0.12, Math.max(sz, 0.15))); });
+      const SH = at(cx + 40, gy(cx + 40, cz + 35), cz + 35, Math.PI); B.add(UB(), '#a8683f', SH, 0, 0, 0, 12, 3.2, 6); B.add(UB(), '#6b3f2c', SH, 0, 3.2, -0.5, 13, 0.4, 7.4, 0.12); B.add(UB(), '#3a2a20', SH, 0, 0.3, -3.05, 10, 2.5, 0.2);
+      B.add(UB(), '#8a8278', null, cx + 20, by, cz - 20, 4, 0.8, 1.2); B.add(UB(), '#5fb3d9', null, cx + 20, by + 0.5, cz - 20, 3.6, 0.35, 0.9);
+      for (let k = 0; k < 22; k++) { const x = cx + (r() - 0.5) * (w - 14), z = cz + (r() - 0.5) * (d - 14), M = at(x, gy(x, z), z, r() * 6.283);
+        B.add(UB(), '#f6f3ea', M, 0, 0.6, 0, 1.3, 1.1, 2); B.add(UB(), '#3a3330', M, 0, 1.0, 1.2, 0.7, 0.7, 0.7); [-0.4, 0.4].forEach(a => [-0.6, 0.6].forEach(b => B.add(UB(), '#3a3330', M, a, 0, b, 0.2, 0.7, 0.2))); } }
+    // ---- the NAP VALLEY sign where the road comes in from the city + benches along the footpath ----
+    { const sp = roadAt(-185), x = sp[0] + NN[0] * 9, z = sp[1] + NN[1] * 9, ry = Math.atan2(-D[0], -D[1]) + Math.PI, y = gy(x, z), M = at(x, y, z, ry);
+      [-3.6, 3.6].forEach(dx => B.add(UB(), '#7a4a2c', M, dx, 0, 0, 0.5, 4.6, 0.5)); B.add(UB(), '#5a3a24', M, 0, 2.2, 0, 8.4, 2.6, 0.4);
+      const cv = document.createElement('canvas'); cv.width = 512; cv.height = 160; const c = cv.getContext('2d'); c.fillStyle = '#3a4a6a'; c.fillRect(0, 0, 512, 160); c.fillStyle = '#f4e7a1';
+      c.beginPath(); c.arc(70, 80, 42, 0, 7); c.fill(); c.fillStyle = '#3a4a6a'; c.beginPath(); c.arc(90, 66, 38, 0, 7); c.fill(); c.fillStyle = '#f6f0e2'; c.font = 'bold 64px sans-serif'; c.textBaseline = 'middle'; c.fillText('NAP VALLEY', 130, 84);
+      const sg = new T.Mesh(new T.PlaneGeometry(8, 2.5), new T.MeshBasicMaterial({ map: new T.CanvasTexture(cv) })); sg.applyMatrix4(M.clone().multiply(new T.Matrix4().makeTranslation(0, 3.5, -0.22).multiply(new T.Matrix4().makeRotationY(Math.PI)))); g.add(sg);
+      const sg2 = sg.clone(); sg2.applyMatrix4(new T.Matrix4()); sg2.geometry = sg.geometry; sg2.position.copy(sg.position); sg2.quaternion.copy(sg.quaternion); sg2.rotateY(Math.PI); sg2.translateZ(-0.46); g.add(sg2); }
+    for (let k = 14; k < FP.length - 10; k += 24) { const p = FP[k], q = FP[k + 1], x = p.x + 4.5, M = at(x, gy(x, p.z), p.z, Math.atan2(q.x - p.x, q.z - p.z) + Math.PI / 2); B.add(UB(), '#a87a4a', M, 0, 0.6, 0, 3, 0.3, 1); B.add(UB(), '#7a4a2c', M, 0, 0, 0, 2.6, 0.6, 0.8); B.add(UB(), '#a87a4a', M, 0, 0.9, 0.45, 3, 0.8, 0.15); }
+    // ---- an avenue of round trees along the road through the valley ----
+    for (let t = -230; t <= 210; t += 17) [-7.5, 7.5].forEach(o2 => { const [x0, z0] = roadAt(t), x = x0 + NN[0] * o2, z = z0 + NN[1] * o2; if (slope(x, z) > 2 || G(x, z) > 4 || inRect(x, z, 3) || nearPath(x, z, 4)) return; trees.push({ x, y: 0, z, r: r() * 6, s: 1.1, k: 'r', c: (t / 17 | 0) & 3 }); });
+    // ---- home spots for later: lanes of cottages along the footpath (nothing built yet) ----
+    const spots = []; for (let k = 6; k < FP.length - 4; k += 6) { const p = FP[k], q = FP[k + 1], dx = q.x - p.x, dz = q.z - p.z, l = Math.hypot(dx, dz) || 1;
+      [-1, 1].forEach(sd => { const x = p.x - dz / l * 17 * sd, z = p.z + dx / l * 17 * sd; if (inRect(x, z, 6) || roadDist(x, z) < 18 || slope(x, z) > 2.5 || nearPath(x, z, 12) || spots.some(s2 => Math.hypot(s2.x - x, s2.z - z) < 22)) return; spots.push({ x, z, ry: Math.atan2(p.x - x, p.z - z) }); }); }
+    // ---- woods: natural clumps in what is left (never on a field, the pasture, a road, the path or a home spot), thicker on the slopes ----
+    const free = (x, z, m) => !inRect(x, z, m) && roadDist(x, z) > 8 + m && !nearPath(x, z, 5 + m) && !spots.some(s2 => Math.hypot(s2.x - x, s2.z - z) < 12);
+    for (let c2 = 0; c2 < (fast ? 28 : 46); c2++) { const cx = (r() * 2 - 1) * 190, cz = (r() * 2 - 1) * 640, rad = 14 + r() * 26, n = 6 + (r() * 16 | 0);
+      for (let k = 0; k < n; k++) { const a = r() * 6.283, d = Math.sqrt(r()) * rad, x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d; if (!free(x, z, 2)) continue; trees.push({ x, y: 0, z, r: r() * 6, s: 0.9 + r() * 0.6, k: G(x, z) > 6 || r() < 0.4 ? 'p' : 'r', c: (r() * 12) | 0 }); } }
+    trees.forEach(t => { if (!t.y) t.y = gy(t.x, t.z) - 0.05; });
+    B.build(g, !fast); forest(g, trees, fast);
+    g.userData = { homes: [], spots, lodge: L };
+    return g;
+  }
+  root.VinlandDistricts = { introvertIsland, introvertIsland2, napValley };
 })(typeof window !== 'undefined' ? window : globalThis);

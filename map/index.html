@@ -846,9 +846,12 @@ const RIVER_WD = z => z < 1850 ? 0 : Math.min(40, (z - 1850) / 60);   // and slo
   const X0 = -8000, X1 = 8000, Z0 = -830, Z1 = 15000, W = X1 - X0, D = Z1 - Z0, N = 2048, px = x => (x - X0) / W * N, pz = z => (z - Z0) / D * N;
   const R = (a => () => (a = (a * 16807) % 2147483647) / 2147483647)(2026);
   const KEEP = [[-1160, 1500, -830, 1260], [480, 960, 1000, 1820]];   // built land, Power & Water: left clear (the river corridor follows its bends)
-  const inKeep = (x, z, m = 0) => KEEP.some(([a, b, c, d]) => x > a - m && x < b + m && z > c - m && z < d + m) || (z < 9000 && Math.abs(x - 430 - RIVER_MX(z)) < 110 + RIVER_WD(z) + m);
-  const HILLS = [[-4300, 3900, 1700, 260], [4300, 4800, 1500, 220], [-1200, 9800, 3000, 380], [5200, 10200, 2100, 300], [-6200, 8200, 1400, 240]];   // x, z, radius, height
-  const hillH = (x, z) => { let h = 0; HILLS.forEach(([hx, hz, r, hh]) => { const d = Math.hypot(x - hx, (z - hz) * 1.3) / r; if (d < 1) h += hh * Math.pow(Math.cos(d * Math.PI / 2), 2) * (0.75 + 0.25 * Math.sin(x * 0.004) * Math.cos(z * 0.005)); }); return h; };
+  const NAP = [-2560, -2160, 680, 1980];   // 24 Nov: Nap Valley (districts2.js napValley): no farms, woods or hill trees inside
+  const inKeep = (x, z, m = 0) => (x > NAP[0] - m && x < NAP[1] + m && z > NAP[2] - m && z < NAP[3] + m) || KEEP.some(([a, b, c, d]) => x > a - m && x < b + m && z > c - m && z < d + m) || (z < 9000 && Math.abs(x - 430 - RIVER_MX(z)) < 110 + RIVER_WD(z) + m);
+  const HILLS = [[-4300, 3900, 1700, 260], [4300, 4800, 1500, 220], [-1200, 9800, 3000, 380], [5200, 10200, 2100, 300], [-6200, 8200, 1400, 240],
+    // 24 Nov (Dev's green line): the land rises west of the city: a low east ridge (gap at z 700-1100 for the village road) and higher hills west of Nap Valley
+    [-1950, -350, 330, 90], [-1950, 0, 330, 90], [-1950, 350, 330, 90], [-1950, 1450, 330, 90], [-1950, 1800, 330, 90], [-1950, 2150, 330, 90], [-1950, 2500, 330, 90], [-3050, 300, 560, 210], [-3050, 700, 560, 210], [-3050, 1100, 560, 210], [-3050, 1500, 560, 210], [-3050, 1900, 560, 210]];   // x, z, radius, height
+  const hillH = window.__hillH = (x, z) => { let h = 0; HILLS.forEach(([hx, hz, r, hh]) => { const d = Math.hypot(x - hx, (z - hz) * 1.3) / r; if (d < 1) h += hh * Math.pow(Math.cos(d * Math.PI / 2), 2) * (0.75 + 0.25 * Math.sin(x * 0.004) * Math.cos(z * 0.005)); }); return h; };
   const cv = document.createElement('canvas'); cv.width = cv.height = N; const c = cv.getContext('2d');
   c.fillStyle = '#86ad5c'; c.fillRect(0, 0, N, N);
   const FIELD = ['#e3c766', '#d8b24a', '#9cc65f', '#7eb04e', '#b8925e', '#c9a86a', '#a6c962', '#e8d27e'], forests = [], farms = [], hedge = [];
@@ -2523,6 +2526,8 @@ const CONTENT = {
     `<p class="p">Nobody knows how far the land goes yet. The fog clears as the country grows and more citizens join.</p>`],
   coast: ['The coast', 'A long, empty beach',
     `<p class="p">No one has built anything by the sea yet.</p>`],
+  nap: ['Nap Valley', 'A sleepy green valley in the hills',
+    `<p class="p">Lavender fields, hammocks in the trees, sheep and a windmill. The Dream Lodge is the only building so far. Homes come when the first nappers move in.</p>`],
   island: ['Introvert Island', 'A quiet island out at sea',
     `<p class="p">Woods, a hill, a lighthouse and a little harbour. The Island Hall is the only building so far. Homes come when the first islanders move in.</p>`],
   sea: ['The sea', 'The edge of our country',
@@ -4458,10 +4463,12 @@ const SH = COAST.shore + 660;   // beach things below were placed for a shore at
 // ================= INTROVERT ISLAND (Dev, 23 Nov): the first Second Home district, an island in the sea off the north coast =================
 // Built by map/districts2.js (loaded after the map is up, so it never slows the first paint). No houses yet: only the hall, the
 // lighthouse and a small harbour; a cottage is added on the next saved spot when a citizen moves in (userData.spots).
-const ISLAND = { x: -1590, z: -2350, ry: Math.PI / 2 };
+const ISLAND = { x: -1590, z: -2350, ry: Math.PI / 2 }, NAPV = { x: -2360, z: 1330 };
 setTimeout(() => { const sc = document.createElement('script'); sc.src = 'districts2.js';
   sc.onload = () => { try { const g = VinlandDistricts.introvertIsland2({ fast: PHONE }); g.position.set(ISLAND.x, 0, ISLAND.z); g.rotation.y = ISLAND.ry;
-    g.traverse(m => { if (m.isMesh) { m.castShadow = false; m.userData.place = 'island'; if (!m.isInstancedMesh) pickables.push(m); } }); scene.add(g); ISLAND.g = g; } catch (e) { console.error('island', e); } };   // tap the island → its card (trees left out: cheaper clicks)
+    g.traverse(m => { if (m.isMesh) { m.castShadow = false; m.userData.place = 'island'; if (!m.isInstancedMesh) pickables.push(m); } }); scene.add(g); ISLAND.g = g; } catch (e) { console.error('island', e); }
+    try { const v = VinlandDistricts.napValley({ fast: PHONE, ground: (x, z) => (window.__hillH ? window.__hillH(x + NAPV.x, z + NAPV.z) : 0) }); v.position.set(NAPV.x, 0, NAPV.z);   // NAP VALLEY (24 Nov), between the new hills west of the city
+      v.traverse(m => { if (m.isMesh) { m.castShadow = false; m.userData.place = 'nap'; if (!m.isInstancedMesh) pickables.push(m); } }); scene.add(v); NAPV.g = v; } catch (e) { console.error('nap', e); } };   // tap the island → its card (trees left out: cheaper clicks)
   document.head.appendChild(sc); }, 1500);
 
 // ================= VINLAND BEACH (Day 9): Beach Boulevard, beach shops, the boardwalk, beach life =================
