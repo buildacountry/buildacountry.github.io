@@ -702,20 +702,25 @@ renderer.setPixelRatio(Math.min(devicePixelRatio || 1, FAST ? 1.25 : 2));   // l
 renderer.shadowMap.enabled = !FAST; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 wrap.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#e8e4d8');
-scene.fog = new THREE.Fog('#e8e4d8', 20, 850);   // the original haze colour. near = haze starts this far outside the built land (full at 16x); far = north edge of the built land
+// (Dev, 23 Nov) BIG COUNTRY: a clear blue sky, no beige haze. Only a soft blue haze far out at the horizon, so the land runs on and on.
+scene.background = new THREE.Color('#dcEEF8');
+scene.fog = new THREE.Fog('#dceef8', 4500, 16000);
+const SKY = (() => { const g = new THREE.SphereGeometry(18000, 24, 12), p = g.attributes.position, col = [], top = new THREE.Color('#7fc0ea'), hor = new THREE.Color('#dceef8');
+  for (let i = 0; i < p.count; i++) { const k = Math.max(0, p.getY(i) / 18000); const c = hor.clone().lerp(top, Math.pow(k, 0.6)); col.push(c.r, c.g, c.b); }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false })); m.renderOrder = -1; scene.add(m); return m; })();   // the original haze colour. near = haze starts this far outside the built land (full at 16x); far = north edge of the built land
 // Haze that starts where the built land ends: every fragment measures how far it is outside the built box
 // (town, districts, Government Row, north districts, beach) and fades into the haze colour from there.
 window.BUILT = { x0: -1080, x1: 1200, z0: -850, z1: 1200 };   // z1 (18 Nov): the Suburb (to z 1175) + Power & Water, so they are not in the haze   // x0: the New District (16 Nov)   // x1: District 2 (Downtown) east of the river
 THREE.ShaderChunk.fog_pars_vertex = '#ifdef USE_FOG\n varying float fogDepth; varying vec3 vFogWorld;\n#endif';
 THREE.ShaderChunk.fog_vertex = '#ifdef USE_FOG\n fogDepth = - mvPosition.z;\n vec4 fw = vec4( transformed, 1.0 );\n #ifdef USE_INSTANCING\n fw = instanceMatrix * fw;\n #endif\n vFogWorld = ( modelMatrix * fw ).xyz;\n#endif';
 THREE.ShaderChunk.fog_pars_fragment = '#ifdef USE_FOG\n uniform vec3 fogColor; varying float fogDepth; varying vec3 vFogWorld;\n uniform float fogNear; uniform float fogFar;\n uniform vec4 builtBox;\n#endif';
-THREE.ShaderChunk.fog_fragment = '#ifdef USE_FOG\n float bx = max( max( builtBox.x - vFogWorld.x, vFogWorld.x - builtBox.y ), 0.0 );\n float bz = max( max( - fogFar - vFogWorld.z, vFogWorld.z - builtBox.w ), 0.0 );\n float fogFactor = max( smoothstep( fogNear, fogNear * 16.0, length( vec2( bx, bz ) ) ), smoothstep( 1400.0, 2900.0, fogDepth ) );\n gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );\n#endif';
+THREE.ShaderChunk.fog_fragment = '#ifdef USE_FOG\n float bx = max( max( builtBox.x - vFogWorld.x, vFogWorld.x - builtBox.y ), 0.0 );\n float bz = max( max( - fogFar - vFogWorld.z, vFogWorld.z - builtBox.w ), 0.0 );\n float fogFactor = smoothstep( fogNear, fogFar, fogDepth ) + 0.0 * ( bx + bz );\n gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );\n#endif';
 THREE.UniformsLib.fog.builtBox = { value: new THREE.Vector4(BUILT.x0, BUILT.x1, BUILT.z0, BUILT.z1) };
 ['basic', 'lambert', 'phong', 'standard', 'toon', 'points', 'sprite', 'dashed', 'matcap', 'physical'].forEach(k => { const sh = THREE.ShaderLib[k]; if (sh && sh.uniforms.fogColor) sh.uniforms.builtBox = THREE.UniformsLib.fog.builtBox; });
-const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 2500);
+const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 20000);
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true; controls.dampingFactor = 0.08; controls.maxPolarAngle = Math.PI * 0.45; controls.minDistance = 14; controls.maxDistance = 1000; controls.screenSpacePanning = false;
+controls.enableDamping = true; controls.dampingFactor = 0.08; controls.maxPolarAngle = Math.PI * 0.45; controls.minDistance = 14; controls.maxDistance = 5000; controls.screenSpacePanning = false;
 // drag = rotate (as before), right-drag / two fingers = move around, wheel zooms toward the mouse
 controls.panSpeed = 1.1;
 (function () {
@@ -730,8 +735,8 @@ controls.panSpeed = 1.1;
     camera.position.sub(P).multiplyScalar(f).add(P); controls.target.sub(P).multiplyScalar(f).add(P); controls.target.y = 0;
   }, { passive: false, capture: true });
 })();
-function clampView() { const t = controls.target, L = typeof GD !== 'undefined' ? -GD.XW + 20 : 340, cx = Math.max(-L, Math.min(1210, t.x)),   // west edge = the Garden District (16 Nov)
-  cz = Math.max(-860, Math.min(1150, t.z)), dx = cx - t.x, dz = cz - t.z;
+function clampView() { const t = controls.target, L = typeof GD !== 'undefined' ? -GD.XW + 20 : 340, cx = Math.max(-L - 6000, Math.min(1210 + 6000, t.x)),   // west edge = the Garden District (16 Nov)
+  cz = Math.max(-860, Math.min(1150 + 6000, t.z)), dx = cx - t.x, dz = cz - t.z;
   if (dx || dz) { t.x = cx; t.z = cz; camera.position.x += dx; camera.position.z += dz; } }
 
 scene.add(new THREE.HemisphereLight('#fff3df', '#7a6a50', 0.55));
@@ -824,13 +829,97 @@ function wallMat(c) { return new THREE.MeshToonMaterial({ color: c, gradientMap:
 // ================= DAY 0 MAP: empty land, one flag, no buildings =================
 const pickables = [];
 // endless land: one big ground that fades into fog, so nobody sees where it ends
-const groundG = new THREE.PlaneGeometry(6000, 6000, 120, 120); groundG.rotateX(-Math.PI / 2);
+const groundG = new THREE.PlaneGeometry(40000, 40000, 200, 200); groundG.rotateX(-Math.PI / 2);
 { const gp = groundG.attributes.position, gc = [], c1 = new THREE.Color('#7fa457'), c2 = new THREE.Color('#6e9a4a');
   for (let i = 0; i < gp.count; i++) { const x = gp.getX(i), z = gp.getZ(i), n = (Math.sin(x * 0.013) * Math.cos(z * 0.011) + Math.sin((x + z) * 0.007)) * 0.25 + 0.5;
     const c = c1.clone().lerp(c2, n); gc.push(c.r, c.g, c.b); }
   groundG.setAttribute('color', new THREE.Float32BufferAttribute(gc, 3)); }
 const ground = new THREE.Mesh(groundG, new THREE.MeshLambertMaterial({ vertexColors: true })); ground.receiveShadow = true; ground.userData.place = 'land'; scene.add(ground); pickables.push(ground);
 const meadow = new THREE.Mesh(new THREE.CircleGeometry(70, 64), mat('#87ad5c')); meadow.rotation.x = -Math.PI / 2; meadow.position.y = 0.03; meadow.receiveShadow = true; meadow.userData.place = 'centre'; scene.add(meadow); pickables.push(meadow);
+// (Dev, 23 Nov) the river meanders once it leaves the built land: 0 up to z 1850 (past Power & Water), then smooth bends out into the countryside
+const RIVER_MX = z => { if (z < 1850) return 0; const k = Math.min(1, (z - 1850) / 900), r = k * k * (3 - 2 * k), t = z - 1850; return r * (300 * Math.sin(t / 820) + 110 * Math.sin(t / 290 + 0.8) + 35 * Math.sin(t / 97)); };
+const RIVER_WD = z => z < 1850 ? 0 : Math.min(40, (z - 1850) / 60);   // and slowly widens downstream
+// ================= THE COUNTRYSIDE (Dev, 23 Nov: "our country is big"): farms, forests, lakes, villages and low hills out to the horizon =================
+// One painted ground (canvas texture, transparent over the built land, the river and the sea) + low-poly hills + instanced trees, barns and
+// village houses. No plots out here yet: new districts can grow into it later. Phones get fewer trees.
+(() => {
+  const X0 = -8000, X1 = 8000, Z0 = -830, Z1 = 15000, W = X1 - X0, D = Z1 - Z0, N = 2048, px = x => (x - X0) / W * N, pz = z => (z - Z0) / D * N;
+  const R = (a => () => (a = (a * 16807) % 2147483647) / 2147483647)(2026);
+  const KEEP = [[-1160, 1500, -830, 1260], [480, 960, 1000, 1820]];   // built land, Power & Water: left clear (the river corridor follows its bends)
+  const inKeep = (x, z, m = 0) => KEEP.some(([a, b, c, d]) => x > a - m && x < b + m && z > c - m && z < d + m) || (z < 9000 && Math.abs(x - 430 - RIVER_MX(z)) < 110 + RIVER_WD(z) + m);
+  const HILLS = [[-4300, 3900, 1700, 260], [4300, 4800, 1500, 220], [-1200, 9800, 3000, 380], [5200, 10200, 2100, 300], [-6200, 8200, 1400, 240]];   // x, z, radius, height
+  const hillH = (x, z) => { let h = 0; HILLS.forEach(([hx, hz, r, hh]) => { const d = Math.hypot(x - hx, (z - hz) * 1.3) / r; if (d < 1) h += hh * Math.pow(Math.cos(d * Math.PI / 2), 2) * (0.75 + 0.25 * Math.sin(x * 0.004) * Math.cos(z * 0.005)); }); return h; };
+  const cv = document.createElement('canvas'); cv.width = cv.height = N; const c = cv.getContext('2d');
+  c.fillStyle = '#86ad5c'; c.fillRect(0, 0, N, N);
+  const FIELD = ['#e3c766', '#d8b24a', '#9cc65f', '#7eb04e', '#b8925e', '#c9a86a', '#a6c962', '#e8d27e'], forests = [], farms = [], hedge = [];
+  // the country roads (from our districts out to the villages) come first: farms are laid out along them
+  const VIL = [[-3000, 1800], [2800, 1700], [-5600, 3800], [6200, 3400], [-2400, 5600], [1600, 5200], [5400, 8000], [-6400, 10200], [600, 12000], [-4400, 13600], [3400, 13200], [-7000, 1200], [7200, 1000]];
+  const ROADS = [[[-1160, 0, 3], [-3000, 1800], [-5600, 3800], [-6400, 10200], [-4400, 13600]], [[1500, 0, 3], [2800, 1700], [6200, 3400], [5400, 8000], [3400, 13200]],
+    [[-200, 1260, 3], [-800, 3000], [-2400, 5600], [600, 12000]], [[960, 1820, 2.4], [1600, 5200], [5400, 8000]], [[-3000, 1800, 2], [-7000, 1200]], [[2800, 1700, 2], [7200, 1000]],
+    [[-2400, 5600, 2], [-5600, 3800]], [[-1800, 2600, 1.6], [-4200, 2600]], [[3600, 2400, 1.6], [6800, 2200]], [[-4000, 7800, 1.6], [-7400, 7000]], [[3000, 9800, 1.6], [7400, 10600]], [[-1000, 8000, 1.6], [2400, 8600]], [[-2000, 11000, 1.6], [-6000, 12400]], [[4000, 6000, 1.6], [7400, 5600]], [[-5600, 3800, 1.6], [-7400, 5000]], [[1600, 5200, 2], [-800, 3000]], [[600, 12000, 2], [3400, 13200]], [[-6400, 10200, 2], [-2400, 5600]]];
+  const lakes = [[-2600, 2200, 260], [2600, 2600, 200], [-6600, 5000, 340], [2400, 7400, 300], [-3600, 13400, 420], [7000, 6600, 240]];
+  const cen = [];   // farm centres, so farms never overlap
+  lakes.forEach(([x, z, r]) => cen.push([x, z, r + 60]));   // keep farms off the lakes
+  ROADS.forEach(rd => { for (let k = 0; k < rd.length - 1; k++) { const [x1, z1] = rd[k], [x2, z2] = rd[k + 1], L = Math.hypot(x2 - x1, z2 - z1), a = Math.atan2(z2 - z1, x2 - x1);
+    for (let t = 200; t < L - 200; t += 380 + R() * 160) [-1, 1].forEach(side => {
+      const ux = Math.cos(a), uz = Math.sin(a), vx = -uz * side, vz = ux * side, cols = 2 + ((R() * 2) | 0), rows = 2 + ((R() * 3) | 0), FW = 230, FD = 190;
+      const ox = x1 + ux * t + vx * 22, oz = z1 + uz * t + vz * 22, mx = ox + ux * cols * FW / 2 + vx * (70 + rows * FD) / 2, mz = oz + uz * cols * FW / 2 + vz * (70 + rows * FD) / 2, rad = Math.hypot(cols * FW, 70 + rows * FD) / 2;
+      if (inKeep(mx, mz, rad) || hillH(mx, mz) > 10 || cen.some(([cx, cz, cr]) => Math.hypot(cx - mx, cz - mz) < (cr + rad) * 0.82) || VIL.some(([vx2, vz2]) => Math.hypot(vx2 - mx, vz2 - mz) < rad + 170) || mx < X0 + 300 || mx > X1 - 300 || mz > Z1 - 300) return;
+      cen.push([mx, mz, rad]);
+      // in the farm's own frame: u along the road, v away from it (side flips v)
+      c.save(); c.translate(px(ox), pz(oz)); c.scale(N / W, N / D); c.rotate(a); c.scale(1, side);
+      c.fillStyle = '#cdb98a'; c.fillRect(0, 0, cols * FW, 70 + rows * FD);                              // the farm block (the gaps between fields are its tracks)
+      c.fillStyle = '#b9a676'; c.fillRect(0, 0, 90, 66);                                                  // farmyard by the road
+      const crop = FIELD[(R() * FIELD.length) | 0];
+      for (let r = 0; r < rows; r++) for (let q = 0; q < cols; q++) { const fx = q * FW + 5, fz = 70 + r * FD + 5, fw = FW - 10, fd = FD - 10;
+        c.fillStyle = R() < 0.35 ? crop : FIELD[(R() * FIELD.length) | 0]; c.fillRect(fx, fz, fw, fd);
+        c.strokeStyle = 'rgba(60,40,10,0.13)'; c.lineWidth = 2.5; for (let k2 = fx + 7; k2 < fx + fw; k2 += 11) { c.beginPath(); c.moveTo(k2, fz + 3); c.lineTo(k2, fz + fd - 3); c.stroke(); } }
+      c.strokeStyle = '#5f8f45'; c.lineWidth = 6; c.strokeRect(0, 0, cols * FW, 70 + rows * FD); c.restore();   // hedge round the farm
+      const P = (u, v) => [ox + ux * u + vx * v, oz + uz * u + vz * v];
+      farms.push(P(32, 30));
+      for (let u = 0; u <= cols * FW; u += 30) { if (R() < 0.6) hedge.push(P(u, 70 + rows * FD)); }   // a tree line along the back hedge
+      for (let v = 70; v <= 70 + rows * FD; v += 30) { if (R() < 0.5) hedge.push(P(0, v)); if (R() < 0.5) hedge.push(P(cols * FW, v)); } }); } });
+  // woods in the land the farms left free (never on a farm, never in a village)
+  for (let i = 0; i < 600 && forests.length < 70; i++) { const x = X0 + 400 + R() * (W - 800), z = Z0 + 500 + R() * (D - 900), r = 140 + R() * 260;
+    if (inKeep(x, z, r) || cen.some(([cx, cz, cr]) => Math.hypot(cx - x, cz - z) < cr + r) || VIL.some(([vx2, vz2]) => Math.hypot(vx2 - x, vz2 - z) < r + 200)) continue; forests.push([x, z, r]); }
+  forests.forEach(([x, z, r]) => { c.fillStyle = '#5d8c45'; c.beginPath(); c.ellipse(px(x), pz(z), r / W * N, r * 0.8 / D * N, R() * 3, 0, Math.PI * 2); c.fill(); });
+  lakes.forEach(([x, z, r]) => { c.fillStyle = '#d8c48f'; c.beginPath(); c.ellipse(px(x), pz(z), (r + 25) / W * N, (r * 0.7 + 25) / D * N, 0.4, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#5fb3d9'; c.beginPath(); c.ellipse(px(x), pz(z), r / W * N, r * 0.7 / D * N, 0.4, 0, Math.PI * 2); c.fill(); });
+  // the country roads on top
+  c.strokeStyle = '#a39a86'; c.lineCap = 'round'; c.lineJoin = 'round';
+  ROADS.forEach(rd => { c.lineWidth = rd[0][2] || 2; c.beginPath(); rd.forEach(([x, z], i) => i ? c.lineTo(px(x), pz(z)) : c.moveTo(px(x), pz(z))); c.stroke(); });
+  // the river's corridor: cleared along its bends (the real river is drawn there)
+  for (let z = 1000; z < 9000; z += 20) { const x = 430 + RIVER_MX(z), w = 110 + RIVER_WD(z); c.clearRect(px(x - w), pz(z), px(x + w) - px(x - w), pz(z + 22) - pz(z)); }
+  // clear holes for the built land, Power & Water and the river (the real ones are drawn there)
+  KEEP.forEach(([a, b, d0, d1]) => c.clearRect(px(a), pz(d0), px(b) - px(a), pz(d1) - pz(d0)));
+  const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4;
+  const land = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshLambertMaterial({ map: tex, transparent: true, alphaTest: 0.5 })); land.rotation.x = -Math.PI / 2; land.position.set((X0 + X1) / 2, 0.22, (Z0 + Z1) / 2);   // well above the base ground: no stripes from far away
+  land.receiveShadow = false; land.userData.place = 'land'; scene.add(land); pickables.push(land);
+  // low hills (flat-shaded, green, pine forest on top)
+  const hillMats = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), lo = new THREE.Color('#86ad5c'), hi = new THREE.Color('#5e8f45'), top = new THREE.Color('#9db86a');
+  HILLS.forEach(([hx, hz, r, hh]) => { const g = new THREE.PlaneGeometry(r * 2.1, r * 2.1 / 1.3, 36, 28); g.rotateX(-Math.PI / 2); const P = g.attributes.position, col = [];
+    for (let i = 0; i < P.count; i++) { const x = P.getX(i) + hx, z = P.getZ(i) + hz, h = hillH(x, z); P.setY(i, h + 0.05); const k = h / hh, cc = lo.clone().lerp(k > 0.75 ? top : hi, Math.min(1, k * 1.3)); col.push(cc.r, cc.g, cc.b); }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.computeVertexNormals(); const m = new THREE.Mesh(g, hillMats); m.position.set(hx, 0, hz); m.userData.place = 'land'; scene.add(m); });
+  // trees: forest blobs + hill slopes (two instanced meshes)
+  const NT = FAST ? 4000 : 10000, pine = [], round = [];
+  for (let i = 0; i < NT * 3 && pine.length + round.length < NT; i++) {
+    let x, z; if (R() < 0.6 && forests.length) { const [fx, fz, fr] = forests[(R() * forests.length) | 0], a = R() * 6.283, d = Math.sqrt(R()) * fr * 0.85; x = fx + Math.cos(a) * d; z = fz + Math.sin(a) * d * 0.8; }
+    else { const [hx, hz, hr] = HILLS[(R() * HILLS.length) | 0], a = R() * 6.283, d = Math.sqrt(R()) * hr; x = hx + Math.cos(a) * d; z = hz + Math.sin(a) * d / 1.3; }
+    if (inKeep(x, z, 40)) continue; const h = hillH(x, z), s = 14 + R() * 12; (h > 40 || R() < 0.4 ? pine : round).push([x, h, z, s]); }
+  hedge.forEach(([x, z]) => { if (!inKeep(x, z, 20)) round.push([x, 0, z, 10 + R() * 6]); });
+  const inst = (geo, color, list, k) => { const m = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color, flatShading: true }), list.length), M = new THREE.Matrix4();
+    list.forEach(([x, y, z, s], i) => { M.makeScale(s, s * k, s); M.setPosition(x, y, z); m.setMatrixAt(i, M); }); m.frustumCulled = false; scene.add(m); return m; };
+  inst(new THREE.ConeGeometry(0.45, 1.6, 6).translate(0, 0.95, 0), '#4c7d3e', pine, 1); inst(new THREE.IcosahedronGeometry(0.6, 0).translate(0, 1.0, 0), '#6fa04c', round, 0.9);
+  inst(new THREE.CylinderGeometry(0.08, 0.1, 0.5, 5).translate(0, 0.25, 0), '#7a5236', round, 1);
+  // farms (red barn + grey roof + silo) and villages (little cream houses with terracotta roofs)
+  const barns = farms.filter(([x, z]) => !inKeep(x, z, 80)).map(([x, z]) => [x, 0, z, 1]), houses = [];
+  VIL.forEach(([vx, vz]) => { for (let i = 0; i < 22; i++) { const a = R() * 6.283, d = 20 + R() * 120, x = vx + Math.cos(a) * d, z = vz + Math.sin(a) * d; if (!inKeep(x, z, 60)) houses.push([x, hillH(x, z), z, 1]); } });
+  const box = (list, w, h, d, color, y = 0) => inst(new THREE.BoxGeometry(w, h, d).translate(0, h / 2 + y, 0), color, list, 1);
+  const roof = (list, w, h, d, color, y) => { const g = new THREE.CylinderGeometry(0.001, w * 0.72, h, 4, 1).rotateY(Math.PI / 4).scale(1, 1, d / w).translate(0, y + h / 2, 0); return inst(g, color, list, 1); };
+  box(barns, 18, 9, 26, '#b8432f'); roof(barns, 18, 6, 26, '#6b6f78', 9); inst(new THREE.CylinderGeometry(3.5, 3.5, 16, 10).translate(12, 8, -6), '#d9dcd8', barns, 1);
+  barns.forEach(([x, y, z]) => houses.push([x - 26, 0, z + 18, 1]));
+  box(houses, 9, 6, 9, '#f2e2c0'); roof(houses, 9, 4.5, 9, '#c8603f', 6);
+})();
 
 const spots = []; let sd = 9; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
 for (let i = 0; i < 160000 && spots.length < 11000; i++) {
@@ -3380,12 +3469,14 @@ function canalHouse(ci = 0, gable = 0) {
 // Town → forest → wide river → stone river wall + promenade → waterfront road (verges both sides) → 4 rows of riverside
 // houses (normal homes, appended to PLOTS so nobody moves). Two stone arch bridges: from Government Row (z -226) and from the
 // Education District (z +226). Behind the homes: Downtown's skyline (towers + cranes), the rest of the land kept for Downtown.
-const RS_SHORE = -820, RIVER_END = 1900;   // RIVER_END (Dev, 18 Nov): the river runs on south to the end of the map (it fades in the haze), no more dead end   // = COAST.shore (COAST is defined further down)
+const RS_SHORE = -820, RIVER_END = 9000;   // (23 Nov) the river runs far out through the countryside
+//   // RIVER_END (Dev, 18 Nov): the river runs on south to the end of the map (it fades in the haze), no more dead end   // = COAST.shore (COAST is defined further down)
 const RS = { BOTTOM: -778, EXTRAS: false, SCALE: 0.8, riverE: 520, road: 552.5, lanes: [640], z0: -650, z1: 540, cross: [-470, -226, 0, 226, 470], bridges: [-226, 0, 226] };   // z 0 = Central Bridge (user, 11 Nov): Town Square's road straight over the river
 const PW = { x0: 545, x1: 905, z0: 1074, z1: 1420, dz: 350, gx: 785,   // (Dev 16:50: moved 350 m further south, half into the haze, away from the homes; drawPower builds at z-dz and shifts)
   day: 18, asked: '@hritu_raj_hajong', water: '@perls877', power: '@ploib.1' };   // VINLAND POWER & WATER (Dev's cream box, 18 Nov): south of Riverside on the river
 RS.bridgeFrom = { '-226': 292.5, '0': 292.5, '226': 152.5 };   // where each bridge road starts on the town side
-RS.riverW = z => RS.riverE - (95 + 10 * Math.sin(z / 61) + 5 * Math.sin(z / 19 + 1) + 2 * Math.sin(z / 7.3));
+RS.riverW = z => RS.riverE + RIVER_MX(z) - RIVER_WD(z) - (95 + 10 * Math.sin(z / 61) + 5 * Math.sin(z / 19 + 1) + 2 * Math.sin(z / 7.3));
+RS.riverEz = z => RS.riverE + RIVER_MX(z) + RIVER_WD(z) * 0.5;   // the east bank: straight along the built land, bending with the river beyond it
 // Riverside flats (user, 9 Nov: blocks of garden villa-apartments and terrace apartments). Each flat is a home number, appended
 // to PLOTS (so nobody moves); a flat plot carries its building, floor and letter. Buildings nearest the two bridges fill first.
 RS.SPEC = { garden: { step: 36, floors: 4, per: 1, fh: 3.3, x: [577, 624.5] }, terrace: { step: 38, floors: 6, per: 1, fh: 3.2, x: [578, 623.5] }, beach: { step: 31, floors: 2, per: 2, fh: 3.4, x: [0, 0] }, tower: { step: 0, floors: 12, per: 1, fh: 3.6, x: [0, 0] } };   // Dev, 12 Nov: every building, waterfront too: 4 flats (garden) / 6 flats (terrace), one per floor
@@ -3613,12 +3704,12 @@ const BD = { ON: false, X0: 1085, X1: 1545, Z0: -690, Z1: 580, AV: [1300, 1330],
     const m = new THREE.Mesh(geo, mat(col)); m.receiveShadow = true; scene.add(m); return m; };
   strip(z => RS.riverW(z) - 4 - 2.5 * Math.sin(z / 13) - 1.5, z => RS.riverW(z) + 1, C.sand2, 0.05, RS_SHORE);
   strip(z => RS.riverW(z) - 9 - 3 * Math.sin(z / 21), z => RS.riverW(z) - 3, '#9cbf6a', 0.03);
-  RS.river = strip(RS.riverW, () => RS.riverE, '#4aa3cf', 0.08, RS_SHORE - 2);
-  strip(z => RS.riverW(z) + 6, () => RS.riverE - 6, '#3a8fc2', 0.11, RS_SHORE + 22);
-  strip(z => RS.riverW(z) + 20, () => RS.riverE - 18, '#2f7db3', 0.14, RS_SHORE + 50);   // deep middle (layers well apart: no flicker)
-  strip(() => RS.riverE, () => RS.riverE + 4, C.sand2, 0.05, -770, RS.z0 - 60); strip(() => RS.riverE, () => RS.riverE + 4, C.sand2, 0.05, RS.z1 + 30, RIVER_END);
+  RS.river = strip(RS.riverW, RS.riverEz, '#4aa3cf', 0.08, RS_SHORE - 2);
+  strip(z => RS.riverW(z) + 6, z => RS.riverEz(z) - 6, '#3a8fc2', 0.11, RS_SHORE + 22);
+  strip(z => RS.riverW(z) + 20, z => RS.riverEz(z) - 18, '#2f7db3', 0.14, RS_SHORE + 50);   // deep middle (layers well apart: no flicker)
+  strip(() => RS.riverE, () => RS.riverE + 4, C.sand2, 0.05, -770, RS.z0 - 60); strip(RS.riverEz, z => RS.riverEz(z) + 4 + (z > 1850 ? 3 * Math.sin(z / 17) + 3 : 0), C.sand2, 0.05, RS.z1 + 30, RIVER_END);
   const forest = [];
-  for (let i = 0; i < 12000 && forest.length < 3400; i++) { const x = 300 + rnd() * 130, z = -770 + rnd() * (RIVER_END - 400 + 770);   // (18 Nov) the west-bank forest follows the river south
+  for (let i = 0; i < 12000 && forest.length < 3400; i++) { const z = -770 + rnd() * (RIVER_END - 400 + 770), x = 300 + RIVER_MX(z) - RIVER_WD(z) + rnd() * 130;   // (18 Nov) the west-bank forest follows the river south
     if (x > RS.riverW(z) - 7 || RS.bridges.some(b => Math.abs(z - b) < 8) || RAIL.near(x, z)) continue; forest.push([x, z, 0.8 + rnd() * 0.6, Math.floor(rnd() * 4)]); }
   treeBelt(forest, scene);
   { const bush = [], rock = [];                                                                   // flowering bushes and rocks along the natural bank
@@ -4342,9 +4433,9 @@ const SH = COAST.shore + 660;   // beach things below were placed for a shore at
   bakeGroup(g);
   // the sea: shallow band, then deep water out to the horizon (own meshes, no shadows)
   const sea = (w, d, x, z, c, y) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.1, d), new THREE.MeshLambertMaterial({ color: c })); m.position.set(x, y, z); m.userData.place = 'beach'; pickables.push(m); scene.add(m); return m; };
-  sea(6000, 28, 0, COAST.shore - 12, '#7fd0de', 0.06);
-  sea(6000, 3000, 0, COAST.shore - 26 - 1500, '#3f9cc2', 0.05);
-  const foam = sea(6000, 2.2, 0, COAST.shore + 1, '#fbf8ef', 0.12); COAST.foam = foam;
+  sea(40000, 28, 0, COAST.shore - 12, '#7fd0de', 0.06);
+  sea(40000, 16000, 0, COAST.shore - 26 - 8000, '#3f9cc2', 0.3);   // (23 Nov) lifted clear of the ground: no green flecks far out
+  const foam = sea(40000, 2.2, 0, COAST.shore + 1, '#fbf8ef', 0.12); COAST.foam = foam;
   // the fog: soft white banks over everything nobody has explored (one draw call)
   const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x2 = cv.getContext('2d'), gr = x2.createRadialGradient(64, 64, 4, 64, 64, 62);
   gr.addColorStop(0, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.5, 'rgba(250,250,246,0.55)'); gr.addColorStop(1, 'rgba(250,250,246,0)'); x2.fillStyle = gr; x2.fillRect(0, 0, 128, 128);
@@ -5209,6 +5300,7 @@ function frame(now) {
   if (window.PEN_ON) { RUN.stopped = true; return; }   // the penalty game is open: the map sleeps
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   nightFrame(now); plazaFrame(now); crackFrame(now); dsquareFrame(now); fxFrame(dt);
+  { const nn = Math.min(25, Math.max(0.5, camera.position.y * 0.02)); if (Math.abs(nn - camera.near) > 0.05 * camera.near) { camera.near = nn; camera.updateProjectionMatrix(); } }   // (23 Nov) near plane follows the height: no water/road flicker when zoomed out
   if (WALK.on) walkFrame(dt, now); else if (DRV.on) driveFrame(dt, now); else {
   if (fly) { const k = ease(Math.min(1, (now - fly.t0) / fly.ms)); controls.target.lerpVectors(fly.fT, fly.tT, k); camera.position.lerpVectors(fly.fP, fly.tP, k); if (k >= 1) fly = null; }
   if (touring) { const t = controls.target, dx = camera.position.x - t.x, dz = camera.position.z - t.z, a = dt * 0.12;
@@ -5986,7 +6078,7 @@ function buildNight() {
 }
 const _cA = new THREE.Color();
 function setNightK(k) { NIGHT.k = k;
-  scene.background.copy(_cA.copy(DAYL.bg).lerp(NIGHTL.bg, k)); if (scene.fog) scene.fog.color.copy(scene.background);
+  scene.background.copy(_cA.copy(DAYL.bg).lerp(NIGHTL.bg, k)); if (scene.fog) scene.fog.color.copy(scene.background); SKY.material.color.setRGB(1, 1, 1).lerp(_cA.set('#24305e'), k);
   sun.color.copy(_cA.copy(DAYL.sun).lerp(NIGHTL.sun, k)); sun.intensity = DAYL.si + (NIGHTL.si - DAYL.si) * k;
   HEMI_L.color.copy(_cA.copy(DAYL.hc).lerp(NIGHTL.hc, k)); HEMI_L.groundColor.copy(_cA.copy(DAYL.hg).lerp(NIGHTL.hg, k)); HEMI_L.intensity = DAYL.hi + (NIGHTL.hi - DAYL.hi) * k;
   (NIGHT.glass || []).forEach(m => { m.emissive.set('#ffc76b'); m.emissiveIntensity = 1.15 * k; });
