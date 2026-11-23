@@ -4461,7 +4461,7 @@ const SH = COAST.shore + 660;   // beach things below were placed for a shore at
 const ISLAND = { x: -1590, z: -2350, ry: Math.PI / 2 };
 setTimeout(() => { const sc = document.createElement('script'); sc.src = 'districts2.js';
   sc.onload = () => { try { const g = VinlandDistricts.introvertIsland2({ fast: PHONE }); g.position.set(ISLAND.x, 0, ISLAND.z); g.rotation.y = ISLAND.ry;
-    g.traverse(m => { if (m.isMesh) { m.castShadow = false; m.userData.place = 'island'; if (!m.isInstancedMesh) pickables.push(m); } });   // tap the island → its card (trees left out: cheaper clicks) scene.add(g); ISLAND.g = g; } catch (e) { console.error('island', e); } };
+    g.traverse(m => { if (m.isMesh) { m.castShadow = false; m.userData.place = 'island'; if (!m.isInstancedMesh) pickables.push(m); } }); scene.add(g); ISLAND.g = g; } catch (e) { console.error('island', e); } };   // tap the island → its card (trees left out: cheaper clicks)
   document.head.appendChild(sc); }, 1500);
 
 // ================= VINLAND BEACH (Day 9): Beach Boulevard, beach shops, the boardwalk, beach life =================
