@@ -847,9 +847,19 @@ const RIVER_WD = z => z < 1850 ? 0 : Math.min(40, (z - 1850) / 60);   // and slo
   const X0 = -8000, X1 = 8000, Z0 = -830, Z1 = 15000, W = X1 - X0, D = Z1 - Z0, N = 2048, px = x => (x - X0) / W * N, pz = z => (z - Z0) / D * N;
   const R = (a => () => (a = (a * 16807) % 2147483647) / 2147483647)(2026);
   const KEEP = [[-1160, 1500, -830, 1260], [480, 960, 1000, 1820]];   // built land, Power & Water: left clear (the river corridor follows its bends)
-  const NAP = [-2800, -1920, 560, 2100];   // PREVIEW: widened to the new Nap Valley's hills   // 24 Nov: Nap Valley (districts2.js napValley): no farms, woods or hill trees inside
+  const NAP = [-2185, -1735, 485, 2015];   // PREVIEW: the Nap Valley district on the valley floor (no farms or woods inside)   // 24 Nov: Nap Valley (districts2.js napValley): no farms, woods or hill trees inside
   const inKeep = (x, z, m = 0) => (x > NAP[0] - m && x < NAP[1] + m && z > NAP[2] - m && z < NAP[3] + m) || KEEP.some(([a, b, c, d]) => x > a - m && x < b + m && z > c - m && z < d + m) || (z < 9000 && Math.abs(x - 430 - RIVER_MX(z)) < 110 + RIVER_WD(z) + m);
   const HILLS = [[-4300, 3900, 1700, 260], [4300, 4800, 1500, 220], [-1200, 9800, 3000, 380], [5200, 10200, 2100, 300], [-6200, 8200, 1400, 240]];   // x, z, radius, height (PREVIEW: 24 Nov west hills removed)
+  // PREVIEW (Dev's sketch, 24 Nov): THE WEST MOUNTAINS. Two ridges from the coast inland with a valley between (Nap Valley sits on its floor),
+  // a small mountain closing the inland end. Tagged 'R': drawn as one merged mesh below, not one mesh per bump. The village road crosses the
+  // west ridge through a pass (no bumps within 170 m of the road line).
+  const RIDGE = [], roadOff = (x, z) => Math.abs((x + 1160) * 0.699 + z * 0.715);
+  for (let z = -560; z <= 2750; z += 140) {
+    const t = z < -200 ? 0.45 + 0.55 * (z + 560) / 360 : 1;   // lower foothills at the coast
+    [[-1420 - 0.04 * z + 40 * Math.sin(z / 500), 100 + 30 * Math.sin(z / 600)], [-2440 - 0.06 * z + 50 * Math.sin(z / 430 + 1), 110 + 32 * Math.sin(z / 520 + 2)]].forEach(([x, hh]) => {
+      if (roadOff(x, z) > 170) RIDGE.push([x, z, 250, hh * t, 'R']); }); }
+  RIDGE.push([-1960, 2950, 420, 160, 'R']);
+  HILLS.push(...RIDGE);
   const hillH = window.__hillH = (x, z) => { let h = 0; HILLS.forEach(([hx, hz, r, hh]) => { const d = Math.hypot(x - hx, (z - hz) * 1.3) / r; if (d < 1) h += hh * Math.pow(Math.cos(d * Math.PI / 2), 2) * (0.75 + 0.25 * Math.sin(x * 0.004) * Math.cos(z * 0.005)); }); return h; };
   const cv = document.createElement('canvas'); cv.width = cv.height = N; const c = cv.getContext('2d');
   c.fillStyle = '#86ad5c'; c.fillRect(0, 0, N, N);
@@ -899,7 +909,13 @@ const RIVER_WD = z => z < 1850 ? 0 : Math.min(40, (z - 1850) / 60);   // and slo
   land.receiveShadow = false; land.userData.place = 'land'; scene.add(land); pickables.push(land);
   // low hills (flat-shaded, green, pine forest on top)
   const hillMats = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), lo = new THREE.Color('#86ad5c'), hi = new THREE.Color('#5e8f45'), top = new THREE.Color('#9db86a');
-  HILLS.forEach(([hx, hz, r, hh]) => { const g = new THREE.PlaneGeometry(r * 2.1, r * 2.1 / 1.3, 36, 28); g.rotateX(-Math.PI / 2); const P = g.attributes.position, col = [];
+  { const rock = new THREE.Color('#8f9479'), snow = new THREE.Color('#b9b8a4'), X0r = -2880, X1r = -1080, Z0r = -830, Z1r = 3420, cs = FAST ? 26 : 18, nx = Math.round((X1r - X0r) / cs), nz = Math.round((Z1r - Z0r) / cs), V = [], pos = [], col = [];   // PREVIEW: the west mountains, one mesh
+    for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) { const x = X0r + i * cs, z = Z0r + j * cs, h = hillH(x, z), k = h / 120, cc = h > 125 ? rock.clone().lerp(snow, Math.min(1, (h - 125) / 60)) : lo.clone().lerp(k > 0.8 ? top : hi, Math.min(1, k * 1.3)); V.push([x, h + 0.05, z, cc]); }
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const a = V[j * (nx + 1) + i], b = V[j * (nx + 1) + i + 1], c2 = V[(j + 1) * (nx + 1) + i], d = V[(j + 1) * (nx + 1) + i + 1];
+      [[a, c2, b], [b, c2, d]].forEach(t => { if (t.every(v => v[1] < 0.2)) return; t.forEach(v => { pos.push(v[0], v[1], v[2]); col.push(v[3].r, v[3].g, v[3].b); }); }); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.computeVertexNormals();
+    const m = new THREE.Mesh(g, hillMats); m.userData.place = 'land'; scene.add(m); }
+  HILLS.forEach(([hx, hz, r, hh, tag]) => { if (tag) return; const g = new THREE.PlaneGeometry(r * 2.1, r * 2.1 / 1.3, 36, 28); g.rotateX(-Math.PI / 2); const P = g.attributes.position, col = [];
     for (let i = 0; i < P.count; i++) { const x = P.getX(i) + hx, z = P.getZ(i) + hz, h = hillH(x, z); P.setY(i, h + 0.05); const k = h / hh, cc = lo.clone().lerp(k > 0.75 ? top : hi, Math.min(1, k * 1.3)); col.push(cc.r, cc.g, cc.b); }
     g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.computeVertexNormals(); const m = new THREE.Mesh(g, hillMats); m.position.set(hx, 0, hz); m.userData.place = 'land'; scene.add(m); });
   // trees: forest blobs + hill slopes (two instanced meshes)
@@ -907,7 +923,7 @@ const RIVER_WD = z => z < 1850 ? 0 : Math.min(40, (z - 1850) / 60);   // and slo
   for (let i = 0; i < NT * 3 && pine.length + round.length < NT; i++) {
     let x, z; if (R() < 0.6 && forests.length) { const [fx, fz, fr] = forests[(R() * forests.length) | 0], a = R() * 6.283, d = Math.sqrt(R()) * fr * 0.85; x = fx + Math.cos(a) * d; z = fz + Math.sin(a) * d * 0.8; }
     else { const [hx, hz, hr] = HILLS[(R() * HILLS.length) | 0], a = R() * 6.283, d = Math.sqrt(R()) * hr; x = hx + Math.cos(a) * d; z = hz + Math.sin(a) * d / 1.3; }
-    if (inKeep(x, z, 40)) continue; const h = hillH(x, z), s = 14 + R() * 12; (h > 40 || R() < 0.4 ? pine : round).push([x, h, z, s]); }
+    if (inKeep(x, z, 40)) continue; const h = hillH(x, z), s = 14 + R() * 12; if (h > 125 || (h > 95 && R() < 0.6)) continue; /* bare mountain tops */ (h > 40 || R() < 0.4 ? pine : round).push([x, h, z, s]); }
   hedge.forEach(([x, z]) => { if (!inKeep(x, z, 20)) round.push([x, 0, z, 10 + R() * 6]); });
   const inst = (geo, color, list, k) => { const m = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color, flatShading: true }), list.length), M = new THREE.Matrix4();
     list.forEach(([x, y, z, s], i) => { M.makeScale(s, s * k, s); M.setPosition(x, y, z); m.setMatrixAt(i, M); }); m.frustumCulled = false; scene.add(m); return m; };
@@ -4462,12 +4478,16 @@ const SH = COAST.shore + 660;   // beach things below were placed for a shore at
 // ================= INTROVERT ISLAND (Dev, 23 Nov): the first Second Home district, an island in the sea off the north coast =================
 // Built by map/districts2.js (loaded after the map is up, so it never slows the first paint). No houses yet: only the hall, the
 // lighthouse and a small harbour; a cottage is added on the next saved spot when a citizen moves in (userData.spots).
-const ISLAND = { x: -1590, z: -2350, ry: Math.PI / 2 }, NAPV = { x: -2360, z: 1330 };
+const ISLAND = { x: -1590, z: -2350, ry: Math.PI / 2 }, NAPV = { x: -1960, z: 1250 };   // PREVIEW: Nap Valley moved onto the new valley floor
 setTimeout(() => { const sc = document.createElement('script'); sc.src = 'districts3.js';   // PREVIEW (Dev, 24 Nov): the new bean-shaped island, all 200 homes shown; old Nap Valley left out
-  sc.onload = () => { try { const v = VinlandDistricts3.napValley3({ fast: PHONE }); v.position.set(NAPV.x, 0, NAPV.z);   // NAP VALLEY v3 (preview)
+  sc.onload = () => { try {   // NAP VALLEY v4 (preview): on the floor of the valley between the west mountains
+      const sx = z => -1900 - 0.05 * z + 45 * Math.sin(z / 260) + 18 * Math.sin(z / 90), ST = []; for (let z = 2620; z >= -850; z -= 6) ST.push([sx(z) - NAPV.x, z - NAPV.z]);   // spring -> sea
+      const lz = 1730, lake = { x: sx(lz) - NAPV.x, z: lz - NAPV.z, rx: 85, rz: 50 }, t0 = (NAPV.x + 1160) / -0.715;
+      const v = VinlandDistricts3.napValley4({ fast: PHONE, ground: (x, z) => window.__hillH(x + NAPV.x, z + NAPV.z), stream: ST, lake, road: { p: [0, 0.699 * t0 - NAPV.z], d: [-0.715, 0.699] }, halfW: 220, halfL: 760 });
+      v.position.set(NAPV.x, 0, NAPV.z);
       v.traverse(m => { if (m.isMesh) { m.castShadow = false; m.userData.place = 'nap'; if (!m.isInstancedMesh) pickables.push(m); } }); scene.add(v); NAPV.g = v;
       const bv = document.createElement('button'); bv.textContent = 'Go to Nap Valley'; bv.style.cssText = 'position:fixed;left:50%;top:184px;transform:translateX(-50%);z-index:50;padding:10px 18px;border-radius:999px;border:2px solid #14233f;background:#fff8ea;font:600 15px Poppins,sans-serif';
-      bv.onclick = () => flyTo(new THREE.Vector3(NAPV.x, 0, NAPV.z + 150), new THREE.Vector3(120, 300, 620), 1800); document.body.appendChild(bv); } catch (e) { console.error('nap', e); }
+      bv.onclick = () => flyTo(new THREE.Vector3(NAPV.x, 0, NAPV.z), new THREE.Vector3(900, 700, -900), 1800); document.body.appendChild(bv); } catch (e) { console.error('nap', e); }
     try { const g = VinlandDistricts3.introvertIsland5({ fast: PHONE }); g.position.set(ISLAND.x, 0, ISLAND.z);
     g.traverse(m => { if (m.isMesh) { m.castShadow = false; m.userData.place = 'island'; if (!m.isInstancedMesh) pickables.push(m); } }); scene.add(g); ISLAND.g = g;
     const bt = document.createElement('button'); bt.textContent = 'Go to the island'; bt.style.cssText = 'position:fixed;left:50%;top:132px;transform:translateX(-50%);z-index:50;padding:10px 18px;border-radius:999px;border:2px solid #14233f;background:#fff8ea;font:600 15px Poppins,sans-serif';

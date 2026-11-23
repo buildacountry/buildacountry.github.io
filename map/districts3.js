@@ -607,5 +607,119 @@
     g.userData.spots = homes.map(({ x, y, z, ry }) => ({ x, y, z, ry })); g.userData.lodge = LODGE; g.userData.treeCount = TR.length;
     return g;
   }
-  root.VinlandDistricts3 = { introvertIsland3, introvertIsland4, introvertIsland5, napValley3, cottage, logCabin, aFrame, CT };
+  // ---------- NAP VALLEY v4 (Dev, 24 Nov: "be logical" + his sketch) ----------
+  // The valley itself is made by the MAP: two mountain ridges from the coast inland (map/index.html RIDGES, part of the country's own hills),
+  // a small mountain closing the inland end. This builder only puts the district on the valley floor (local frame, centre o.centre):
+  // the stream (o.stream: local points from the spring to the sea, flowing past a small lake), cabins, lanes, lodge, windmill, lavender,
+  // sheep, groves. Ground = o.ground (the map's hill height) + 0.22 (the map's painted land). No terrain of its own: nothing to look pasted.
+  function napValley4(o = {}) {
+    const r = rng(o.seed || 7341), g = new T.Group(), fast = !!o.fast, B = Batch(), TR = [], HOMES = o.homes || 200;
+    const P0 = o.road ? o.road.p : [0, -468], D = o.road ? o.road.d : [-0.715, 0.699], NN = [D[1], -D[0]], roadDist = (x, z) => Math.abs((x - P0[0]) * NN[0] + (z - P0[1]) * NN[1]);
+    const GR0 = o.ground || (() => 0), gy = (x, z) => Math.max(0, GR0(x, z)) + 0.22, HW = o.halfW || 220, HL = o.halfL || 760;
+    const sst = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+    const SP = (o.stream || []).map(([x, z]) => ({ x, z }));
+    const LAKE = o.lake || { x: 0, z: 480, rx: 90, rz: 55 };
+    const streamD = (x, z) => { let m = 1e9; for (let i = 0; i < SP.length; i++) { const d = Math.hypot(x - SP[i].x, z - SP[i].z); if (d < m) m = d; } return m; };
+    const lakeQ = (x, z) => Math.hypot((x - LAKE.x) / LAKE.rx, (z - LAKE.z) / LAKE.rz);
+    const edgeF = (x, z) => (Math.abs(x) < HW && Math.abs(z) < HL && GR0(x, z) < 0.6) ? 1 : 0;
+    const hRaw = gy;
+
+    // ---- places ----
+    const FEAT = [], PADS = [];
+    const LODGE = { x: 70, z: -60 }; LODGE.y = hRaw(LODGE.x, LODGE.z) + 0.1; PADS.push({ x: LODGE.x, z: LODGE.z, y: LODGE.y, r0: 24, r1: 36 }); FEAT.push([LODGE.x, LODGE.z, 40]);
+    const MILL = { x: -150, z: 120 }; MILL.y = hRaw(MILL.x, MILL.z); PADS.push({ x: MILL.x, z: MILL.z, y: MILL.y, r0: 8, r1: 14 }); FEAT.push([MILL.x, MILL.z, 22]);
+    const LAV = [[-120, 40, 80, 44, 0.25], [-80, 200, 64, 34, -0.15]], SHEEP = [110, 260, 96, 64, -0.1];
+    const inRect = (x, z, [cx, cz, w, d, ry], m = 0) => { const dx = x - cx, dz = z - cz, c = Math.cos(ry), s = Math.sin(ry), u = dx * c - dz * s, v = dx * s + dz * c; return Math.abs(u) < w / 2 + m && Math.abs(v) < d / 2 + m; };
+    const busy = (x, z, m) => LAV.some(R => inRect(x, z, R, m)) || inRect(x, z, SHEEP, m) || FEAT.some(([fx, fz, fr]) => Math.hypot(x - fx, z - fz) < fr + m) || lakeQ(x, z) < 1.25 + m / 80;
+    const homes = [], far = (x, z, m) => homes.every(p => Math.hypot(p.x - x, p.z - z) > m);
+    for (let tries = 0, gap = 24; homes.length < HOMES && tries < 90000; tries++) { if (tries % 22000 === 21999) gap -= 2;
+      const x = (r() * 2 - 1) * HW, z = (r() * 2 - 1) * HL; if (busy(x, z, 8) || streamD(x, z) < 16 || roadDist(x, z) < 14 || !far(x, z, gap)) continue;
+      const y = hRaw(x, z), sl = Math.abs(hRaw(x + 6, z) - hRaw(x - 6, z)) + Math.abs(hRaw(x, z + 6) - hRaw(x, z - 6)); if (sl > 1.5 || edgeF(x, z) < 1) continue;
+      homes.push({ x, z, y: y + 0.1 }); }
+    homes.forEach(p => PADS.push({ x: p.x, z: p.z, y: p.y, r0: 8, r1: 13 }));
+    const h = (x, z) => { let y = hRaw(x, z); for (const p of PADS) { const q = Math.hypot(x - p.x, z - p.z); if (q < p.r1) { const k = sst((q - p.r0) / (p.r1 - p.r0)); y = p.y + (y - p.y) * k; } } return y; };
+    // ---- water: the stream (5 m ribbon, 0.45 under the floor line, always going down) and the lake ----
+    const ribbon = (pts, w, yOf, c) => { const pos = []; for (let i = 0; i < pts.length - 1; i++) { const p = pts[i], q = pts[i + 1], dx = q.x - p.x, dz = q.z - p.z, l = Math.hypot(dx, dz) || 1, ox = -dz / l * w / 2, oz = dx / l * w / 2;
+        const v = [[p.x + ox, yOf(p), p.z + oz], [p.x - ox, yOf(p), p.z - oz], [q.x + ox, yOf(q), q.z + oz], [q.x - ox, yOf(q), q.z - oz]]; pos.push(...v[0], ...v[2], ...v[1], ...v[1], ...v[2], ...v[3]); }
+      const G = new T.BufferGeometry(); G.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); B.add(G, c, null); };
+    { const pts = SP.filter(p => lakeQ(p.x, p.z) > 0.95); let run = [];
+      const flush = () => { if (run.length > 1) { ribbon(run, 10, p => gy(p.x, p.z) + 0.04, '#c9b48a'); ribbon(run, 5, p => gy(p.x, p.z) + 0.09, '#5aa8cf'); } run = []; };
+      pts.forEach((p, i) => { if (i && Math.hypot(p.x - pts[i - 1].x, p.z - pts[i - 1].z) > 12) flush(); run.push(p); }); flush(); }
+    B.add(new T.CircleGeometry(1, 48).rotateX(-Math.PI / 2), '#d9c49a', null, LAKE.x, gy(LAKE.x, LAKE.z) + 0.03, LAKE.z, LAKE.rx * 1.12, 1, LAKE.rz * 1.15);   // sandy rim
+    B.add(new T.CircleGeometry(1, 48).rotateX(-Math.PI / 2), '#5aa8cf', null, LAKE.x, gy(LAKE.x, LAKE.z) + 0.09, LAKE.z, LAKE.rx, 1, LAKE.rz);
+    // ---- the village road through the gap (5 m dirt ribbon over our ground), and a wooden bridge where it meets the stream ----
+    let cross = null; for (let t = -1400; t < 1400; t += 1) { const x = P0[0] + D[0] * t, z = P0[1] + D[1] * t; if (streamD(x, z) < 1.2) { cross = t; break; } }
+    if (cross != null) { const cx = P0[0] + D[0] * cross, cz = P0[1] + D[1] * cross, ry = Math.atan2(D[0], D[1]), dy = gy(cx, cz) + 0.8, bb = at(cx, 0, cz, ry);
+      box(B, '#a0703f', bb, 5.4, 0.35, 18, 0, dy - 0.2, 0); [-1, 1].forEach(s => { box(B, '#7a5236', bb, 0.2, 1.0, 18, s * 2.6, dy + 0.15, 0); box(B, '#8a8278', bb, 6, dy + 0.5, 1.6, 0, -0.5, s * 8.2); }); }
+    // ---- cabins (log cabin + porch + a hammock), facing the valley centre ----
+    homes.forEach(p => { p.ry = Math.atan2(-p.x, (LODGE.z - p.z) * 0.3) + (r() - 0.5) * 0.8; p.door = { x: p.x + Math.sin(p.ry) * 7, z: p.z + Math.cos(p.ry) * 7 }; });
+    homes.sort((a, b) => Math.hypot(a.x - LODGE.x, a.z - LODGE.z) - Math.hypot(b.x - LODGE.x, b.z - LODGE.z));
+    const filled = o.filled == null ? homes.length : Math.min(o.filled, homes.length);
+    homes.slice(0, filled).forEach(p => { const base = at(p.x, p.y, p.z, p.ry), b2 = at(p.x, p.y + 0.2, p.z, p.ry);
+      box(B, '#a39a8c', base, 7.8, 1.2, 6.8, 0, -1.0, -0.2); logCabin(B, b2, r, fast); box(B, '#a39a8c', base, 2.0, 0.12, 0.7, 0, 0, 5.55);
+      const hm = at(p.x, p.y, p.z, p.ry).multiply(at(7.6, 0, 0.5, 0));                        // hammock in the side yard: two posts 3.4 m apart, 2.6 m clear of the wall
+      box(B, '#5a3a24', hm, 0.18, 2.0, 0.18, 0, 0, -1.7); box(B, '#5a3a24', hm, 0.18, 2.0, 0.18, 0, 0, 1.7);
+      box(B, ['#e8c45a', '#d65a5a', '#5a8ad6', '#f1e8d6'][(r() * 4) | 0], hm, 0.9, 0.06, 2.6, 0, 0.75, 0);
+      [-1, 1].forEach(sd => B.add(new T.BoxGeometry(0.05, 0.05, 1.15), '#d9c49a', hm, 0, 1.3, sd * 1.5, 1, 1, 1, sd * 1.05, 0, 0)); });   // ropes: post top -> cloth end
+    // ---- lanes: shortest-path tree over porches, the lodge, the mill and points on the road ----
+    const nodes = [{ x: LODGE.x, z: LODGE.z + 20 }, { x: MILL.x + 9, z: MILL.z }];
+    for (let t = -900; t <= 900; t += 70) { const x = P0[0] + D[0] * t, z = P0[1] + D[1] * t; if (edgeF(x, z) > 0.9 && (cross == null || Math.abs(t - cross) > 20)) nodes.push({ x, z }); }
+    const nRoad = nodes.length; homes.slice(0, filled).forEach(p => nodes.push(p.door));
+    const n = nodes.length, inT = new Uint8Array(n), best = new Float64Array(n).fill(1e18), par = new Int32Array(n).fill(-1), edges = [];
+    for (let i = 2; i < nRoad; i++) best[i] = 0; best[0] = 0;
+    for (let it = 0; it < n; it++) { let u = -1; for (let i = 0; i < n; i++) if (!inT[i] && (u < 0 || best[i] < best[u])) u = i; inT[u] = 1; if (par[u] >= 0) edges.push([par[u], u]);
+      for (let v = 0; v < n; v++) if (!inT[v]) { const a = nodes[u], b = nodes[v], d = Math.hypot(a.x - b.x, a.z - b.z) * (streamCross(a, b) ? 4 : 1); if (d < best[v]) { best[v] = d; par[v] = u; } } }
+    function streamCross(a, b) { for (let k = 1; k < 10; k++) { const x = a.x + (b.x - a.x) * k / 10, z = a.z + (b.z - a.z) * k / 10; if (streamD(x, z) < 4) return true; } return false; }
+    const LP = [];
+    edges.forEach(([a, b]) => { const A = nodes[a], Bn = nodes[b], L = Math.hypot(Bn.x - A.x, Bn.z - A.z); if (L < 1) return; const nx = -(Bn.z - A.z) / L, nz = (Bn.x - A.x) / L, bend = (r() - 0.5) * L * 0.2;
+      const cur = new T.QuadraticBezierCurve(new T.Vector2(A.x, A.z), new T.Vector2((A.x + Bn.x) / 2 + nx * bend, (A.z + Bn.z) / 2 + nz * bend), new T.Vector2(Bn.x, Bn.z));
+      const pts = cur.getSpacedPoints(Math.max(2, Math.round(L / 3))).map(p => ({ x: p.x, z: p.y, y: h(p.x, p.y) + 0.12 })); pts.forEach(p => LP.push(p)); ribbon(pts, 2.6, p => p.y, '#cdb88f');
+      // a footbridge where a lane crosses the stream
+      for (let i = 0; i < pts.length - 1; i++) if (streamD(pts[i].x, pts[i].z) < 2) { const q = pts[i], ry = Math.atan2(Bn.x - A.x, Bn.z - A.z), y = gy(q.x, q.z) + 0.35;
+        box(B, '#a0703f', at(q.x, 0, q.z, ry), 2.8, 0.25, 11, 0, y, 0); break; } });
+    const LH = new Map(), key = (x, z) => Math.floor(x / 8) * 10007 + Math.floor(z / 8); LP.forEach(p => { const k = key(p.x, p.z); if (!LH.has(k)) LH.set(k, []); LH.get(k).push(p); });
+    const nearLane = (x, z, m) => { for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) { const L = LH.get(key(x + i * 8, z + j * 8)); if (L && L.some(p => Math.hypot(p.x - x, p.z - z) < m)) return true; } return false; };
+    // ---- the Dream Lodge: 24 x 14 m, two storeys of logs, wrap-around porch, big gable with a balcony, stone chimneys ----
+    { const lb = at(LODGE.x, LODGE.y, LODGE.z, 0), W = '#9a5f3a', DK = '#5a3a24', RF = '#6b3f2e';
+      box(B, '#a39a8c', lb, 25, 1.4, 15, 0, -1.0, 0); box(B, W, lb, 24, 7.2, 14, 0, 0.4, 0);
+      if (!fast) for (let k = 0; k < 8; k++) box(B, DK, lb, 24.1, 0.12, 14.1, 0, 1.0 + k * 0.8, 0);
+      const a = Math.atan2(4.5, 7), half = 7 + 0.7, len = half / Math.cos(a), SL = new T.BoxGeometry(1, 1, 1);
+      B.add(prismGeo(14, 4.5, 24), W, lb, 0, 7.6, 0, 1, 1, 1, 0, Math.PI / 2, 0);
+      [-1, 1].forEach(sd => B.add(SL, RF, lb, 0, 7.6 + 4.5 - (half / 2) * Math.tan(a) + 0.15 * Math.cos(a), sd * half / 2 + sd * 0.15 * Math.sin(a), 25.4, 0.3, len, sd * a, 0, 0));
+      box(B, '#b98a5a', lb, 27, 0.3, 3.4, 0, 0.1, 8.7); for (let x = -13; x <= 13; x += 3.25) box(B, DK, lb, 0.3, 3.2, 0.3, x, 0.4, 10.2);   // porch on the pad + posts
+      box(B, RF, lb, 27.6, 0.25, 4.2, 0, 3.6, 8.9, 0, 0.2);
+      box(B, '#e6d8b8', lb, 3.4, 3.4, 0.1, 0, 0.4, 7.02); box(B, DK, lb, 2.6, 2.8, 0.12, 0, 0.4, 7.06);                                // double door
+      [-8, -4.5, 4.5, 8].forEach(x => { box(B, 'glow', lb, 1.6, 1.5, 0.12, x, 1.4, 7.02); box(B, 'glass', lb, 1.6, 1.5, 0.12, x, 4.6, 7.02); });
+      box(B, '#2f4a3c', lb, 6, 1.0, 0.12, 0, 5.2, 7.08);                                                                                 // name board
+      [-1, 1].forEach(s => { box(B, '#8a8278', lb, 1.6, 13.5, 1.6, s * 12.8, -0.5, 0); });                                                  // chimneys at both ends
+      box(B, '#a39a8c', lb, 6, 0.2, 1.2, 0, 0, 11.0);                                                                                     // stone step off the porch
+      for (let i = 0; i < 4; i++) box(B, '#7a5236', null, 1.8, 0.45, 0.6, LODGE.x - 6 + i * 4, LODGE.y, LODGE.z + 18); }
+    // ---- windmill: stone tower 13 m, cap, 4 sails (pivot on its pad) ----
+    { const mb = at(MILL.x, MILL.y, MILL.z, 0.5);
+      B.add(new T.CylinderGeometry(3.0, 4.2, 13, 10).translate(0, 6.5, 0), '#d9cdb4', mb); B.add(new T.ConeGeometry(3.6, 3.4, 10).translate(0, 1.7, 0), '#6b3f2e', mb, 0, 13, 0);
+      box(B, '#5a3a24', mb, 1.4, 2.4, 0.2, 0, 0, 4.1); box(B, '#5a3a24', mb, 0.5, 0.5, 1.4, 0, 12.6, 3.6);
+      for (let k = 0; k < 4; k++) { const sm = mb.clone().multiply(new T.Matrix4().makeTranslation(0, 12.8, 4.3)).multiply(new T.Matrix4().makeRotationZ(k * Math.PI / 2 + 0.3));
+        box(B, '#7a5236', sm, 0.3, 9, 0.15, 0, 0, 0); box(B, '#f1e8d6', sm, 1.8, 7, 0.08, 1.05, 1.6, 0.05); } }
+    // ---- lavender fields: purple rows with soil between ----
+    LAV.forEach(([cx, cz, w, d, ry]) => { const fb = at(cx, 0, cz, ry), y = h(cx, cz);
+      box(B, '#8a6a4a', fb, w, 0.12, d, 0, y - 0.02, 0); for (let v = -d / 2 + 1.2; v < d / 2 - 0.6; v += 2.4) box(B, ['#9a7fd0', '#a68ad8', '#8f74c4'][Math.abs(Math.round(v)) % 3], fb, w - 2, 0.7, 1.2, 0, y, v); });
+    // ---- sheep meadow: post-and-rail fence with a gate, sheep grazing ----
+    { const [cx, cz, w, d, ry] = SHEEP, sb = at(cx, 0, cz, ry), y = h(cx, cz);
+      const side = (x0, z0, x1, z1) => { const L = Math.hypot(x1 - x0, z1 - z0), n2 = Math.round(L / 4), a2 = Math.atan2(x1 - x0, z1 - z0);
+        for (let i = 0; i <= n2; i++) { const x = x0 + (x1 - x0) * i / n2, z = z0 + (z1 - z0) * i / n2; if (Math.abs(x) < 2.2 && z > 0) continue; box(B, '#7a5236', sb, 0.2, 1.3, 0.2, x, y - 0.2, z); }
+        box(B, '#9a6a3a', sb.clone().multiply(at((x0 + x1) / 2, 0, (z0 + z1) / 2, a2)), 0.1, 0.12, L, 0, y + 0.85, 0); };
+      side(-w / 2, -d / 2, w / 2, -d / 2); side(-w / 2, -d / 2, -w / 2, d / 2); side(w / 2, -d / 2, w / 2, d / 2); side(-w / 2, d / 2, -2.2, d / 2); side(2.2, d / 2, w / 2, d / 2);
+      for (let i = 0; i < 16; i++) { const x = (r() - 0.5) * (w - 10), z = (r() - 0.5) * (d - 10), sh = sb.clone().multiply(at(x, y, z, r() * 6));
+        box(B, '#f4f0e6', sh, 0.9, 0.75, 1.4, 0, 0.45, 0); box(B, '#2f2b28', sh, 0.45, 0.45, 0.5, 0, 0.9, 0.85); [-0.3, 0.3].forEach(lx => [-0.45, 0.45].forEach(lz => box(B, '#2f2b28', sh, 0.14, 0.45, 0.14, lx, 0, lz))); } }
+    // ---- trees: groves on the hillsides + a few in the valley, never on lanes, fields, water or pads ----
+    const padClear = (x, z) => PADS.some(p => Math.hypot(x - p.x, z - p.z) < p.r0 + 2);
+    const groves = []; for (let i = 0; i < (fast ? 26 : 40); i++) groves.push([(r() * 2 - 1) * HW, (r() * 2 - 1) * HL, 10 + r() * 14]);
+    groves.forEach(([gx, gz, gr]) => { const nT = Math.round(gr * gr / (fast ? 40 : 26)); for (let i = 0; i < nT; i++) { const a = r() * Math.PI * 2, q = Math.sqrt(r()) * gr, x = gx + Math.cos(a) * q, z = gz + Math.sin(a) * q;
+      if (edgeF(x, z) < 1 || busy(x, z, 3) || streamD(x, z) < 8 || roadDist(x, z) < 6 || padClear(x, z) || nearLane(x, z, 3)) continue; const y = h(x, z);
+      TR.push({ k: r() < 0.25 ? 'p' : 'r', x, z, y: y - 0.15, r: r() * 6, s: 0.8 + r() * 0.5, c: (r() * 9) | 0 }); } });
+    B.build(g, !fast); trees(g, TR, fast);
+    g.userData.spots = homes.map(({ x, y, z, ry }) => ({ x, y, z, ry })); g.userData.lodge = LODGE; g.userData.treeCount = TR.length;   // v4
+    return g;
+  }
+  root.VinlandDistricts3 = { introvertIsland3, introvertIsland4, introvertIsland5, napValley3, napValley4, cottage, logCabin, aFrame, CT };
 })(window);
