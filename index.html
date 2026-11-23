@@ -53,6 +53,11 @@ button,input{font:inherit;color:inherit}button{cursor:pointer;touch-action:manip
 .pill{display:inline-block;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--mute)}
 .tag{font:600 10.5px var(--sans);padding:3px 9px;border-radius:20px;background:#f1e6c8;color:#5c4513;white-space:nowrap}.tag.on{background:var(--navy);color:var(--goldlt)}
 .err{font-size:12.5px;color:#a32d2d;margin-top:6px}
+.rq{background:#fffaf0;border:1px solid #e6d9b6;border-radius:4px;padding:12px 12px 10px;margin-bottom:12px;box-shadow:0 2px 0 #e3d4ad,0 8px 16px -12px rgba(20,35,63,.55);position:relative}
+.rq:before{content:'';position:absolute;top:-6px;left:50%;width:12px;height:12px;border-radius:50%;background:#c2552d;box-shadow:0 2px 0 #8f3a1c}
+.rq .t{font:600 16px/1.3 var(--serif);margin:6px 0 10px;overflow-wrap:anywhere}.rq .by{font-size:12px;color:var(--mute);overflow-wrap:anywhere}
+.rq .sp{display:flex;align-items:center;gap:8px;justify-content:flex-end}.rq .done{position:absolute;right:10px;top:10px;font:800 11px var(--sans);color:#2f7a68;border:2px solid #2f7a68;border-radius:4px;padding:2px 6px;transform:rotate(-6deg)}
+.rqbar{display:flex;gap:6px;margin:0 0 12px;flex-wrap:wrap}.rqta{width:100%;box-sizing:border-box;min-height:84px;border:1px solid var(--rule);border-radius:8px;padding:10px;font:15px var(--sans);background:#fff;color:var(--ink);resize:vertical}
 .mast{text-align:center;border-bottom:3px double var(--navy);padding-bottom:8px;margin-bottom:14px}.mast b{font:700 27px/1.1 var(--serif);display:block}
 .bar2{height:6px;background:#efe3c4;border-radius:6px;overflow:hidden;margin-top:5px}.bar2 i{display:block;height:100%;background:var(--gold)}
 .li{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid #efe3c4}.li:first-of-type{border-top:0}.li .n{font:700 13px var(--serif);min-width:30px;color:var(--mute)}
@@ -536,7 +541,7 @@ async function shBuy(id) { const se = readSession(); if (!se || SH.busy) return;
 function shUse(k, v) { const look = Object.assign({}, SH.look); if (k === 'party') { const cur = new Set(look.party || []); if (v[0] === '-') { cur.delete(v.slice(1)); v = ''; } else cur.add(v); look.party = [...cur]; } else if (v) look[k] = v; else delete look[k]; shSave(look, v ? 'Done. It shows on the map within a few minutes.' : ''); }
 
 // ---------- pages ----------
-const TABS = [['home', 'home', 'Home'], ['map', 'map', 'Map'], ['news', 'news', 'News'], ['me', 'user', 'Me']];
+const TABS = [['home', 'home', 'Home'], ['map', 'map', 'Map'], ['ideas', 'parl', 'Ideas'], ['news', 'news', 'News'], ['me', 'user', 'Me']];
 const OLD_TABS = [['town', 'town', 'Town'], ['times', 'news', 'Times'], ['parliament', 'parl', 'Parliament'], ['me', 'user', 'Me']];
 let tab = 'home', supCard = false, newsOpen = -1, parlOpen = false, found = null, miss = '', suggest = [], qText = '', lastUser = store.get('vin_last') || '';
 const mapLink = h => 'map/?home=' + (h.status === 'hidden' || h.villa ? h.n : encodeURIComponent(h.user));
@@ -583,6 +588,20 @@ function supportCard() {
       <div class="grid2"><div class="mini">🧱<b>Name on the Wall</b></div><div class="mini">🏰<b>Your own villa</b></div></div>
       <div class="row" style="margin-top:12px"><button class="push g" data-a="sup-open">See how to support</button></div>
       <p class="sub" style="text-align:center;margin-top:8px">Never buys votes, jobs or power · Under 18? Ask a parent</p></div>` : ''}</div>`; }
+// ---------- IDEAS: the requests board + Ask Vinland (23 Nov: Instagram paused our DMs, so questions and requests live here now) ----------
+const RQ = { open: [], done: [], sup: new Set(), view: 'now', sort: 'pop', q: '', form: false, err: '', msg: '', busy: false, loaded: false, failed: false, asks: [], unseen: 0, askErr: '', askMsg: '' };
+async function rqLoad() {
+  const se = readSession(); RQ.failed = false;
+  try { const r = await socApi({ action: 'req_list', token: se ? se.token : '' }); if (r && r.ok) { RQ.open = r.open || []; RQ.done = r.done || []; RQ.sup = new Set(r.supported || []); RQ.loaded = true; } else RQ.failed = true; } catch (e) { RQ.failed = true; }
+  if (se) try { const a = await socApi({ action: 'ask_mine', token: se.token, seen: tab === 'ideas' }); if (a && a.ok) { RQ.asks = a.asks || []; RQ.unseen = tab === 'ideas' ? 0 : a.unseen || 0; } } catch (e) {}
+  if (tab === 'ideas') render(true);
+}
+function rqCard(r, done) {
+  const on = RQ.sup.has(r.id), mine = session() === String(r.username).toLowerCase();
+  return `<div class="rq">${done ? '<span class="done">BUILT ✓</span>' : ''}<div class="by">@${esc(r.username)} ${mine ? '(you) ' : ''}asked for</div><div class="t">${esc(r.text)}</div>
+    ${done && r.note ? `<div class="sub" style="margin:-4px 0 8px;color:#2f7a68">${esc(r.note)}</div>` : ''}
+    <div class="sp"><span class="sub">${num(r.supports || 0)} ${r.supports === 1 ? 'citizen wants' : 'citizens want'} this</span>${done ? '' : `<button class="push sm${on ? ' g' : ''}" style="min-height:38px;padding:0 14px" data-a="rq-sup" data-id="${r.id}" aria-pressed="${on}">${on ? '✓ Supported' : '↑ Support'}</button>`}</div></div>`;
+}
 const P = {
   home() {
     const su = session(), h = su ? byUser.get(su) : null;
@@ -604,6 +623,27 @@ const P = {
       ${beachStrip()}
       <div class="big3 two"><a class="push g" href="${IG}" target="_blank" rel="noopener" data-a="go-ig"><span>📸</span>Follow + comment HOME</a><a class="push" href="map/" data-a="go-map"><span>🗺️</span>Explore</a></div>
       ${partiesCard()}${towerCard(null)}${focusCard()}${supportCard()}`;
+  },
+  ideas() {
+    const su = session(), se = readSession(), h = su ? byUser.get(su) : null; if (!RQ.loaded && !RQ.failed && !RQ.busy) { RQ.busy = true; rqLoad().finally(() => { RQ.busy = false; }); }
+    if (RQ.unseen && se) { RQ.unseen = 0; socApi({ action: 'ask_mine', token: se.token, seen: true }).catch(() => {}); }
+    const q = RQ.q.trim().toLowerCase(), list = (RQ.view === 'done' ? RQ.done : RQ.open).filter(r => !q || r.text.toLowerCase().includes(q) || String(r.username).toLowerCase().includes(q));
+    if (RQ.view !== 'done' && RQ.sort === 'new') list.sort((a, b) => b.id - a.id);
+    return `<div class="mast"><b>Vinland Requests</b><span class="sub">Ask for what you want built. The most supported ideas get built first.</span></div>
+      <div class="doc lob" style="background:var(--navy);color:var(--goldlt);border-color:var(--navy)"><b style="color:#fff;font:700 17px var(--serif)">💬 Ask Vinland</b><small style="display:block;color:var(--goldlt);margin:2px 0 10px">A question for us? Ask here. Our answer shows right on this page.</small>
+        ${se ? `<form data-a="ask-form"><textarea class="rqta" id="askT" maxlength="400" placeholder="Your question…"></textarea>${RQ.askErr ? `<p class="err">${esc(RQ.askErr)}</p>` : ''}${RQ.askMsg ? `<div class="okbox">${esc(RQ.askMsg)}</div>` : ''}<div class="row" style="margin-top:8px"><button class="push g" type="submit">Send question</button></div></form>
+          ${RQ.asks.length ? `<div style="margin-top:12px">${RQ.asks.map(x => `<div style="background:#fffaf0;color:var(--ink);border-radius:8px;padding:10px;margin-top:8px"><div class="sub">You asked</div><div style="overflow-wrap:anywhere">${esc(x.text)}</div>${x.reply ? `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--rule)"><div class="sub" style="color:#2f7a68">📬 Vinland replied</div><div style="overflow-wrap:anywhere;white-space:pre-wrap">${esc(x.reply)}</div></div>` : '<div class="sub" style="margin-top:6px">⏳ We’ll answer here soon. Check back in a day or two.</div>'}</div>`).join('')}</div>` : ''}`
+        : `<div class="row"><button class="push g" data-a="code-me">Log in to ask</button></div>`}</div>
+      <div class="rqbar"><button class="tag${RQ.view !== 'done' ? ' on' : ''}" data-a="rq-view" data-v="now">Current ${num(RQ.open.length)}</button><button class="tag${RQ.view === 'done' ? ' on' : ''}" data-a="rq-view" data-v="done">Built ${num(RQ.done.length)}</button>
+        ${RQ.view !== 'done' ? `<button class="tag" data-a="rq-sort">${RQ.sort === 'new' ? 'Newest' : 'Most supported'} ⇅</button>` : ''}<span style="flex:1"></span>${se && h ? `<button class="tag on" data-a="rq-form">+ New request</button>` : ''}</div>
+      ${RQ.form ? `<form class="doc frame" data-a="rq-new"><div class="h" style="font-size:18px">What would you like in Vinland?</div><textarea class="rqta" id="rqT" maxlength="140" style="margin-top:8px" placeholder="A place, a shop, an event… something everyone can enjoy"></textarea>
+        <ul class="sub" style="margin:8px 0 0 18px;padding:0"><li>Ask for something everyone can enjoy.</li><li>Check the board first and support similar requests.</li><li>Keep it kind. No links, no @mentions. It shows on the public board.</li><li>Real jobs and places only (our laws still apply).</li></ul>
+        ${RQ.err ? `<p class="err">${esc(RQ.err)}</p>` : ''}<div class="row" style="margin-top:10px"><button class="push sm" type="button" data-a="rq-form">Cancel</button><button class="push g" type="submit">Post request</button></div></form>` : ''}
+      ${RQ.msg ? `<div class="okbox">${esc(RQ.msg)}</div>` : ''}
+      ${!se ? `<div class="doc" style="text-align:center"><p class="sub" style="margin:0 0 8px">Log in to post a request or support one.</p><button class="push g" data-a="code-me">Log in</button></div>` : !h ? '<p class="sub">Once your home is on the map, you can post and support requests.</p>' : ''}
+      <form class="field" data-a="rq-search" style="margin-bottom:12px"><input id="rqQ" type="search" placeholder="Search requests or @names" value="${esc(RQ.q)}"></form>
+      ${RQ.failed ? '<p class="err">Could not load the board. Check your internet and try again.</p><div class="row"><button class="push sm" data-a="rq-retry">Try again</button></div>' : !RQ.loaded ? '<p class="load">Loading the board…</p>'
+        : list.length ? list.map(r => rqCard(r, RQ.view === 'done')).join('') : `<p class="sub" style="text-align:center">${q ? 'Nothing matches.' : RQ.view === 'done' ? 'Built requests show here.' : 'No requests yet. Be the first!'}</p>`}`;
   },
   news() {
     const nw = news(), reminded = store.get('vin_remind') === ELECTION.id;
@@ -678,7 +718,7 @@ function render(keepScroll) {
   const y = window.scrollY, su = session();
   $('#sub').textContent = dataOK ? `Day ${dayNumber()}  |  ${num(live)} citizens` : 'A country built by its followers';
   const lb = $('#loginBtn'), mh = su && byUser.get(su); lb.classList.toggle('me', !!su); lb.innerHTML = su ? `<span>@${esc(su)}</span>${mh ? `<small>${esc(statusOf(mh))}</small>` : ''}` : ic('key', 16) + 'Login';
-  $('#nav').innerHTML = TABS.map(t => t[0] === 'map' ? `<a href="map/" data-a="go-map">${ic(t[1], 22)}${t[2]}</a>` : `<button class="${t[0] === tab ? 'on' : ''}" data-a="tab" data-t="${t[0]}" aria-current="${t[0] === tab ? 'page' : 'false'}">${ic(t[1], 22)}${t[2]}${t[0] === 'me' && tab !== 'me' && newKnocks() ? `<span class="badge" aria-label="${newKnocks()} new knocks">${newKnocks()}</span>` : ''}</button>`).join('');
+  $('#nav').innerHTML = TABS.map(t => t[0] === 'map' ? `<a href="map/" data-a="go-map">${ic(t[1], 22)}${t[2]}</a>` : `<button class="${t[0] === tab ? 'on' : ''}" data-a="tab" data-t="${t[0]}" aria-current="${t[0] === tab ? 'page' : 'false'}">${ic(t[1], 22)}${t[2]}${t[0] === 'ideas' && tab !== 'ideas' && RQ.unseen ? `<span class="badge" aria-label="${RQ.unseen} new answers">${RQ.unseen}</span>` : ''}${t[0] === 'me' && tab !== 'me' && newKnocks() ? `<span class="badge" aria-label="${newKnocks()} new knocks">${newKnocks()}</span>` : ''}</button>`).join('');
   scr.innerHTML = P[tab]();
   window.scrollTo(0, keepScroll ? y : 0);
 }
@@ -881,6 +921,12 @@ function supClose(fromHistory) { if (sup.hidden) return; sup.hidden = true; docu
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-a]'); if (!el) return; const a = el.dataset.a;
   if (a === 'tab') setTab(el.dataset.t);
+  else if (a === 'rq-view') { RQ.view = el.dataset.v; RQ.msg = ''; render(true); }
+  else if (a === 'rq-sort') { RQ.sort = RQ.sort === 'new' ? 'pop' : 'new'; render(true); }
+  else if (a === 'rq-form') { RQ.form = !RQ.form; RQ.err = ''; RQ.msg = ''; render(true); if (RQ.form) setTimeout(() => { const t = $('#rqT'); t && t.focus(); }, 30); }
+  else if (a === 'rq-retry') { RQ.failed = false; render(true); }
+  else if (a === 'rq-sup') { const se = readSession(), id = +el.dataset.id, on = !RQ.sup.has(id); if (!se) { lcOpen(); return; } el.disabled = true;
+    socApi({ action: 'req_support', token: se.token, id, on }).then(r => { if (r && r.ok) { on ? RQ.sup.add(id) : RQ.sup.delete(id); const x = RQ.open.find(o => o.id === id); if (x) x.supports = r.supports; track('rq-support'); } else if (r && r.msg) RQ.msg = r.msg; render(true); }).catch(() => { el.disabled = false; }); }
   else if (a === 'find') find(el.dataset.u);
   else if (a === 'retry') load();
   else if (a === 'pp-open') { if (!ppOpen(el.dataset.u, +el.dataset.i || 0)) find(el.dataset.u); }
@@ -931,6 +977,11 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('submit', e => { const f = e.target.closest('form[data-a]'); if (!f) return; e.preventDefault();
   if (f.dataset.a === 'find-form') find(f.querySelector('input').value);
+  else if (f.dataset.a === 'rq-search') { RQ.q = f.querySelector('input').value; render(true); }
+  else if (f.dataset.a === 'rq-new') { const se = readSession(), t = ($('#rqT') || {}).value || ''; if (!se) return lcOpen(); if (t.trim().length < 4) { RQ.err = 'Write a bit more (at least 4 letters).'; render(true); return; }
+    socApi({ action: 'req_new', token: se.token, text: t }).then(r => { if (r && r.ok) { RQ.form = false; RQ.err = ''; RQ.msg = '📌 Posted! Share it so other citizens support it.'; RQ.open.unshift(r.req); RQ.sup.add(r.req.id); RQ.view = 'now'; RQ.sort = 'new'; track('rq-new'); } else RQ.err = (r && r.msg) || 'Could not post. Try again.'; render(true); }).catch(() => { RQ.err = 'Could not post. Check your internet.'; render(true); }); }
+  else if (f.dataset.a === 'ask-form') { const se = readSession(), t = ($('#askT') || {}).value || ''; if (!se) return lcOpen(); if (t.trim().length < 3) { RQ.askErr = 'Write your question first.'; render(true); return; }
+    socApi({ action: 'ask_new', token: se.token, text: t }).then(r => { if (r && r.ok) { RQ.askErr = ''; RQ.askMsg = '✅ Sent! Our answer will show right here. Check back in a day or two.'; RQ.asks.unshift({ text: t.trim(), reply: null }); track('ask-new'); } else RQ.askErr = (r && r.msg) || 'Could not send. Try again.'; render(true); }).catch(() => { RQ.askErr = 'Could not send. Check your internet.'; render(true); }); }
   else if (f.dataset.a === 'pp-form') { const v = f.querySelector('input').value, er = $('#pperr'); if (!cleanName(v)) { er.textContent = 'Type your username first.'; return; } if (!dataOK) { er.textContent = 'Still loading the citizens list. Try again in a moment.'; return; } if (!ppOpen(v)) { er.textContent = 'No home for @' + cleanName(v) + ' yet. Follow @buildacountry and comment HOME.'; } else { er.textContent = ''; lastUser = cleanName(v); store.set('vin_last', lastUser); } } });
 document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (!pp.hidden) ppClose(); else if (!$('#lc').hidden) lcClose(); else if (!sup.hidden) supClose(); });
 const onHash = () => { let t2; const t = location.hash.slice(1); if (t === 'support') { if (tab !== 'home') setTab('home', false); if (sup.hidden) supOpen(); return; } supClose(true); t2 = ({ town: 'home', times: 'news', parliament: 'news' })[t] || t; if (P[t2] && t2 !== tab) setTab(t2, false); };
@@ -954,6 +1005,7 @@ if (!ST) { scr.innerHTML = '<p class="load">Vinland could not load. Refresh to t
 useNotices(null); useDemands(store.get('vin_demands')); useCitizens(store.get('vin_citizens'));
 { const t = ({ town: 'home', times: 'news', parliament: 'news' })[location.hash.slice(1)] || location.hash.slice(1); if (P[t]) tab = t; else if (t === 'support') tab = 'home'; }
 render(); if (location.hash === '#support') supOpen();
+if (readSession()) setTimeout(() => { if (!RQ.loaded && !RQ.busy) { RQ.busy = true; rqLoad().finally(() => { RQ.busy = false; render(true); }); } }, 2500);   // so the Ideas tab can show '1 new answer'
 { let u = ''; try { u = new URLSearchParams(location.search).get('u') || ''; } catch (e) {} if (u && dataOK) find(u); else if (u) qText = u; }
 let wantPP = ''; try { wantPP = new URLSearchParams(location.search).get('pp') || ''; } catch (e) {}   // index.html?pp=username opens that citizen's passport (from Vinland Maps)
 const openWantedPP = () => { if (wantPP && dataOK) { const u = wantPP; wantPP = ''; ppOpen(u, 1); } }; openWantedPP();   // index.html?u=username opens that home card
