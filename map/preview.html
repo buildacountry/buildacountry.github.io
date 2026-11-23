@@ -864,20 +864,20 @@ const RIVER_WD = z => z < 1850 ? 0 : Math.min(40, (z - 1850) / 60);   // and slo
   const RIDGE = [];
   for (let z = -700; z <= 2900; z += 110) {   // Nap Valley's two side ridges: low at the sea, rising into the mountains
     const up = 0.12 + 0.88 * SS(-820, 2600, z), off = 420 + Math.max(0, 500 - z) * 0.25, ax = NAPAX(z);
-    [-1, 1].forEach(sd => RIDGE.push([ax + sd * off, z, 380, (85 + 20 * Math.sin(z / 380 + sd)) * up, 'R'])); }   // broad wooded shoulders, not walls
+    [-1, 1].forEach(sd => RIDGE.push([ax + sd * off, z, 460, (60 + 14 * Math.sin(z / 380 + sd)) * up, 'R'])); }   // broad wooded shoulders, not walls
   [[-4700, 3700, 750, 170], [-3800, 4400, 650, 150], [-5100, 4700, 600, 160], [-4300, 3100, 550, 120], [-6300, 2300, 800, 150], [-7300, 2900, 700, 140],
-   [-6900, 6200, 900, 180], [-4800, 6300, 800, 150], [-3300, 5600, 600, 110], [-5300, 2400, 500, 90]].forEach(([x, z, r, hh]) => RIDGE.push([x, z, r, hh * 1.4, 'R']));   // the mountain range
+   [-6900, 6200, 900, 180], [-4800, 6300, 800, 150], [-3300, 5600, 600, 110], [-5300, 2400, 500, 90]].forEach(([x, z, r, hh]) => RIDGE.push([x, z, r * 1.5, hh * 0.9, 'R']));   // the hill range: broad and round
   HILLS[0][3] = 90; HILLS[0].push('R');   // the old big west mountain is now the base the range stands on
   HILLS.push(...RIDGE);
-  const hillsOnly = (x, z) => { let h = 0; HILLS.forEach(([hx, hz, r, hh]) => { const d = Math.hypot(x - hx, (z - hz) * 1.3) / r; if (d < 1) h += hh * Math.pow(Math.cos(d * Math.PI / 2), 2) * (0.75 + 0.25 * Math.sin(x * 0.004) * Math.cos(z * 0.005)); }); return h; };
+  const hillsOnly = (x, z) => { let h = 0; HILLS.forEach(([hx, hz, r, hh, tg]) => { const d = Math.hypot(x - hx, (z - hz) * 1.3) / r; if (d < 1) h += hh * (tg ? Math.pow(1 - d * d, 3) : Math.pow(Math.cos(d * Math.PI / 2), 2)) * (0.75 + 0.25 * Math.sin(x * 0.004) * Math.cos(z * 0.005)); }); return h; };
   const segD = (x, z, [x1, z1], [x2, z2]) => { const dx = x2 - x1, dz = z2 - z1, t = Math.max(0, Math.min(1, ((x - x1) * dx + (z - z1) * dz) / (dx * dx + dz * dz))); return Math.hypot(x - x1 - dx * t, z - z1 - dz * t); };
   const hillH = window.__hillH = (x, z) => { let h = hillsOnly(x, z); const m = WMASK(x, z); if (m <= 0) return h;
-    h *= 1 + m * (0.6 * VN(x / 280 + 31, z / 280 + 17) - 0.2);                                                  // rugged mountain sides
+    h *= 1 + m * (0.3 * VN(x / 600 + 31, z / 600 + 17) - 0.1);                                                  // rugged mountain sides
     h += m * ((6 + 40 * SS(-700, 2600, z)) * FBM(x, z) + 55 * SS(600, 5200, z));                                // rolling land, rising steadily inland, flat near the sea                                                          // rolling land, flat near the sea
     let f = 1; VIL.forEach(([vx, vz]) => { f *= 0.1 + 0.9 * SS(160, 420, Math.hypot(x - vx, z - vz)); });   // villages on level ground
     lakes.forEach(([lx, lz, lr]) => { f *= SS(lr + 40, lr + 320, Math.hypot(x - lx, (z - lz) / 0.7)); });     // lakes lie flat
     { let rdm = 1e9; ROADS.forEach(rd => { for (let k = 0; k < rd.length - 1; k++) rdm = Math.min(rdm, segD(x, z, rd[k], rd[k + 1])); }); f *= 0.5 + 0.5 * SS(30, 260, rdm); }   // roads run through lower passes
-    const cz = 1 - SS(2500, 3050, z), dv = Math.abs(x - NAPAX(z)); f *= 1 - cz * (1 - SS(95, 330, dv));       // Nap Valley's floor
+    const cz = 1 - SS(2500, 3050, z), dv = Math.abs(x - NAPAX(z)); f *= 1 - cz * (1 - SS(110, 480, dv));       // Nap Valley's floor
     f *= SS(-700, -420, z);                                                                                     // the beach and the shore stay flat
     return h * (1 - m * (1 - f)); };
   const cv = document.createElement('canvas'); cv.width = cv.height = N; const c = cv.getContext('2d');
@@ -932,7 +932,7 @@ const RIVER_WD = z => z < 1850 ? 0 : Math.min(40, (z - 1850) / 60);   // and slo
     const cpx = gc.width / (GX1 - GX0), cpz = gc.height / (GZ1 - GZ0);
     { const tc = document.createElement('canvas'); tc.width = nx; tc.height = nz; const t2 = tc.getContext('2d'), id = t2.createImageData(nx, nz), D8 = id.data;   // woods uphill, grassy tops, rock where steep: one pixel a cell, smoothed
       for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const h = H[j * (nx + 1) + i], hx = H[j * (nx + 1) + i + 1] - h, hz = H[(j + 1) * (nx + 1) + i] - h, sl = Math.hypot(hx, hz) / cs;
-        const fo = SS(20, 70, h) * (1 - SS(170, 215, h)) * 0.55, rk = Math.max(SS(0.6, 0.95, sl), SS(230, 280, h)) * 0.8, tp = SS(150, 190, h) * 0.45;
+        const fo = SS(20, 70, h) * (1 - SS(170, 215, h)) * 0.55, rk = Math.max(SS(0.85, 1.3, sl), SS(260, 300, h)) * 0.6, tp = SS(150, 190, h) * 0.45;
         let r0 = 78, g0 = 118, b0 = 56, a = fo; if (tp > a) { r0 = 160; g0 = 180; b0 = 104; a = tp; } if (rk > 0.05) { const k = rk / Math.max(rk, a); r0 = r0 * (1 - k) + 176 * k; g0 = g0 * (1 - k) + 170 * k; b0 = b0 * (1 - k) + 148 * k; a = Math.max(a, rk); }
         const o = (j * nx + i) * 4; D8[o] = r0; D8[o + 1] = g0; D8[o + 2] = b0; D8[o + 3] = Math.round(a * 255); }
       t2.putImageData(id, 0, 0); g2.imageSmoothingEnabled = true; g2.drawImage(tc, 0, 0, gc.width, gc.height); }
