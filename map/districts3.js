@@ -400,10 +400,13 @@
       G.setAttribute('color', new T.Float32BufferAttribute(col, 3)); G.computeVertexNormals();
       const m = new T.Mesh(G, new T.MeshLambertMaterial({ vertexColors: true, flatShading: true })); m.receiveShadow = true; g.add(m); }
     // ---- the lagoon + shallows: a turquoise sheet just above the map's sea top (0.35): y 0.6 (0.25 m clear of it: no flicker from far away), pale at the sand, deeper to the reef; surf ring on the reef ----
-    { const RC = [0, 40], RR = 372, RN = fast ? 14 : 22, SN = fast ? 96 : 140, pos = [], col = [];
+    // (Dev 24 Nov: "around the island with some space", not a huge disc): the sheet reaches ~48 m past the outermost shore on every bearing
+    { const RC = [0, -40], RN = fast ? 12 : 18, SN = fast ? 120 : 180, pos = [], col = [], GAP = 48;
+      const raw = []; for (let i = 0; i < SN; i++) { const a = i / SN * Math.PI * 2; let last = 0; for (let t = 0; t < 600; t += 2) if (dist(RC[0] + Math.cos(a) * t, RC[1] + Math.sin(a) * t) > 0) last = t; raw.push(last + GAP); }
+      const sm = raw.map((v, i) => { let s2 = 0; for (let k = -4; k <= 4; k++) s2 += raw[(i + k + SN) % SN]; return s2 / 9; });   // smooth, so the reef curves gently
+      const rr = a => { const f = ((a / (Math.PI * 2)) % 1 + 1) % 1 * SN, i0 = Math.floor(f) % SN, i1 = (i0 + 1) % SN, u = f - Math.floor(f); return sm[i0] * (1 - u) + sm[i1] * u; };
       const cA = new T.Color('#b8efe6'), cB = new T.Color('#62d0d8'), cC = new T.Color('#3fb2cc');
-      const rr = a => RR * (1 + 0.04 * Math.sin(3 * a + 1) + 0.025 * Math.sin(7 * a + 0.3));
-      const vtx = (t, a) => { const x = RC[0] + Math.cos(a) * rr(a) * t * 1.06, z = RC[1] + Math.sin(a) * rr(a) * t * 0.9, d = -dist(x, z), c = d < 30 ? cA.clone().lerp(cB, Math.max(0, d) / 30) : cB.clone().lerp(cC, Math.min(1, (d - 30) / 120));
+      const vtx = (t, a) => { const x = RC[0] + Math.cos(a) * rr(a) * t, z = RC[1] + Math.sin(a) * rr(a) * t, d = -dist(x, z), c = d < 18 ? cA.clone().lerp(cB, Math.max(0, d) / 18) : cB.clone().lerp(cC, Math.min(1, (d - 18) / 40));
         return [x, 0.6, z, c]; };
       for (let j = 0; j < RN; j++) for (let i = 0; i < SN; i++) { const t0 = j / RN, t1 = (j + 1) / RN, a0 = i / SN * Math.PI * 2, a1 = (i + 1) / SN * Math.PI * 2;
         const q = [vtx(t0, a0), vtx(t0, a1), vtx(t1, a0), vtx(t1, a1)]; [0, 2, 1, 1, 2, 3].forEach(n => { pos.push(q[n][0], q[n][1], q[n][2]); col.push(q[n][3].r, q[n][3].g, q[n][3].b); }); }
@@ -466,6 +469,7 @@
     for (let x = -R1 - 10; x < R1 + 10; x += step) for (let z = -R1 / 1.25 - 10; z < 220; z += step) {
       const tx = x + (r() - 0.5) * step, tz = z + (r() - 0.5) * step, d = dist(tx, tz), sw = sandW(tx, tz); if (d < sw - 3) continue;
       if (padClear(tx, tz) || nearPath(tx, tz, 2.2)) continue;
+      if (d > sw + 6 && r() < 0.3) continue;                                           // (Dev 24 Nov) a bit thinner: 30% fewer inland trees
       const edge = d < sw + 6, palm = edge || r() < 0.38, y = h(tx, tz) - 0.3;
       if (palm) { const out = Math.atan2(tx, tz * 1.25); TR.push({ k: 'palm', x: tx, z: tz, y, r: r() * 6, s: 0.8 + r() * 0.45, c: (r() * 9) | 0, lx: edge ? Math.cos(out) * 0.18 : (r() - 0.5) * 0.12, lz: edge ? -Math.sin(out) * 0.18 : (r() - 0.5) * 0.12 }); }
       else TR.push({ k: 'bush', x: tx, z: tz, y, r: r() * 6, s: 1.0 + r() * 0.9, c: (r() * 9) | 0 }); }
