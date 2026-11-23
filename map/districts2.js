@@ -122,7 +122,7 @@
     const qOf = (x, z) => { const u = x / hw, v = z / hl; return Math.hypot(u, v) / rN(Math.atan2(v, u)); };
     const dist = (x, z) => (1 - qOf(x, z)) * hw;                                   // ~metres inland (negative = sea)
     const cliffy = (x, z) => Math.sin(Math.atan2(z / hl, x / hw) * 4 + 0.9) > -0.15;   // most of the shore is cliff, the rest are beach coves
-    const HILL = [0, hl * 0.42, 110, 160, 85], BUMPS = [[-hw * 0.35, -hl * 0.25, 60, 9], [hw * 0.3, -hl * 0.05, 70, 7], [hw * 0.2, -hl * 0.55, 60, 8], [-hw * 0.2, hl * 0.05, 55, 6]];
+    const HILL = [0, hl * 0.42, 110, 160, 50], BUMPS = [[-hw * 0.35, -hl * 0.25, 60, 9], [hw * 0.3, -hl * 0.05, 70, 7], [hw * 0.2, -hl * 0.55, 60, 8], [-hw * 0.2, hl * 0.05, 55, 6]];
     const hRaw = (x, z) => { const d = dist(x, z); let base;
       if (d < 0) base = -4 + Math.max(-10, d * 0.25);
       else if (cliffy(x, z)) base = Math.min(9, d < 3 ? d * 0.6 : 1.8 + (d - 3) * 1.6); else base = Math.min(9, d * 0.22);
