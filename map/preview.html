@@ -3139,7 +3139,7 @@ function bankCard() {
 const STAD = { x: 822, z: -128, rx: 47, rz: 34 };
 // VINLAND CUP (promised 21 Nov, placed 24 Nov): the District Cup trophy on the stadium plaza. Gold cup on a navy plinth,
 // the winner's name on the front plaque. Same model as the reel (reels/library/part.js __trophy), 2.2x so it reads from the air (~10 m).
-const CUP = { x: 822, z: -46, s: 2.2, winner: '' };   // winner = the district's name, from Dev
+const CUP = { x: 822, z: -46, s: 2.2, winner: 'Suburb' };   // winner = the district's name, from Dev
 (function drawCup() { if (!CUP.winner) return;
   const g = new THREE.Group(), gold = new THREE.MeshPhongMaterial({ color: '#e9b23c', specular: '#fff1b8', shininess: 90, emissive: '#3a2600' }), navy = wallMat('#1f2b52');
   const box = (w, h, d, m, y) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.y = y + h / 2; o.castShadow = true; o.receiveShadow = true; g.add(o); return o; };
