@@ -403,7 +403,8 @@ const WEAK = PHONE && ((navigator.deviceMemory && navigator.deviceMemory <= 3) |
 const hasGL = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl') || c.getContext('experimental-webgl')); } catch (e) { return false; } })();
 // Which view opens: the person's own choice wins; else laptop = 3D; phone = what the speed check found last time, or a first guess from the phone's memory / cores.
 const EDITING = /[?&]edit\b/.test(location.search) && !PHONE; window.VIN_EDIT = EDITING;   // the Vinland Builder: /map/?edit, laptop only
-function pickMode() { if (EDITING) return '3d'; const v = qs.get('view'); if (v === '2d' || v === '3d') return v; if (!hasGL || !ST) return hasGL ? '3d' : '2d';
+function pickMode() { if (EDITING || /[?&]life\b/.test(location.search)) return '3d';   // ?life = Life in Vinland (the game) always opens in 3D
+  const v = qs.get('view'); if (v === '2d' || v === '3d') return v; if (!hasGL || !ST) return hasGL ? '3d' : '2d';
   if (PHONE) return '2d';   // 13 Nov (step 4): phones always open in Maps mode (instant, never lags). 3D is one tap away, for a look-around.
   const c = LS.get('vin_map_mode'); return c === '2d' ? '2d' : '3d'; }
 
@@ -443,7 +444,7 @@ async function start3D() {
   catch (e) { started3d = false; hideLoad(); if (mode === '3d') { setMode('2d'); toast('3D could not start here. Showing the quick 2D map.'); } }
 }
 // Speed check on phones (only when the person has not chosen a view): the 3D map reports its real frame times for the first moments.
-function frameTime(ms) { if (judged || !PHONE || qs.get('view') || LS.get('vin_map_mode') || LS.get('vin_map_auto')) return; samples.push(ms);
+function frameTime(ms) { if (judged || !PHONE || qs.get('view') || /[?&]life\b/.test(location.search) || LS.get('vin_map_mode') || LS.get('vin_map_auto')) return; samples.push(ms);
   if (samples.length < 45) return; judged = true; const s = samples.slice(8).sort((a, b) => a - b), med = s[s.length >> 1];
   if (med > 50) { LS.set('vin_map_auto', '2d'); setMode('2d'); toast('3D is slow on this phone, so here is the quick 2D map. Tap 3D any time.'); } else LS.set('vin_map_auto', '3d'); }
 
@@ -6926,6 +6927,8 @@ if (PHONE && !OLDP) { const note = () => { if (BOOT && BOOT.toast) BOOT.toast('B
   ['tour', 'nightBtn', 'walkBtn', 'driveBtn'].forEach(id => { const b = document.getElementById(id); if (b) { b.onclick = note; b.classList.add('laponly'); b.setAttribute('aria-label', b.textContent.trim() + ' (best on laptop)'); } }); }
 // REEL STUDIO (22 Nov): /map/?reel=<name> plays an animated reel scene for Dev to screen-record; /map/?film adds smooth camera sliders. reel.js is downloaded only then. Visitors never load it.
 if (/[?&](reel|film)\b/.test(location.search)) { const runR = code => eval(code); (function wR() { if (RUN.homes && homes.length) fetch('reel.js?v=1', { cache: 'no-cache' }).then(r => r.text()).then(t => runR(t + '\n//# sourceURL=reel.js')).catch(e => console.error(e)); else setTimeout(wR, 300); })(); }
+// LIFE IN VINLAND (24 Nov): /map/?life (the /play page sends you here) opens the map straight into walking, with the game's screen on top. life.js is downloaded only then.
+if (/[?&]life\b/.test(location.search)) { const runL = code => eval(code); (function wL() { if (RUN.homes && homes.length) fetch('life.js?v=1', { cache: 'no-cache' }).then(r => r.text()).then(t => runL(t + '\n//# sourceURL=life.js')).catch(e => console.error(e)); else setTimeout(wL, 300); })(); }
 if (window.__vinHook) window.__vinHook(code => eval(code));   // only the build tools set this (tools/export_plan.py)
 
 // ----- load the sheet -----
