@@ -1853,7 +1853,7 @@ function fxPlay(key, delay) {
 function fxEnd(a, cancel) { if (a.done) return; a.done = true; scene.remove(a.g); a.g.traverse(o => { if (o.material) o.material.dispose(); if (o === a.ph) o.geometry.dispose(); }); fxHide(a.e, false); a.e.busy = false;
   const i = FX.live.indexOf(a); if (i >= 0) FX.live.splice(i, 1); }
 function fxFrame(dt) {
-  if (FX.manual || (!FX.live.length && !FX.parts.length)) return; kick(500);
+  if (FX.manual) return; islPopFrame(dt); if (!FX.live.length && !FX.parts.length) return; kick(500);
   FX.live.slice().forEach(a => { a.t += dt; const t = a.t; if (t < 0) return;
     const ph = a.ph, [w, h, d] = ph.userData.s;                                                   // 0 .. 0.65 s: the grey box
     if (t < 0.65) { ph.visible = true; if (t < 0.32) ph.scale.set(w, Math.max(0.001, h * backOut(t / 0.32)), d); else if (t < 0.5) { const q = Math.sin((t - 0.32) * 40) * 0.07; ph.scale.set(w * (1 + q), h * (1 - q), d * (1 + q)); }
@@ -2457,11 +2457,11 @@ function selectHome(h) {
   }
   const link = h.status === 'hidden' ? '' : `<a class="ig" href="https://www.instagram.com/${encodeURIComponent(h.user)}/" target="_blank" rel="noopener">View @${esc(h.user)} on Instagram</a>`;
   show(h.villa ? `Villa owner · ${where}` : `Citizen #${h.n} · ${where}`, h.shown,
-    `${h.villa ? (isMansion(h.villa) ? `<div class="vip">🏰 Mansion owner${h.villa === 101 ? " · Mansion Lane's first owner" : ''} ⭐</div>` : `<div class="vip">🏡 Villa owner${villaRank(h.user) === 1 ? " · Villa Lane's first owner" : ''} ⭐</div>`) : ''}<dl class="facts"><dt>Home</dt><dd>${h.villa ? '🏡 Villa · Villa Lane, plot ' + h.villa : h.flat ? esc(h.flat.label) + ' · Building R' + h.flat.bid + ' · #' + h.n : (h.founder ? 'Founder home' : 'Home') + ' #' + h.n}</dd>${h.island ? `<dt>Second home</dt><dd>🏝️ Introvert Island · home ${h.island}</dd>` : ''}${h.friends && h.friends.length ? `<dt>Best friends</dt><dd>${h.friends.slice(0, 6).map(u => '@' + esc(u)).join(' ')}</dd>` : ''}${isPioneer(h) ? '<dt>Pioneer</dt><dd>🏅 One of the first 1,000 citizens</dd>' : ''}${h.status !== 'hidden' && supRank(h.user) ? `<dt>Supporter</dt><dd>⭐ ${supRank(h.user) >= 2 ? 'Supporter of Vinland' : "Name on the Supporters' Wall"}</dd>` : ''}${h.job ? `<dt>Profession</dt><dd>${esc(h.job)}</dd>` : ''}${h.staffOf ? `<dt>Works at</dt><dd>@${esc(h.staffOf.owner.user)}'s ${esc(h.staffOf.job.toLowerCase().replace(/\s*(owner|landlord)$/, ''))} · ${h.staffOf.area === 'se' ? 'New Market' : 'Market'} shop ${h.staffOf.n}</dd>` : ''}<dt>Joined</dt><dd>Day ${h.joined}</dd></dl>
+    `${h.villa ? (isMansion(h.villa) ? `<div class="vip">🏰 Mansion owner${h.villa === 101 ? " · Mansion Lane's first owner" : ''} ⭐</div>` : `<div class="vip">🏡 Villa owner${villaRank(h.user) === 1 ? " · Villa Lane's first owner" : ''} ⭐</div>`) : ''}<dl class="facts"><dt>Home</dt><dd>${h.villa ? '🏡 Villa · Villa Lane, plot ' + h.villa : h.flat ? esc(h.flat.label) + ' · Building R' + h.flat.bid + ' · #' + h.n : (h.founder ? 'Founder home' : 'Home') + ' #' + h.n}</dd>${h.island ? `<dt>Second home</dt><dd>🏝️ Islander #${h.island} · ${h.island > 200 ? 'First Islander ⭐' : 'Introvert Island'}</dd>` : ''}${h.friends && h.friends.length ? `<dt>Best friends</dt><dd>${h.friends.slice(0, 6).map(u => '@' + esc(u)).join(' ')}</dd>` : ''}${isPioneer(h) ? '<dt>Pioneer</dt><dd>🏅 One of the first 1,000 citizens</dd>' : ''}${h.status !== 'hidden' && supRank(h.user) ? `<dt>Supporter</dt><dd>⭐ ${supRank(h.user) >= 2 ? 'Supporter of Vinland' : "Name on the Supporters' Wall"}</dd>` : ''}${h.job ? `<dt>Profession</dt><dd>${esc(h.job)}</dd>` : ''}${h.staffOf ? `<dt>Works at</dt><dd>@${esc(h.staffOf.owner.user)}'s ${esc(h.staffOf.job.toLowerCase().replace(/\s*(owner|landlord)$/, ''))} · ${h.staffOf.area === 'se' ? 'New Market' : 'Market'} shop ${h.staffOf.n}</dd>` : ''}<dt>Joined</dt><dd>Day ${h.joined}</dd></dl>
      <div class="row2"><button class="btn ghost" id="shareHome">Copy link to this home</button>${h.shopRef || h.staffOf ? `<button class="btn ghost" id="visitShop">${h.shopRef ? 'Visit their shop' : 'Visit their workplace'}</button>` : ''}${link}</div>`);
   const vs = document.getElementById('visitShop'); if (vs) vs.onclick = () => selectShop(h.shopRef || h.staffOf);
   { const row = cardBody.querySelector('.row2'), sp = h.island && ISLAND.spots && ISLAND.spots[h.island - 1]; if (row && sp) { const ib = document.createElement('button'); ib.className = 'btn ghost'; ib.textContent = '🏝️ Visit island home';
-    ib.onclick = () => flyTo(new THREE.Vector3(ISLAND.x + sp.x, sp.y + 3, ISLAND.z + sp.z), new THREE.Vector3(30, 42, 48)); row.appendChild(ib); } }
+    ib.onclick = () => { const dd = sp.door || sp; flyTo(new THREE.Vector3(ISLAND.x + (sp.x + dd.x) / 2, sp.y + 2, ISLAND.z + (sp.z + dd.z) / 2), new THREE.Vector3(Math.sin(sp.ry) * 24 + Math.cos(sp.ry) * 8, 13, Math.cos(sp.ry) * 24 - Math.sin(sp.ry) * 8)); islandPop(h.island, h.user, 1.3); }; row.appendChild(ib); } }   // close, in front of the door, so the sign reads
   { const row = cardBody.querySelector('.row2'); if (row && FX.reg.has(fxKey(h))) { const rb = document.createElement('button'); rb.className = 'btn ghost'; rb.textContent = '▶ Replay build'; rb.onclick = () => { track('replay-build'); fxPlay(fxKey(h), 0.2); }; row.appendChild(rb); } }
   { const row = cardBody.querySelector('.row2'); if (row && h.status !== 'hidden') { const pb = document.createElement('button'); pb.className = 'btn'; pb.textContent = (window.VSOC && window.VSOC.user && h.user && h.user.toLowerCase() === window.VSOC.user) ? '🛂 My passport' : '🛂 Passport'; pb.onclick = () => openPassport(h, where); row.prepend(pb); } }
   { const row = PHONE && !OLDP ? null : cardBody.querySelector('.row2'); if (row) { const wb = document.createElement('button'); wb.className = 'btn ghost'; wb.textContent = '🚶 Walk from this home'; wb.onclick = () => startWalk(h); row.prepend(wb); const db = document.createElement('button'); db.className = 'btn ghost'; db.textContent = '🚗 Drive from here'; db.onclick = () => startDrive(h); wb.after(db); } }
@@ -2537,13 +2537,14 @@ const CONTENT = {
   nap: ['Nap Valley', 'A sleepy green valley in the hills',
     `<p class="p">Lavender fields, hammocks in the trees, sheep and a windmill. The Dream Lodge is the only building so far. Homes come when the first nappers move in.</p>`],
   island: ['Introvert Island', 'A quiet second home out at sea',
-    `<p class="p">Palm jungle, a sandy bay with a shallow lagoon, a lighthouse, two jetties and the Island Hall. 200 cottages hidden in the trees, far from the busy city.</p><p class="p"><b>How to get a cottage here:</b> bring 3 new friends to Vinland. Tag them under any post: <b>HOME @friend1 @friend2 @friend3</b>. Or your friends follow @buildacountry and comment <b>HOME @yourname</b>. When your 3rd friend joins, the next island cottage is yours, and your friends show up as Best friends on your passport.</p>`],
+    `<p class="p">Palm jungle, a sandy bay with a shallow lagoon, a lighthouse, two jetties and the Island Hall. 200 cottages hidden in the trees, far from the busy city. Out at sea: a wild jungle island with a rocky cliff, a small palm island, two sandy cays joined by a sandbar and a few sea rocks.</p><p class="p"><b>How to get a cottage here:</b> bring 3 new friends to Vinland. Tag them under any post: <b>HOME @friend1 @friend2 @friend3</b>. Or your friends follow @buildacountry and comment <b>HOME @yourname</b>. When your 3rd friend joins, the next island cottage is yours, and your friends show up as Best friends on your passport.</p><p class="p"><b>First Islanders:</b> the first 1,000 people who follow @buildacountry and comment <b>ISLAND</b> get a cottage on the new islands next door, no friends needed. Your cottage gets a sign: Islander #N.</p><p class="p" id="islCount"></p>`],
   sea: ['The sea', 'The edge of our country',
     `<p class="p">For now, the land ends here. It grows as the country grows.</p>`],
 
 };
 function showKey(k) { if (k === 'welcome') { card.hidden = true; infoBtn.hidden = true; return; }   // Vinland Maps (13 Nov): no site card, the map itself is the welcome
-  const c = (k === 'hall' ? hallCard : CONTENT[k]) || CONTENT.land; show(c[0], c[1], c[2]); }
+  const c = (k === 'hall' ? hallCard : CONTENT[k]) || CONTENT.land; show(c[0], c[1], c[2]);
+  if (k === 'island') { const el = document.getElementById('islCount'), n = (window.__islanders || []).length; if (el && n) el.textContent = `🏝️ ${n.toLocaleString('en-IN')} islanders live here.`; } }   // (Dev, 24 Nov) a live count, never "only X left"
 // ================= EDUCATION DISTRICT (south): the first school =================
 // South of the lane-3 road: a tree belt, then the Education District with a road around it.
 // The school stands in the middle. Space on both sides is kept free for later (nothing drawn there yet).
@@ -4488,12 +4489,46 @@ const SH = COAST.shore + 660;   // beach things below were placed for a shore at
 // Built by map/districts2.js (loaded after the map is up, so it never slows the first paint). No houses yet: only the hall, the
 // lighthouse and a small harbour; a cottage is added on the next saved spot when a citizen moves in (userData.spots).
 const ISLAND = { x: -1590, z: -2350, ry: 0 };
-setTimeout(() => { const sc = document.createElement('script'); sc.src = 'districts3.js';   // (Dev, 24 Nov) the new bean-shaped island (districts3.js introvertIsland5); old island + old Nap Valley gone
+setTimeout(() => { const sc = document.createElement('script'); sc.src = 'districts3.js?v=2511a';   // (Dev, 24 Nov) the new bean-shaped island (districts3.js introvertIsland5); old island + old Nap Valley gone
   sc.onload = () => { let tries = 0; const go = () => { if (!window.__homesReady && tries++ < 120) return setTimeout(go, 500);   // wait for the citizens list: a cottage only for each real islander
-    try { const isl = (window.__islanders || []), filled = isl.reduce((m, h) => Math.max(m, h.island), 0);
-      const g = VinlandDistricts3.introvertIsland5({ fast: PHONE, filled }); g.position.set(ISLAND.x, 0, ISLAND.z);
-      g.traverse(m => { if (m.isMesh) { m.castShadow = false; m.userData.place = 'island'; if (!m.isInstancedMesh) pickables.push(m); } }); scene.add(g); ISLAND.g = g; ISLAND.spots = g.userData.spots; } catch (e) { console.error('island', e); } }; go(); };
+    try { const isl = (window.__islanders || []), taken = new Set(isl.map(h => h.island));   // (25 Nov) each cottage is drawn by its own number: 1-200 on Introvert Island (3-friend), 201+ First Islanders on the new islands
+      const g = VinlandDistricts3.introvertIsland5({ fast: PHONE, taken }); g.position.set(ISLAND.x, 0, ISLAND.z);
+      let spots = g.userData.spots;
+      if (VinlandDistricts3.islets) { const ig = VinlandDistricts3.islets({ fast: PHONE, taken, first: spots.length + 1 }); g.add(ig); spots = spots.concat(ig.userData.spots); }
+      g.traverse(m => { if (m.isMesh) { m.castShadow = false; m.userData.place = 'island'; if (!m.isInstancedMesh) pickables.push(m); } }); scene.add(g); ISLAND.g = g; ISLAND.spots = spots; } catch (e) { console.error('island', e); } }; go(); };
   document.head.appendChild(sc); }, 1500);
+// (Dev, 25 Nov) a cottage POP: the cottage squashes up out of the ground with a bounce and a puff of dust, then its gate sign
+// "Islander #N" pops up by the path. Only the cottage you visit gets a sign (one canvas), so phones stay fast.
+const ISLPOP = { live: [], sign: null };
+function islSign(no, user) {
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 256; const c = cv.getContext('2d'), fit = (t, px, w, b) => { let f = px + 2; do { f -= 2; c.font = (b ? 'bold ' : '') + f + 'px system-ui, sans-serif'; } while (c.measureText(t).width > w && f > 20); };
+  c.fillStyle = '#f4ead2'; c.fillRect(0, 0, 512, 256); c.strokeStyle = '#6b4a2b'; c.lineWidth = 18; c.strokeRect(9, 9, 494, 238);
+  c.fillStyle = '#3b2a1a'; c.textAlign = 'center'; c.textBaseline = 'middle'; const t1 = 'Islander #' + no; fit(t1, 84, 420, true); c.fillText(t1, 256, user ? 100 : 128);
+  if (user) { let u = '@' + user; fit(u, 52, 420, false); c.fillText(u, 256, 186); }
+  const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4; const g = new THREE.Group(), wood = mat('#6b4a2b');
+  [-0.75, 0.75].forEach(x => { const p = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.8, 0.12).translate(0, 0.9, 0), wood); p.position.set(x * 1.2, 0, -0.1); g.add(p); });   // two posts in the ground, behind the board
+  const board = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.1, 0.08), [wood, wood, wood, wood, new THREE.MeshBasicMaterial({ map: tex }), wood]); board.position.y = 1.65; g.add(board);
+  g.userData.tex = tex; return g; }
+function islandPop(no, user, delay = 0) {
+  const sp = ISLAND.spots && ISLAND.spots[no - 1]; if (!ISLAND.g || !sp) return false;
+  const pc = VinlandDistricts3.piece(ISLAND.g, no, sp.x, sp.y, sp.z); if (!pc.ok) return false;
+  ISLPOP.live.filter(a => a.no === no).forEach(a => islPopEnd(a)); pc.hide(true); pc.g.scale.set(1, 0.001, 1); ISLAND.g.add(pc.g);
+  if (ISLPOP.sign) { ISLAND.g.remove(ISLPOP.sign); ISLPOP.sign.userData.tex.dispose(); }
+  const sg = ISLPOP.sign = islSign(no, user), d = sp.door || { x: sp.x, z: sp.z };   // at the end of the front path, facing the way the cottage faces
+  sg.position.set(d.x + Math.cos(sp.ry) * 2.6, sp.y - 0.05, d.z - Math.sin(sp.ry) * 2.6); sg.rotation.y = sp.ry; sg.scale.setScalar(0.001); ISLAND.g.add(sg);
+  const a = { no, pc, sg, t: -delay, burst: false }; ISLPOP.live.push(a); kick(3500 + delay * 1000); return true; }
+function islPopEnd(a) { a.pc.hide(false); ISLAND.g.remove(a.pc.g); a.pc.g.traverse(m => { if (m.isMesh) m.geometry.dispose(); }); a.sg.scale.setScalar(1); const i = ISLPOP.live.indexOf(a); if (i >= 0) ISLPOP.live.splice(i, 1); }
+function islPopFrame(dt) {
+  if (!ISLPOP.live.length) return; kick(500);
+  ISLPOP.live.slice().forEach(a => { a.t += dt; const t = a.t, G = a.pc.g; if (t < 0) return;
+    if (t < 0.38) { const k = backOut(t / 0.38); G.scale.set(1 - 0.18 * (1 - t / 0.38), Math.max(0.001, k * 1.12), 1 - 0.18 * (1 - t / 0.38)); }   // shoots up, a bit too tall and thin
+    else if (t < 0.9) { const q = Math.sin((t - 0.38) * 26) * 0.14 * Math.exp(-(t - 0.38) * 6); G.scale.set(1 + q, 1 - q, 1 + q);   // then wobbles: squash, stretch, settle
+      if (!a.burst) { a.burst = true; fxBurst(G, 8, 3, 8, new THREE.Vector3(0, 0, 0)); } }
+    else G.scale.set(1, 1, 1);
+    const st = t - 0.75; a.sg.scale.setScalar(st <= 0 ? 0.001 : Math.max(0.001, Math.min(backOut(Math.min(1, st / 0.4)), 1.15)));   // the sign pops just after
+    if (t > 1.3) islPopEnd(a); }); }
+window.VinIslandPop = (no, user, delay) => islandPop(no, user, delay);   // reels: VinIslandPop(214, 'someone')
+
 
 // ================= VINLAND BEACH (Day 9): Beach Boulevard, beach shops, the boardwalk, beach life =================
 // On the open land kept free between the North Shore's bottom street and the sand. West outer block left open (space for the resort).
