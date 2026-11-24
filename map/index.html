@@ -2370,7 +2370,7 @@ function buildHomes(rows) {
     const el = document.createElement('div'); el.className = 'lbl home villa'; el.innerHTML = `<b>✨ ${isMansion(lot) ? 'MANSION' : 'VILLA'}</b> ${esc(h.shown)} <i>⭐</i>`;
     homeLabels.appendChild(el); h.el = el; h.lp = new THREE.Vector3(L.x, 10, L.z); homes.push(h); });
   { const byInv = new Map(); homes.forEach(h => { if (h.invitedBy && h.status === 'active' && h.user) { const k = h.invitedBy.toLowerCase(); if (!byInv.has(k)) byInv.set(k, []); byInv.get(k).push(h.user); } });   // (Dev, 24 Nov) best friends = the new citizens they brought
-    homes.forEach(h => { h.friends = (h.user && byInv.get(h.user.toLowerCase())) || []; }); window.__islanders = homes.filter(h => h.island > 0 && h.status === 'active' && !h.villa); window.__homesReady = true; }
+    homes.forEach(h => { h.friends = (h.user && byInv.get(h.user.toLowerCase())) || []; }); window.__islanders = [...new Map(homes.filter(h => h.island > 0 && h.status === 'active').map(h => [h.island, h])).values()]; window.__homesReady = true; }   // (25 Nov) villa owners get their island cottage too (was skipped); one entry per island number
   drawHomes(homes.filter(h => !h.flat && !h.villa));   // Riverside flats live inside their apartment buildings; villas are drawn on Villa Lane
   rsDrawBlds(new Set(homes.filter(h => h.flat).map(h => h.flat.bid)));
   buildSupTags();
