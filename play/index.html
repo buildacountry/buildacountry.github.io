@@ -43,7 +43,7 @@ canvas#g{display:block;width:100vw;height:100vh}
 // built for phones: only what is near you is drawn, no big 3D map, a minimap instead.
 const load = s => new Promise((ok, no) => { const e = document.createElement('script'); e.src = s; e.onload = ok; e.onerror = no; document.head.appendChild(e); });
 (async () => {
-  await load('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'); await load('kit.js').catch(() => null); await load('homes.js').catch(() => null); await load('oldtown.js').catch(() => null);
+  await load('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'); await load('kit.js').catch(() => null); await load('homes.js').catch(() => null); await load('world.js').catch(() => null); await load('oldtown.js').catch(() => null);
   start();
 })();
 function start() {
@@ -67,7 +67,8 @@ boxes(D.roads.map(([w, d, x, z]) => [w, 0.08, d, x, 0.06, z]), '#55524d');
 const solid = [];   // [x0, z0, x1, z1] things you can't walk through
 const PCOL = ['#e9d3a8', '#d7c3e6', '#cfe1ee', '#f0c9b4', '#d9e6c4'];
 D.places.forEach(([n, x, z, w, d], i) => { if (!n || /Avenue|Parking|Field|site|Plaza|Power|Corner shop/.test(n)) return; const h = /Stadium|Parliament/.test(n) ? 16 : 10;
-  boxes([[w * 0.85, h, d * 0.85, x + w / 2, h / 2, z + d / 2]], PCOL[i % PCOL.length]); solid.push([x + w * 0.075, z + d * 0.075, x + w * 0.925, z + d * 0.925]); });
+  const cx = x + w / 2, cz = z + d / 2, drawn = window.VIN_WORLD && window.VIN_WORLD.groups.some(g => cx > g[1] && cx < g[3] && cz > g[2] && cz < g[4]);   // the real building comes from world.js
+  if (!drawn) boxes([[w * 0.85, h, d * 0.85, x + w / 2, h / 2, z + d / 2]], PCOL[i % PCOL.length]); solid.push([x + w * 0.075, z + d * 0.075, x + w * 0.925, z + d * 0.925]); });
 // ---- homes: every plot of the real map, as one instanced house (body + roof = 2 draw calls for all 7,908)
 const plots = S.plots.trim().split('\n').map(l => l.split(',')).map(([x, z, t]) => [+x, +z, t]);
 const HB = new THREE.InstancedMesh(new THREE.BoxGeometry(6.4, 4.4, 6.4).translate(0, 2.2, 0), new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: grad }), plots.length);
@@ -105,6 +106,28 @@ if (window.VIN_HOMES) { const UP = new THREE.Vector3(0, 1, 0), ink = new THREE.L
       idx.forEach((i, k) => { const m = h.mats[i]; for (let j = 0; j < L.length; j += 3) { v.set(L[j], L[j + 1], L[j + 2]).applyMatrix4(m); arr.set([v.x, v.y, v.z], k * L.length + j); } });
       h.ls.geometry.dispose(); h.ls.geometry = new THREE.BufferGeometry(); h.ls.geometry.setAttribute('position', new THREE.BufferAttribute(arr, 3)); n += idx.length; });
     return n; }; window.MH = MH; }
+// ---- WORLD: the map's own big buildings, villas, mansions, canal, parks and lots (exported from the map by tools/export_game_world.js
+//      into world.js + world/c<x>_<z>.bin, one file per 400 m chunk). Only the chunks near you are loaded and drawn.
+const WD = { rad: PHONE ? 230 : 330, got: {}, lastX: 1e9, lastZ: 1e9 };
+if (window.VIN_WORLD) { const W = window.VIN_WORLD, CH = W.chunk, Q = W.q;
+  const wmat = new THREE.MeshToonMaterial({ color: '#ffffff', vertexColors: true, gradientMap: grad }), wink = new THREE.LineBasicMaterial({ color: '#3a2a20', transparent: true, opacity: 0.5 });
+  W.solids.forEach(([n, x0, z0, x1, z1]) => { const ix = (x1 - x0) * 0.1, iz = (z1 - z0) * 0.1; solid.push([x0 + ix, z0 + iz, x1 - ix, z1 - iz]); });
+  WD.group = n => { const g = W.groups.find(e => e[0] === n); return g ? { x0: g[1], z0: g[2], x1: g[3], z1: g[4] } : null; };
+  function chunk(cx, cz, buf) { const H = new Int32Array(buf, 0, 2), nP = H[0], nL = H[1]; let off = 8;
+    const Pq = new Int16Array(buf, off, nP); off += nP * 2; off += (4 - off % 4) % 4;
+    const Cq = new Uint8Array(buf, off, nP / 3); off += nP / 3; off += (4 - off % 4) % 4; const Lq = new Int16Array(buf, off, nL);
+    const ox = cx * CH, oz = cz * CH, pos = new Float32Array(nP), col = new Float32Array(nP);
+    for (let i = 0; i < nP; i += 3) { pos[i] = Pq[i] * Q + ox; pos[i + 1] = Pq[i + 1] * Q; pos[i + 2] = Pq[i + 2] * Q + oz; }
+    for (let t = 0; t < nP / 9; t++) for (let v = 0; v < 3; v++) for (let k = 0; k < 3; k++) col[t * 9 + v * 3 + k] = Cq[t * 3 + k] / 255;
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals();
+    const m = new THREE.Mesh(g, wmat); scene.add(m);
+    const lp = new Float32Array(nL); for (let i = 0; i < nL; i += 3) { lp[i] = Lq[i] * Q + ox; lp[i + 1] = Lq[i + 1] * Q; lp[i + 2] = Lq[i + 2] * Q + oz; }
+    const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(lp, 3)); const ls = new THREE.LineSegments(lg, wink); scene.add(ls);
+    return { m, ls }; }
+  WD.near = (px, pz) => W.chunks.forEach(([cx, cz]) => { const x0 = cx * CH, z0 = cz * CH, dx = Math.max(x0 - px, 0, px - x0 - CH), dz = Math.max(z0 - pz, 0, pz - z0 - CH), on = Math.hypot(dx, dz) < WD.rad, k = cx + '_' + cz, c = WD.got[k];
+    if (on && !c) { WD.got[k] = 'loading'; fetch('world/c' + k + '.bin').then(r => { if (!r.ok) throw 0; return r.arrayBuffer(); }).then(buf => { WD.got[k] = chunk(cx, cz, buf); WD.lastX = 1e9; }).catch(e => { console.warn('world chunk', k, e); delete WD.got[k]; }); }
+    else if (c && c.m) c.m.visible = c.ls.visible = on; });
+  window.WD = WD; }
 // solid lookup on a 16 m grid so collision stays cheap
 const GRID = {}, gk = (a, b) => a + ',' + b; solid.forEach((s, i) => { for (let a = Math.floor(s[0] / 16); a <= Math.floor(s[2] / 16); a++) for (let b = Math.floor(s[1] / 16); b <= Math.floor(s[3] / 16); b++) (GRID[gk(a, b)] = GRID[gk(a, b)] || []).push(s); });
 const blocked = (x, z, r) => (GRID[gk(Math.floor(x / 16), Math.floor(z / 16))] || []).some(s => x > s[0] - r && x < s[2] + r && z > s[1] - r && z < s[3] + r);
@@ -131,7 +154,7 @@ function homesFrom(text) {   // same as build2D() in map/index.html
   const st = v => { v = String(v || '').toLowerCase(); return /^(abandon|left|unfollow|gone)/.test(v) ? 'abandoned' : /^(hid|private|anon)/.test(v) ? 'hidden' : 'active'; };
   parseCSV(text).map(r => ({ n: parseInt(String(r.number || '').replace(/[^\d]/g, ''), 10), user: String(r.username || '').trim().replace(/^@/, '').replace(/\s+/g, '').slice(0, 30), job: (r.profession || '').slice(0, 34), status: st(r.status) }))
     .forEach(r => { const k = r.user.toLowerCase(); if (!r.user && r.status !== 'hidden') return; if (never.includes(k)) return; if (k && seen.has(k)) return; if (k) seen.add(k);
-      if (S.villas[k] && r.status === 'active') { const L = (S.lots || {})[S.villas[k]]; if (L) out.set(k, { user: r.user, job: r.job, x: L[0], z: L[1], label: 'Villa ' + S.villas[k] }); return; }
+      if (S.villas[k] && r.status === 'active') { const L = (S.lots || {})[S.villas[k]]; if (L) out.set(k, { user: r.user, job: r.job, x: L[0], z: L[1], label: (S.villas[k] > 100 ? 'Mansion ' : 'Villa ') + S.villas[k], villa: S.villas[k] }); return; }
       if (r.n > 0 && !byNum.has(r.n)) byNum.set(r.n, r); else noNum.push(r); });
   let free = 1; noNum.forEach(r => { while (byNum.has(free)) free++; r.n = free; byNum.set(free, r); });
   byNum.forEach(r => { const p = PL[r.n - 1]; if (p && r.user && r.status === 'active') out.set(r.user.toLowerCase(), { user: r.user, job: r.job, x: p.x, z: p.z, label: p.label || AREA[p.a] || '', n: r.n }); });
@@ -178,6 +201,14 @@ const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 2.2, 16, 1, tru
 let homeTag = null;
 function nearestRoad(x, z) { let best = null, bd = 1e9; D.roads.forEach(([w, d, cx, cz]) => { const px = Math.max(cx - w / 2 + 1, Math.min(cx + w / 2 - 1, x)), pz = Math.max(cz - d / 2 + 1, Math.min(cz + d / 2 - 1, z)), dd = Math.hypot(px - x, pz - z); if (dd < bd) { bd = dd; best = [px, pz, w > d]; } }); return best; }
 function setHome(h, mine) { HUD.home = h; HUD.mine = mine; const r = nearestRoad(h.x, h.z) || [h.x, h.z + 8];
+  const vg = h.villa && WD.group ? WD.group((h.villa > 100 ? 'mansion:' : 'villa:') + h.villa) : null;
+  if (vg) {   // a villa or mansion: stand in front of its door, looking at it (villas face the canal; mansions face the sea or their lane)
+    const fx = h.villa <= 12 ? -Math.sign(h.x) : 0, fz = h.villa <= 12 ? 0 : h.villa >= 121 ? Math.sign(h.z) : -1, cx = (vg.x0 + vg.x1) / 2, cz = (vg.z0 + vg.z1) / 2;
+    const half = fx ? (vg.x1 - vg.x0) / 2 : (vg.z1 - vg.z0) / 2, door = [cx + fx * (half + 1.2), cz + fz * (half + 1.2)];
+    P.x = door[0] + fx * 4.5; P.z = door[1] + fz * 4.5; P.ang = P.yaw = Math.atan2(-fx, -fz); P.pitch = 0.42;
+    cam.position.set(P.x - Math.sin(P.yaw) * 8, 5, P.z - Math.cos(P.yaw) * 8); beam.position.set(door[0], 1.1, door[1]); beam.visible = true;
+    homeTag = label('@' + h.user); homeTag.position.set(door[0], 2.9, door[1]); scene.add(homeTag); WD.lastX = 1e9;
+    big(mine ? 'WELCOME HOME' : 'VISITING', '@' + h.user + ' · ' + h.label); return; }
   P.x = r[0]; P.z = r[1]; P.ang = Math.atan2(h.x - P.x, h.z - P.z);   // you look at your home; the camera looks along the road, so the home is beside you
   const ux = Math.sin(P.ang), uz = Math.cos(P.ang); P.x -= ux * 2.5; P.z -= uz * 2.5; P.yaw = P.ang - 0.12; P.pitch = 0.5;   // step back across the road so the whole home is in view
   cam.position.set(P.x - Math.sin(P.yaw) * 8, 5, P.z - Math.cos(P.yaw) * 8);
@@ -201,6 +232,7 @@ else setTimeout(() => toast('Welcome to Vinland'), 600);
 // ---- the loop
 let last = performance.now(), mt = 0;
 function frame(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (WD.near && Math.hypot(P.x - WD.lastX, P.z - WD.lastZ) > 25) { WD.lastX = P.x; WD.lastZ = P.z; WD.near(P.x, P.z); }
   if (MH.near && Math.hypot(P.x - MH.lastX, P.z - MH.lastZ) > 15) { MH.lastX = P.x; MH.lastZ = P.z; MH.count = MH.near(P.x, P.z); }
   if (OT && Math.hypot(P.x - OT.lastX, P.z - OT.lastZ) > 15) { OT.lastX = P.x; OT.lastZ = P.z; OT.visTris = OT.show(P.x, P.z, OT.rad, OT.swap); }
   let ix = J.x, iy = J.y; if (keys.a || keys.arrowleft) ix -= 1; if (keys.d || keys.arrowright) ix += 1; if (keys.w || keys.arrowup) iy -= 1; if (keys.s || keys.arrowdown) iy += 1;
