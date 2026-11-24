@@ -847,60 +847,26 @@ const RIVER_WD = z => z < 1850 ? 0 : Math.min(40, (z - 1850) / 60);   // and slo
   const X0 = -8000, X1 = 8000, Z0 = -830, Z1 = 15000, W = X1 - X0, D = Z1 - Z0, N = 2048, px = x => (x - X0) / W * N, pz = z => (z - Z0) / D * N;
   const R = (a => () => (a = (a * 16807) % 2147483647) / 2147483647)(2026);
   const KEEP = [[-1160, 1500, -830, 1260], [480, 960, 1000, 1820]];   // built land, Power & Water: left clear (the river corridor follows its bends)
-  const NAP = [0, 0, 0, 0];   // PREVIEW: the Nap Valley district on the valley floor (no farms or woods inside)   // 24 Nov: Nap Valley (districts2.js napValley): no farms, woods or hill trees inside
+  const NAP = [0, 0, 0, 0];   // PREVIEW (Dev, 24 Nov): west side kept plain, Nap Valley to be planned again   // 24 Nov: Nap Valley (districts2.js napValley): no farms, woods or hill trees inside
   const inKeep = (x, z, m = 0) => (x > NAP[0] - m && x < NAP[1] + m && z > NAP[2] - m && z < NAP[3] + m) || KEEP.some(([a, b, c, d]) => x > a - m && x < b + m && z > c - m && z < d + m) || (z < 9000 && Math.abs(x - 430 - RIVER_MX(z)) < 110 + RIVER_WD(z) + m);
-  const HILLS = [[-4300, 3900, 1700, 260], [4300, 4800, 1500, 220], [-1200, 9800, 3000, 380], [5200, 10200, 2100, 300], [-6200, 8200, 1400, 240]];   // x, z, radius, height (PREVIEW: 24 Nov west hills removed)
-  // PREVIEW (Dev, 24 Nov v7, Dev's mock-up): THE WEST HILL COUNTRY. Old v6 note follows. West of x -2000 the land is one real ground (not a flat table): a flat farm plain by the
-  // sea, rolling fields inland, then wooded hills and a mountain range (Dev's reference). Roads run through low passes, villages and lakes sit
-  // on level ground, and Nap Valley is a valley the land itself makes, from the mountains down to the sea. All tagged 'R' hills are drawn by
-  // that one ground mesh. Everything out here (farms, barns, villages, trees) takes its height from hillH, so nothing floats or sinks.
-  const SS = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
-  const HASH = (i, j) => { const s = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return s - Math.floor(s); };
-  const VN = (x, z) => { const i = Math.floor(x), j = Math.floor(z), fx = x - i, fz = z - j, u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz);
-    return (HASH(i, j) * (1 - u) + HASH(i + 1, j) * u) * (1 - v) + (HASH(i, j + 1) * (1 - u) + HASH(i + 1, j + 1) * u) * v; };
-  const FBM = (x, z) => 0.55 * VN(x / 1500, z / 1500) + 0.3 * VN(x / 640 + 7, z / 640 + 3) + 0.15 * VN(x / 250 + 13, z / 250 + 5);
-  HILLS.splice(0, 1);   // the old lone west mountain: the mountain range replaces it
-  const hillsOnly = (x, z) => { let h = 0; HILLS.forEach(([hx, hz, r, hh]) => { const d = Math.hypot(x - hx, (z - hz) * 1.3) / r; if (d < 1) h += hh * Math.pow(Math.cos(d * Math.PI / 2), 2) * (0.75 + 0.25 * Math.sin(x * 0.004) * Math.cos(z * 0.005)); }); return h; };
-  const segD = (x, z, [x1, z1], [x2, z2]) => { const dx = x2 - x1, dz = z2 - z1, t = Math.max(0, Math.min(1, ((x - x1) * dx + (z - z1) * dz) / (dx * dx + dz * dz))); return Math.hypot(x - x1 - dx * t, z - z1 - dz * t); };
-  // PREVIEW (Dev, 24 Nov v8): THE WEST MOUNTAINS, real low-poly: big flat faces, sharp ridges and peaks (ridged noise on a coarse grid with
-  // random diagonals), green where gentle, brown where steep, rocks, clumps of trees. Starts well west of the city (x < -3000). Villages,
-  // lakes and the country roads keep flat ground (roads run through passes). One mesh, ~16k triangles (fewer on phones).
-  const MG = { X0: -8000, X1: -2900, Z0: -800, Z1: 7000, cs: FAST ? 80 : 55 };
-  const mtnRaw = (x, z) => { const m = SS(-3000, -3800, x) * SS(7000, 5800, z) * SS(-8000, -7600, x) * SS(-600, 300, z); if (m <= 0) return 0;
-    const r1 = 1 - Math.abs(2 * VN(x / 560, z / 560) - 1), r2 = 1 - Math.abs(2 * VN(x / 260 + 11, z / 260 + 7) - 1), ridge = 0.6 * r1 * r1 + 0.4 * r2 * r2;
-    let h = m * (SS(0.2, 0.62, FBM(x * 1.7 + 400, z * 1.7)) * (25 + 190 * ridge) + 12 * VN(x / 140 + 3, z / 140 + 1));   // many smaller hills and peaks
-    let f = 1; VIL.forEach(([vx, vz]) => { f *= SS(200, 520, Math.hypot(x - vx, z - vz)); });                       // villages on flat ground
-    lakes.forEach(([lx, lz, lr]) => { f *= SS(lr + 60, lr + 360, Math.hypot(x - lx, (z - lz) / 0.7)); });           // lakes lie flat
-    { let rdm = 1e9; ROADS.forEach(rd => { for (let k = 0; k < rd.length - 1; k++) rdm = Math.min(rdm, segD(x, z, rd[k], rd[k + 1])); }); f *= SS(50, 330, rdm); }   // roads through passes
-    return h * f; };
-  let MGH = null; const mgBuild = () => { const nx = Math.round((MG.X1 - MG.X0) / MG.cs), nz = Math.round((MG.Z1 - MG.Z0) / MG.cs); MG.nx = nx; MG.nz = nz;
-    MGH = new Float32Array((nx + 1) * (nz + 1)); for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) MGH[j * (nx + 1) + i] = mtnRaw(MG.X0 + i * MG.cs, MG.Z0 + j * MG.cs); };
-  const mgDiag = (i, j) => HASH(i + 0.5, j + 0.25) < 0.5;   // which way each grid square is cut: random, so the faces look hand-made
-  const meshH = (x, z) => { if (!MGH) mgBuild(); const u = (x - MG.X0) / MG.cs, v = (z - MG.Z0) / MG.cs; if (u < 0 || v < 0 || u >= MG.nx || v >= MG.nz) return 0;
-    const i = Math.floor(u), j = Math.floor(v), fx = u - i, fz = v - j, W = MG.nx + 1, a = MGH[j * W + i], b = MGH[j * W + i + 1], c = MGH[(j + 1) * W + i], d = MGH[(j + 1) * W + i + 1];
-    if (mgDiag(i, j)) return fx >= fz ? a + fx * (b - a) + fz * (d - b) : a + fz * (c - a) + fx * (d - c);
-    return fx + fz <= 1 ? a + fx * (b - a) + fz * (c - a) : d + (1 - fx) * (c - d) + (1 - fz) * (b - d); };
-  const hillH = window.__hillH = (x, z) => hillsOnly(x, z) + meshH(x, z);   // the ground under anything out here (on the mountain faces exactly)
+  const HILLS = [[4300, 4800, 1500, 220], [-1200, 9800, 3000, 380], [5200, 10200, 2100, 300], [-6200, 8200, 1400, 240]];   // x, z, radius, height (PREVIEW: 24 Nov west hills + the big west mountain removed: plain land)
+  const hillH = window.__hillH = (x, z) => { let h = 0; HILLS.forEach(([hx, hz, r, hh]) => { const d = Math.hypot(x - hx, (z - hz) * 1.3) / r; if (d < 1) h += hh * Math.pow(Math.cos(d * Math.PI / 2), 2) * (0.75 + 0.25 * Math.sin(x * 0.004) * Math.cos(z * 0.005)); }); return h; };
   const cv = document.createElement('canvas'); cv.width = cv.height = N; const c = cv.getContext('2d');
   c.fillStyle = '#86ad5c'; c.fillRect(0, 0, N, N);
-  const hlPine = [], hlRound = [];   // PREVIEW: highland trees (filled once the highland ground is made)
   const FIELD = ['#e3c766', '#d8b24a', '#9cc65f', '#7eb04e', '#b8925e', '#c9a86a', '#a6c962', '#e8d27e'], forests = [], farms = [], hedge = [];
   // the country roads (from our districts out to the villages) come first: farms are laid out along them
   const VIL = [[-3000, 1800], [2800, 1700], [-5600, 3800], [6200, 3400], [-2400, 5600], [1600, 5200], [5400, 8000], [-6400, 10200], [600, 12000], [-4400, 13600], [3400, 13200], [-7000, 1200], [7200, 1000]];
-  const ROADS0 = [[[-1160, 0, 3], [-3000, 1800], [-5600, 3800], [-6400, 10200], [-4400, 13600]], [[1500, 0, 3], [2800, 1700], [6200, 3400], [5400, 8000], [3400, 13200]],
+  const ROADS = [[[-1160, 0, 3], [-3000, 1800], [-5600, 3800], [-6400, 10200], [-4400, 13600]], [[1500, 0, 3], [2800, 1700], [6200, 3400], [5400, 8000], [3400, 13200]],
     [[-200, 1260, 3], [-800, 3000], [-2400, 5600], [600, 12000]], [[960, 1820, 2.4], [1600, 5200], [5400, 8000]], [[-3000, 1800, 2], [-7000, 1200]], [[2800, 1700, 2], [7200, 1000]],
     [[-2400, 5600, 2], [-5600, 3800]], [[-1800, 2600, 1.6], [-4200, 2600]], [[3600, 2400, 1.6], [6800, 2200]], [[-4000, 7800, 1.6], [-7400, 7000]], [[3000, 9800, 1.6], [7400, 10600]], [[-1000, 8000, 1.6], [2400, 8600]], [[-2000, 11000, 1.6], [-6000, 12400]], [[4000, 6000, 1.6], [7400, 5600]], [[-5600, 3800, 1.6], [-7400, 5000]], [[1600, 5200, 2], [-800, 3000]], [[600, 12000, 2], [3400, 13200]], [[-6400, 10200, 2], [-2400, 5600]]];
-  // PREVIEW (Dev, 24 Nov): no country roads into the west mountains, no villages in them, no lake at their edge
-  const ROADS = []; ROADS0.forEach(rd => { for (let k = 0; k < rd.length - 1; k++) if (rd[k][0] >= -3100 && rd[k + 1][0] >= -3100) ROADS.push([[rd[k][0], rd[k][1], rd[0][2] || 2], rd[k + 1]]); });
-  VIL.splice(0, VIL.length, ...VIL.filter(([x, z]) => !(x < -3100 && z < 7000)));
-  const lakes = [[2600, 2600, 200], [-6600, 5000, 340], [2400, 7400, 300], [-3600, 13400, 420], [7000, 6600, 240]];
+  const lakes = [[-2600, 2200, 260], [2600, 2600, 200], [-6600, 5000, 340], [2400, 7400, 300], [-3600, 13400, 420], [7000, 6600, 240]];
   const cen = [];   // farm centres, so farms never overlap
   lakes.forEach(([x, z, r]) => cen.push([x, z, r + 60]));   // keep farms off the lakes
   ROADS.forEach(rd => { for (let k = 0; k < rd.length - 1; k++) { const [x1, z1] = rd[k], [x2, z2] = rd[k + 1], L = Math.hypot(x2 - x1, z2 - z1), a = Math.atan2(z2 - z1, x2 - x1);
     for (let t = 200; t < L - 200; t += 380 + R() * 160) [-1, 1].forEach(side => {
       const ux = Math.cos(a), uz = Math.sin(a), vx = -uz * side, vz = ux * side, cols = 2 + ((R() * 2) | 0), rows = 2 + ((R() * 3) | 0), FW = 230, FD = 190;
       const ox = x1 + ux * t + vx * 22, oz = z1 + uz * t + vz * 22, mx = ox + ux * cols * FW / 2 + vx * (70 + rows * FD) / 2, mz = oz + uz * cols * FW / 2 + vz * (70 + rows * FD) / 2, rad = Math.hypot(cols * FW, 70 + rows * FD) / 2;
-      if (inKeep(mx, mz, rad) || (() => { const hs = [[0, 0], [-1, -1], [1, -1], [-1, 1], [1, 1]].map(([i, j]) => hillH(mx + i * rad * 0.7, mz + j * rad * 0.7)); return hs[0] > 90 || Math.max(...hs) - Math.min(...hs) > 14; })() || cen.some(([cx, cz, cr]) => Math.hypot(cx - mx, cz - mz) < (cr + rad) * 0.82) || VIL.some(([vx2, vz2]) => Math.hypot(vx2 - mx, vz2 - mz) < rad + 170) || mx < X0 + 300 || mx > X1 - 300 || mz > Z1 - 300) return;
+      if (inKeep(mx, mz, rad) || hillH(mx, mz) > 10 || cen.some(([cx, cz, cr]) => Math.hypot(cx - mx, cz - mz) < (cr + rad) * 0.82) || VIL.some(([vx2, vz2]) => Math.hypot(vx2 - mx, vz2 - mz) < rad + 170) || mx < X0 + 300 || mx > X1 - 300 || mz > Z1 - 300) return;
       cen.push([mx, mz, rad]);
       // in the farm's own frame: u along the road, v away from it (side flips v)
       c.save(); c.translate(px(ox), pz(oz)); c.scale(N / W, N / D); c.rotate(a); c.scale(1, side);
@@ -928,52 +894,32 @@ const RIVER_WD = z => z < 1850 ? 0 : Math.min(40, (z - 1850) / 60);   // and slo
   for (let z = 1000; z < 9000; z += 20) { const x = 430 + RIVER_MX(z), w = 110 + RIVER_WD(z); c.clearRect(px(x - w), pz(z), px(x + w) - px(x - w), pz(z + 22) - pz(z)); }
   // clear holes for the built land, Power & Water and the river (the real ones are drawn there)
   KEEP.forEach(([a, b, d0, d1]) => c.clearRect(px(a), pz(d0), px(b) - px(a), pz(d1) - pz(d0)));
-  { // PREVIEW: THE WEST MOUNTAINS MESH (non-indexed, flat faces coloured by steepness and height)
-    if (!MGH) mgBuild(); const { X0: GX0, Z0: GZ0, cs, nx, nz } = MG, GX1m = MG.X1, W = nx + 1, pos = [], col = [], cc = new THREE.Color();
-    const GREEN = ['#93b257', '#86a94f', '#9cba5c', '#8aab52'], OLIVE = ['#8f9a52', '#83904b', '#99a15a'], BROWN = ['#8b7457', '#7f6a50', '#977f60', '#6f5d47'], PALE = ['#c2bb95', '#b5ae88'];
-    const V = (i, j) => [GX0 + i * cs, MGH[j * W + i], GZ0 + j * cs];
-    const tri = (A, B, C, k) => { if (A[1] < 0.3 && B[1] < 0.3 && C[1] < 0.3) return;
-      const ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2], vx = C[0] - A[0], vy = C[1] - A[1], vz = C[2] - A[2], nxv = uy * vz - uz * vy, nyv = uz * vx - ux * vz, nzv = ux * vy - uy * vx, ny = Math.abs(nyv) / Math.hypot(nxv, nyv, nzv), hm = (A[1] + B[1] + C[1]) / 3;
-      const P = hm > 175 ? PALE : ny < 0.74 ? BROWN : ny < 0.87 ? OLIVE : GREEN; cc.set(P[Math.floor(HASH(k, 3.7) * P.length)]); cc.multiplyScalar(0.94 + 0.12 * HASH(k, 9.1));
-      [A, B, C].forEach(p => { pos.push(p[0], p[1] + 0.17, p[2]); col.push(cc.r, cc.g, cc.b); }); };
-    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const a = V(i, j), b = V(i + 1, j), c2 = V(i, j + 1), d = V(i + 1, j + 1), k = j * nx + i;
-      if (mgDiag(i, j)) { tri(a, d, b, k * 2); tri(a, c2, d, k * 2 + 1); } else { tri(a, c2, b, k * 2); tri(b, c2, d, k * 2 + 1); } }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.computeVertexNormals();
-    const mm = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true })); mm.userData.place = 'land'; mm.receiveShadow = true; scene.add(mm); pickables.push(mm);
-    // clumps of trees on the gentler faces, rocks on the steep ones
-    const slope = (x, z) => Math.hypot(meshH(x + 6, z) - meshH(x - 6, z), meshH(x, z + 6) - meshH(x, z - 6)) / 12, NC = FAST ? 260 : 650, rocks = [];
-    for (let t = 0, put = 0; t < NC * 8 && put < NC; t++) { const x = GX0 + R() * (GX1m - GX0), z = GZ0 + R() * (MG.Z1 - GZ0), h = meshH(x, z); if (h < 4 || h > 170 || slope(x, z) > 0.45) continue; put++;
-      const n = 4 + ((R() * 9) | 0); for (let q = 0; q < n; q++) { const a = R() * 6.283, d = R() * 38, tx = x + Math.cos(a) * d, tz = z + Math.sin(a) * d, th = meshH(tx, tz); if (th < 1 || slope(tx, tz) > 0.6) continue;
-        (R() < 0.55 ? hlPine : hlRound).push([tx, th - 0.4, tz, 9 + R() * 7]); } }
-    for (let t = 0; t < (FAST ? 1500 : 4000) && rocks.length < (FAST ? 120 : 320); t++) { const x = GX0 + R() * (GX1m - GX0), z = GZ0 + R() * (MG.Z1 - GZ0), h = meshH(x, z); if (h < 10 || slope(x, z) < 0.55) continue; rocks.push([x, h - 0.8, z, 3 + R() * 5]); }
-    const rk = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0).scale(1.2, 0.8, 1), new THREE.MeshLambertMaterial({ color: '#9a968c', flatShading: true }), rocks.length), M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), E3 = new THREE.Euler();
-    rocks.forEach(([x, y, z, s2], i) => { E3.set(R() * 3, R() * 6, R() * 3); Q.setFromEuler(E3); M4.compose(new THREE.Vector3(x, y, z), Q, new THREE.Vector3(s2, s2, s2)); rk.setMatrixAt(i, M4); }); rk.frustumCulled = false; scene.add(rk); }
   const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4;
   const land = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshLambertMaterial({ map: tex, transparent: true, alphaTest: 0.5 })); land.rotation.x = -Math.PI / 2; land.position.set((X0 + X1) / 2, 0.22, (Z0 + Z1) / 2);   // well above the base ground: no stripes from far away
   land.receiveShadow = false; land.userData.place = 'land'; scene.add(land); pickables.push(land);
   // low hills (flat-shaded, green, pine forest on top)
   const hillMats = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }), lo = new THREE.Color('#86ad5c'), hi = new THREE.Color('#5e8f45'), top = new THREE.Color('#9db86a');
-  HILLS.forEach(([hx, hz, r, hh, tag]) => { if (tag) return; const g = new THREE.PlaneGeometry(r * 2.1, r * 2.1 / 1.3, 36, 28); g.rotateX(-Math.PI / 2); const P = g.attributes.position, col = [];
+  HILLS.forEach(([hx, hz, r, hh]) => { const g = new THREE.PlaneGeometry(r * 2.1, r * 2.1 / 1.3, 36, 28); g.rotateX(-Math.PI / 2); const P = g.attributes.position, col = [];
     for (let i = 0; i < P.count; i++) { const x = P.getX(i) + hx, z = P.getZ(i) + hz, h = hillH(x, z); P.setY(i, h + 0.05); const k = h / hh, cc = lo.clone().lerp(k > 0.75 ? top : hi, Math.min(1, k * 1.3)); col.push(cc.r, cc.g, cc.b); }
     g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.computeVertexNormals(); const m = new THREE.Mesh(g, hillMats); m.position.set(hx, 0, hz); m.userData.place = 'land'; scene.add(m); });
   // trees: forest blobs + hill slopes (two instanced meshes)
-  const OLDH = HILLS.filter(q => !q[4]), NT = FAST ? 4000 : 10000, pine = [...hlPine], round = [...hlRound];
+  const NT = FAST ? 4000 : 10000, pine = [], round = [];
   for (let i = 0; i < NT * 3 && pine.length + round.length < NT; i++) {
     let x, z; if (R() < 0.6 && forests.length) { const [fx, fz, fr] = forests[(R() * forests.length) | 0], a = R() * 6.283, d = Math.sqrt(R()) * fr * 0.85; x = fx + Math.cos(a) * d; z = fz + Math.sin(a) * d * 0.8; }
-    else { const [hx, hz, hr] = OLDH[(R() * OLDH.length) | 0], a = R() * 6.283, d = Math.sqrt(R()) * hr; x = hx + Math.cos(a) * d; z = hz + Math.sin(a) * d / 1.3; }
-    if (inKeep(x, z, 40)) continue; const h = hillH(x, z), s = 14 + R() * 12; if (h > 150 || (h > 115 && R() < 0.6)) continue; /* bare mountain tops */ (h > 40 || R() < 0.4 ? pine : round).push([x, h, z, s]); }
-  hedge.forEach(([x, z]) => { if (!inKeep(x, z, 20)) round.push([x, hillH(x, z), z, 10 + R() * 6]); });
+    else { const [hx, hz, hr] = HILLS[(R() * HILLS.length) | 0], a = R() * 6.283, d = Math.sqrt(R()) * hr; x = hx + Math.cos(a) * d; z = hz + Math.sin(a) * d / 1.3; }
+    if (inKeep(x, z, 40)) continue; const h = hillH(x, z), s = 14 + R() * 12; (h > 40 || R() < 0.4 ? pine : round).push([x, h, z, s]); }
+  hedge.forEach(([x, z]) => { if (!inKeep(x, z, 20)) round.push([x, 0, z, 10 + R() * 6]); });
   const inst = (geo, color, list, k) => { const m = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color, flatShading: true }), list.length), M = new THREE.Matrix4();
     list.forEach(([x, y, z, s], i) => { M.makeScale(s, s * k, s); M.setPosition(x, y, z); m.setMatrixAt(i, M); }); m.frustumCulled = false; scene.add(m); return m; };
   inst(new THREE.ConeGeometry(0.45, 1.6, 6).translate(0, 0.95, 0), '#4c7d3e', pine, 1); inst(new THREE.IcosahedronGeometry(0.6, 0).translate(0, 1.0, 0), '#6fa04c', round, 0.9);
   inst(new THREE.CylinderGeometry(0.08, 0.1, 0.5, 5).translate(0, 0.25, 0), '#7a5236', round, 1);
   // farms (red barn + grey roof + silo) and villages (little cream houses with terracotta roofs)
-  const barns = farms.filter(([x, z]) => !inKeep(x, z, 80)).map(([x, z]) => [x, hillH(x, z), z, 1]), houses = [];
+  const barns = farms.filter(([x, z]) => !inKeep(x, z, 80)).map(([x, z]) => [x, 0, z, 1]), houses = [];
   VIL.forEach(([vx, vz]) => { for (let i = 0; i < 22; i++) { const a = R() * 6.283, d = 20 + R() * 120, x = vx + Math.cos(a) * d, z = vz + Math.sin(a) * d; if (!inKeep(x, z, 60)) houses.push([x, hillH(x, z), z, 1]); } });
   const box = (list, w, h, d, color, y = 0) => inst(new THREE.BoxGeometry(w, h, d).translate(0, h / 2 + y, 0), color, list, 1);
   const roof = (list, w, h, d, color, y) => { const g = new THREE.CylinderGeometry(0.001, w * 0.72, h, 4, 1).rotateY(Math.PI / 4).scale(1, 1, d / w).translate(0, y + h / 2, 0); return inst(g, color, list, 1); };
   box(barns, 18, 9, 26, '#b8432f'); roof(barns, 18, 6, 26, '#6b6f78', 9); inst(new THREE.CylinderGeometry(3.5, 3.5, 16, 10).translate(12, 8, -6), '#d9dcd8', barns, 1);
-  barns.forEach(([x, y, z]) => houses.push([x - 26, hillH(x - 26, z + 18), z + 18, 1]));
+  barns.forEach(([x, y, z]) => houses.push([x - 26, 0, z + 18, 1]));
   box(houses, 9, 6, 9, '#f2e2c0'); roof(houses, 9, 4.5, 9, '#c8603f', 6);
 })();
 
@@ -4516,10 +4462,9 @@ const SH = COAST.shore + 660;   // beach things below were placed for a shore at
 // ================= INTROVERT ISLAND (Dev, 23 Nov): the first Second Home district, an island in the sea off the north coast =================
 // Built by map/districts2.js (loaded after the map is up, so it never slows the first paint). No houses yet: only the hall, the
 // lighthouse and a small harbour; a cottage is added on the next saved spot when a citizen moves in (userData.spots).
-const ISLAND = { x: -1590, z: -2350, ry: Math.PI / 2 }, NAPV = { x: -3870, z: 1500 };   // PREVIEW: Nap Valley moved onto the new valley floor
+const ISLAND = { x: -1590, z: -2350, ry: Math.PI / 2 }, NAPV = { x: -2360, z: 1330 };
 setTimeout(() => { const sc = document.createElement('script'); sc.src = 'districts3.js';   // PREVIEW (Dev, 24 Nov): the new bean-shaped island, all 200 homes shown; old Nap Valley left out
-  sc.onload = () => {
-    try { const g = VinlandDistricts3.introvertIsland5({ fast: PHONE }); g.position.set(ISLAND.x, 0, ISLAND.z);
+  sc.onload = () => { try { const g = VinlandDistricts3.introvertIsland5({ fast: PHONE }); g.position.set(ISLAND.x, 0, ISLAND.z);
     g.traverse(m => { if (m.isMesh) { m.castShadow = false; m.userData.place = 'island'; if (!m.isInstancedMesh) pickables.push(m); } }); scene.add(g); ISLAND.g = g;
     const bt = document.createElement('button'); bt.textContent = 'Go to the island'; bt.style.cssText = 'position:fixed;left:50%;top:132px;transform:translateX(-50%);z-index:50;padding:10px 18px;border-radius:999px;border:2px solid #14233f;background:#fff8ea;font:600 15px Poppins,sans-serif';
     bt.onclick = () => flyTo(new THREE.Vector3(ISLAND.x, 0, ISLAND.z + 40), new THREE.Vector3(0, 380, 520), 1800); document.body.appendChild(bt); } catch (e) { console.error('island', e); } };
