@@ -4490,7 +4490,7 @@ const SH = COAST.shore + 660;   // beach things below were placed for a shore at
 // Built by map/districts2.js (loaded after the map is up, so it never slows the first paint). No houses yet: only the hall, the
 // lighthouse and a small harbour; a cottage is added on the next saved spot when a citizen moves in (userData.spots).
 const ISLAND = { x: -1590, z: -2350, ry: 0 };
-setTimeout(() => { const sc = document.createElement('script'); sc.src = 'districts3.js?v=2411u';   // (Dev, 24 Nov) the new bean-shaped island (districts3.js introvertIsland5); old island + old Nap Valley gone
+setTimeout(() => { const sc = document.createElement('script'); sc.src = 'districts3.js?v=2411v';   // (Dev, 24 Nov) the new bean-shaped island (districts3.js introvertIsland5); old island + old Nap Valley gone
   sc.onload = () => { let tries = 0; const go = () => { if (!window.__homesReady && tries++ < 120) return setTimeout(go, 500);   // wait for the citizens list: a cottage only for each real islander
     try { const isl = (window.__islanders || []), filled = Math.max(isl.reduce((m, h) => Math.max(m, h.island), 0), +(new URLSearchParams(location.search).get('fill') || 0));   /* PREVIEW ONLY: ?fill=N shows N cottages */
       const g = VinlandDistricts3.introvertIsland5({ fast: PHONE, filled }); g.position.set(ISLAND.x, 0, ISLAND.z);
