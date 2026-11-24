@@ -14,6 +14,7 @@
   'use strict';
   const THREE = root.THREE;
   if (!THREE) { console.error('VinlandKit: load three.js r128 before kit.js'); return; }
+  if (root.VinlandKit && root.VinlandKit._h) return;   // loaded twice (two loaders): keep the first, it may already carry add-on pieces
 
   // ---------- colours (copied from the map so everything matches) ----------
   const PAL = {

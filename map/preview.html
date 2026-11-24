@@ -433,7 +433,7 @@ let started3d = false, mode = null, samples = [], judged = false;
 async function start3D() {
   if (started3d) return; started3d = true; showLoad();
   try { progress(8, 'Loading the 3D engine…'); await loadScript(CDN[0]); progress(30); await loadScript(CDN[1]);
-    await Promise.all(['roads.js', 'kit_dt.js'].map(f => loadScript(f).catch(() => null)));   // step 4: real roads + street life. If one fails to load, the map still opens with the old roads and no street pieces.
+    await Promise.all(['roads.js', 'kit_dt.js?v=2411c'].map(f => loadScript(f).catch(() => null)));   // step 4: real roads + street life. If one fails to load, the map still opens with the old roads and no street pieces.
     if (!window.VIN_LAYOUT) { const txt = await fetch('layout.json', { cache: 'no-cache' }).then(r => r.ok ? r.text() : '').catch(() => '');
       let h = 5381; for (let i = 0; i < txt.length; i++) h = ((h << 5) + h + txt.charCodeAt(i)) | 0; window.VIN_LAYOUT_BASE = String(h);   // fingerprint of the layout on the site
       let site = null; try { site = txt ? JSON.parse(txt) : null; } catch (e) {}
@@ -622,7 +622,7 @@ const penTeamOf = u => { const h = V.byUser ? V.byUser.get(String(u || '').toLow
 const penTeamSize = () => { const n = {}; (V.homes || []).forEach(h => { if (h.status === 'active' || h.status === 'founding') { const k = penTeamKey(h); n[k] = (n[k] || 0) + 1; } }); return n; };   // citizens per district: the Cup is per 1,000 citizens
 const penJS = src => new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
 window.VinPenStart = async (game = 'pen') => { if (window.PEN_ON) return; const G = game === 'cricket' ? ['VinCricket', 'cricket.js?v=16nov'] : ['VinPenalty', 'penalty.js?v=20nov'];
-  try { if (!window.THREE) await penJS('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'); if (!window.VinlandKit) await penJS('kit_dt.js'); if (!window[G[0]]) await penJS(G[1]); }
+  try { if (!window.THREE) await penJS('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'); if (!window.VinlandKit) await penJS('kit_dt.js?v=2411c'); if (!window[G[0]]) await penJS(G[1]); }
   catch (e) { toast('The game could not load. Check your internet and try again.'); return; }
   const se = socSess(), lk = se && window.VLOOKS ? window.VLOOKS[String(se.user).toLowerCase()] : null; window.PEN_ON = true;
   window[G[0]].open({ api: socApi, session: se, look: lk || null, teamOf: penTeamOf, teamSize: penTeamSize, onClose: () => { window.PEN_ON = false; if (window.VIN3D_KICK) window.VIN3D_KICK(); } }); };
@@ -1770,7 +1770,7 @@ function makeTemplate(make) {
 }
 // load map/kit.js once, then run every waiting job
 function whenKit(cb) { if (window.VinlandKit) return cb(); (window.__kitCbs = window.__kitCbs || []).push(cb);
-  if (!window.__kitLoading) { window.__kitLoading = true; const sc = document.createElement('script'); sc.src = 'kit_dt.js'; sc.onload = () => (window.__kitCbs || []).splice(0).forEach(f => { try { f(); } catch (e) { console.error(e); } }); document.head.appendChild(sc); } }
+  if (!window.__kitLoading) { window.__kitLoading = true; const sc = document.createElement('script'); sc.src = 'kit_dt.js?v=2411c'; sc.onload = () => (window.__kitCbs || []).splice(0).forEach(f => { try { f(); } catch (e) { console.error(e); } }); document.head.appendChild(sc); } }
 window.whenKit = whenKit;
 // GARDEN DISTRICT buildings (16 Nov): one template per kind (kit gd* pieces), every building drawn once, each in its own shades of the
 // kit colour sets (walls, roof, doors); a detached house takes its owner's chosen colours. Ink outlines go into the shared outline piece.
@@ -2407,15 +2407,16 @@ function rsDrawBlds(occupied) {
   const WALLS = ['#f6ead3', '#f3dcc4', '#efe3cf', '#f5e1cf'], wallM = mat('#fffffe'), Q = new THREE.Quaternion(), UPv = new THREE.Vector3(0, 1, 0), SC = new THREE.Vector3(RS.SCALE, RS.SCALE, RS.SCALE);
   RS.tpl = RS.tpl || {};
   { const bl = RS.blds.filter(b => b.style === 'beach' && occupied.has(b.id));   // Beach Lane: Beach Flats from the asset kit (loaded only when needed)
-    if (bl.length && !window.VinlandKit) { if (!RS.kitLoading) { RS.kitLoading = true; const sc = document.createElement('script'); sc.src = 'kit_dt.js'; sc.onload = () => rsDrawBlds(occupied); document.head.appendChild(sc); } }
+    if (bl.length && !window.VinlandKit) { if (!RS.kitLoading) { RS.kitLoading = true; const sc = document.createElement('script'); sc.src = 'kit_dt.js?v=2411c'; sc.onload = () => rsDrawBlds(occupied); document.head.appendChild(sc); } }
     else if (bl.length) { const K = window.VinlandKit; RS.beachBaked = RS.beachBaked || K.bake(K.make ? K.make('beachFlats', {}) : K.beachFlats({}));
       const SETS = K.SETS.beachSets, order = RS.blds.filter(b => b.style === 'beach').sort((a, c) => a.x - c.x || a.z - c.z), ix = new Map(order.map((b, i) => [b.id, i]));
       const mats = bl.map(b => new THREE.Matrix4().compose(new THREE.Vector3(b.x, 0, b.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI), new THREE.Vector3(2.1, 2.1, 2.1)));
       const grp = K.instances(RS.beachBaked, mats, i => { const j = ix.get(bl[i].id), st = SETS[(j + (Math.round(bl[i].z) < -640 ? 2 : 0)) % SETS.length]; return { wall: st[1], accent: st[2] }; });
       [...grp.children].forEach(ch => { ch.userData.blds = bl; if (ch.isMesh) pickables.push(ch); scene.add(ch); RS.bldMeshes.push(ch); }); } }
   { const tl = RS.blds.filter(b => b.style === 'tower' && (DTN.ON || occupied.has(b.id)));   // City Centre Towers: the kit's penthouse tower, one shared drawing for all
-    if (tl.length && !window.VinlandKit) { if (!RS.kitLoading) { RS.kitLoading = true; const sc = document.createElement('script'); sc.src = 'kit_dt.js'; sc.onload = () => rsDrawBlds(occupied); document.head.appendChild(sc); } }
+    if (tl.length && !window.VinlandKit) { if (!RS.kitLoading) { RS.kitLoading = true; const sc = document.createElement('script'); sc.src = 'kit_dt.js?v=2411c'; sc.onload = () => rsDrawBlds(occupied); document.head.appendChild(sc); } }
     else if (tl.length && DTN.ON) { const K = window.VinlandKit; RS.redrawTowers = () => rsDrawBlds(occupied);
+      if (!K.dtResClad && !RS.dtLoading) { RS.dtLoading = true; const sc = document.createElement('script'); sc.src = 'downtown.js?v=2411c'; sc.onload = () => { RS.dtLoading = false; rsDrawBlds(occupied); }; document.head.appendChild(sc); }
       if (K.dtResClad) { const TY = ['dtResClad', 'dtResWood', 'dtResGlass']; RS.dtBaked = RS.dtBaked || TY.map(k => K.bake(K[k]({ floors: 12 })));
         TY.forEach((k, t) => { const L = tl.filter(b => b.dt === t); if (!L.length) return;
           const mats = L.map(b => new THREE.Matrix4().compose(new THREE.Vector3(b.x, 0.17, b.z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), b.ry), new THREE.Vector3(1, 1, 1)));
@@ -4160,7 +4161,7 @@ const DSQ = { x0: 930, x1: 1188, z0: -222, z1: 222, lane: 1075, BUILDINGS: false
       const baked = K.bake(K[k]({})), mats = list.map(([x, z, ry]) => new THREE.Matrix4().compose(new THREE.Vector3(x, 0.17, z), new THREE.Quaternion().setFromAxisAngle(RYQ, ry), new THREE.Vector3(1, 1, 1)));
       const grp = K.instances(baked, mats); grp.children.forEach(ch => { if (ch.isMesh) { ch.userData.place = 'downtown'; pickables.push(ch); } }); scene.add(grp); (DTN.meshes = DTN.meshes || []).push(grp); });
     if (NIGHT.on && K.setNight) (DTN.meshes || []).forEach(m => K.setNight(m, true)); };
-  whenKit(() => { if (window.VinlandKit.dtResClad) return draw(); const sc = document.createElement('script'); sc.src = 'downtown.js?v=2411b'; sc.onload = () => { draw(); if (window.RS && RS.redrawTowers) RS.redrawTowers(); }; document.head.appendChild(sc); });
+  whenKit(() => { if (window.VinlandKit.dtResClad) return draw(); const sc = document.createElement('script'); sc.src = 'downtown.js?v=2411c'; sc.onload = () => { draw(); if (window.RS && RS.redrawTowers) RS.redrawTowers(); }; document.head.appendChild(sc); });
 })();
 
 

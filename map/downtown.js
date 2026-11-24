@@ -7,6 +7,7 @@
   'use strict';
   const K = root.VinlandKit, THREE = root.THREE;
   if (!K || !K._h) { console.error('downtown.js: load kit.js (with KIT._h) first'); return; }
+  if (K.dtResClad) return;   // already added
   const { B, P, CYL, ICO, BALL, GABLE, grp, tree, def: def0, colours, choices, glowMat, slot, toon, NE, FLAT, PAL } = K._h;
   const def = e => def0(Object.assign({ dt: true, part: 3 }, e));
   const FH = 3.2, OF = 3.6;
