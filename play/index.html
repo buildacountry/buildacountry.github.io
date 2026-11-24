@@ -6,8 +6,17 @@
 html,body{margin:0;height:100%;overflow:hidden;background:#9fd3ee;font-family:Poppins,system-ui,sans-serif;touch-action:none;-webkit-user-select:none;user-select:none}
 canvas#g{display:block;width:100vw;height:100vh}
 #load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#9fd3ee;color:#23324a;font-weight:700;font-size:18px;z-index:9}
-#mini{position:fixed;top:calc(12px + env(safe-area-inset-top));left:12px;width:132px;height:132px;border-radius:50%;border:3px solid #fff8e8;box-shadow:0 3px 10px #0003;background:#8fbf62}
-#place{position:fixed;top:calc(150px + env(safe-area-inset-top));left:12px;width:138px;text-align:center;font-size:12px;font-weight:700;color:#23324a;text-shadow:0 1px 0 #fff8}
+#mini{position:fixed;top:calc(12px + env(safe-area-inset-top));left:12px;width:132px;height:132px;border-radius:50%;border:3px solid #10151f;box-shadow:0 0 0 2px #fff8,0 3px 10px #0005;background:#8fbf62}
+#bars{position:fixed;top:calc(152px + env(safe-area-inset-top));left:14px;width:132px;display:flex;gap:4px}#bars i{flex:1;height:7px;background:#10151fcc;border-radius:2px;overflow:hidden;display:block}#bars b{display:block;height:100%;width:100%;background:#5fd068;transition:width .15s}
+@media (hover:hover) and (pointer:fine){#mini{top:auto;bottom:34px;left:22px;width:170px;height:170px}#bars{top:auto;bottom:18px;left:26px;width:170px}#place{top:auto;bottom:212px;left:22px;width:174px}}
+.hud{font-family:Impact,'Arial Black',system-ui,sans-serif;color:#fff;text-shadow:0 2px 0 #000,0 0 3px #000,1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;letter-spacing:.5px}
+#tr{position:fixed;top:calc(10px + env(safe-area-inset-top));right:14px;text-align:right;line-height:1.05}#clock{font-size:22px}#coins{font-size:30px;color:#ffd447}#who{font-size:15px;color:#cfe8ff}
+#obj{position:fixed;top:calc(118px + env(safe-area-inset-top));right:14px;max-width:62vw;text-align:right;font-family:Poppins,system-ui,sans-serif;font-weight:700;font-size:14px;color:#fff;background:#10151fb3;padding:8px 12px;border-radius:8px;border-left:4px solid #ffd447}#obj small{display:block;color:#ffd447;font-size:12px;margin-top:2px}#obj a{color:#ffd447}
+@media (hover:hover) and (pointer:fine){#obj{top:auto;bottom:24px;right:auto;left:50%;transform:translateX(-50%);text-align:center;max-width:520px}}
+#feed{position:fixed;left:50%;transform:translateX(-50%);top:calc(196px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}#feed div{font-family:Poppins,system-ui,sans-serif;font-weight:700;font-size:13px;background:#10151fd9;color:#fff;padding:7px 12px;border-radius:8px;animation:fd 4.5s forwards}@keyframes fd{0%{opacity:0;transform:translateY(-8px)}8%,85%{opacity:1;transform:none}100%{opacity:0}}
+#big{position:fixed;left:0;right:0;top:34%;text-align:center;font-size:44px;opacity:0;transition:opacity .5s;pointer-events:none}#big small{display:block;font-size:20px;color:#ffd447}
+
+#place{position:fixed;top:calc(166px + env(safe-area-inset-top));left:10px;width:142px;text-align:center;font-size:15px}
 #stick{position:fixed;left:calc(28px + env(safe-area-inset-left));bottom:calc(28px + env(safe-area-inset-bottom));width:130px;height:130px;border-radius:50%;background:#fff3;border:3px solid #fff8}
 #knob{position:absolute;left:39px;top:39px;width:52px;height:52px;border-radius:50%;background:#fff8e8;box-shadow:0 2px 8px #0004}
 .btn{position:fixed;width:70px;height:70px;border-radius:50%;background:#fff8e8;color:#23324a;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px #0004;border:0}
@@ -15,11 +24,17 @@ canvas#g{display:block;width:100vw;height:100vh}
 #run{right:calc(26px + env(safe-area-inset-right));bottom:calc(30px + env(safe-area-inset-bottom))}
 #jump{right:calc(108px + env(safe-area-inset-right));bottom:calc(30px + env(safe-area-inset-bottom))}
 @media (hover:hover) and (pointer:fine){#stick,.btn{display:none}}
-#hint{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);font-size:13px;color:#23324a;background:#fff8e8cc;padding:6px 12px;border-radius:14px;display:none}
+#hint{position:fixed;top:12px;left:16px;font-size:12px;color:#fff;background:#10151f99;padding:5px 10px;border-radius:6px;display:none;font-family:Poppins,system-ui,sans-serif}
 @media (hover:hover) and (pointer:fine){#hint{display:block}}
+#rot{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#10151f;color:#fff;font-family:Poppins,system-ui,sans-serif;font-weight:700;font-size:18px;text-align:center;padding:24px}
+#rot .ph{width:46px;height:80px;border:4px solid #ffd447;border-radius:10px;animation:rt 1.8s ease-in-out infinite}@keyframes rt{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}#rot small{font-weight:500;font-size:13px;color:#b8c4d6}
+@media (orientation:portrait) and (pointer:coarse){#rot{display:flex}}
+@media (orientation:landscape) and (pointer:coarse){#feed{top:calc(12px + env(safe-area-inset-top))}#big{top:26%;font-size:38px}#obj{top:calc(96px + env(safe-area-inset-top));max-width:40vw}#mini{width:118px;height:118px}#bars{top:calc(136px + env(safe-area-inset-top));width:118px}#place{top:calc(148px + env(safe-area-inset-top));width:124px}}
 </style></head><body>
 <div id="load">Loading Vinland…</div>
-<canvas id="g"></canvas><canvas id="mini" width="264" height="264"></canvas><div id="place"></div>
+<div id="rot"><div class="ph"></div>Turn your phone sideways to play<small>Vinland is played in landscape</small></div>
+<canvas id="g"></canvas><canvas id="mini" width="300" height="300"></canvas><div id="bars"><i><b id="st"></b></i></div><div id="place" class="hud"></div>
+<div id="tr" class="hud"><div id="clock"></div><div id="coins"></div><div id="who"></div></div><div id="obj"></div><div id="feed"></div><div id="big" class="hud"></div>
 <div id="stick"><div id="knob"></div></div><button class="btn" id="run">RUN</button><button class="btn" id="jump">JUMP</button>
 <div id="hint">WASD / arrows to walk · Shift to run · Space to jump · drag to look</div>
 <script src="../vinland-static.js"></script><script src="../map/mapdata.js"></script>
@@ -28,14 +43,14 @@ canvas#g{display:block;width:100vw;height:100vh}
 // built for phones: only what is near you is drawn, no big 3D map, a minimap instead.
 const load = s => new Promise((ok, no) => { const e = document.createElement('script'); e.src = s; e.onload = ok; e.onerror = no; document.head.appendChild(e); });
 (async () => {
-  await load('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'); await load('kit.js').catch(() => null);
+  await load('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'); await load('kit.js').catch(() => null); await load('oldtown.js').catch(() => null);
   start();
 })();
 function start() {
 const D = window.VIN_MAPDATA, S = window.VIN_STATIC, PHONE = matchMedia('(pointer:coarse)').matches;
 const cv = document.getElementById('g'), R = new THREE.WebGLRenderer({ canvas: cv, antialias: !PHONE, powerPreference: 'high-performance' });
 R.setPixelRatio(Math.min(devicePixelRatio, PHONE ? 1.5 : 2)); R.setSize(innerWidth, innerHeight);
-const scene = new THREE.Scene(), SKY = new THREE.Color('#9fd3ee'); scene.background = SKY; scene.fog = new THREE.Fog(SKY, 70, PHONE ? 150 : 210);
+window.__R = R; const scene = new THREE.Scene(), SKY = new THREE.Color('#9fd3ee'); scene.background = SKY; window.__S = scene; scene.fog = new THREE.Fog(SKY, 70, PHONE ? 150 : 210);
 const cam = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.3, PHONE ? 160 : 220);
 scene.add(new THREE.HemisphereLight('#fff3df', '#7a6a50', 0.55)); const sun = new THREE.DirectionalLight('#ffe0b4', 0.85); sun.position.set(40, 80, 25); scene.add(sun);
 const grad = new THREE.DataTexture(new Uint8Array([105, 165, 215]), 3, 1, THREE.LuminanceFormat); grad.magFilter = grad.minFilter = THREE.NearestFilter; grad.needsUpdate = true;
@@ -51,7 +66,7 @@ boxes(D.roads.map(([w, d, x, z]) => [w, 0.08, d, x, 0.06, z]), '#55524d');
 // ---- places: a simple block each (the game will get the real buildings later)
 const solid = [];   // [x0, z0, x1, z1] things you can't walk through
 const PCOL = ['#e9d3a8', '#d7c3e6', '#cfe1ee', '#f0c9b4', '#d9e6c4'];
-D.places.forEach(([n, x, z, w, d], i) => { if (!n || /Avenue|Parking|Field|site|Plaza|Power/.test(n)) return; const h = /Stadium|Parliament/.test(n) ? 16 : 10;
+D.places.forEach(([n, x, z, w, d], i) => { if (!n || /Avenue|Parking|Field|site|Plaza|Power|Corner shop/.test(n)) return; const h = /Stadium|Parliament/.test(n) ? 16 : 10;
   boxes([[w * 0.85, h, d * 0.85, x + w / 2, h / 2, z + d / 2]], PCOL[i % PCOL.length]); solid.push([x + w * 0.075, z + d * 0.075, x + w * 0.925, z + d * 0.925]); });
 // ---- homes: every plot of the real map, as one instanced house (body + roof = 2 draw calls for all 7,908)
 const plots = S.plots.trim().split('\n').map(l => l.split(',')).map(([x, z, t]) => [+x, +z, t]);
@@ -61,6 +76,13 @@ const WALL = ['#f4e3c3', '#e9d0b0', '#f6efe2', '#dcc9e8', '#cfe3ef', '#f2d0c0', 
 const M4 = new THREE.Matrix4(), C = new THREE.Color();
 plots.forEach(([x, z], i) => { M4.makeTranslation(x, 0, z); HB.setMatrixAt(i, M4); HR.setMatrixAt(i, M4); HB.setColorAt(i, C.set(WALL[(i * 7) % WALL.length])); HR.setColorAt(i, C.set(ROOF[(i * 3) % ROOF.length])); solid.push([x - 3.4, z - 3.4, x + 3.4, z + 3.4]); });
 scene.add(HB, HR);
+// ---- Old Town (Life in Vinland step 1): real kit houses, shops, footpaths, lamps, poles and trees replace the plain blocks there
+const OT = window.OldTown && window.VinlandKit ? window.OldTown.build(scene, window.VinlandKit, D, S, solid) : null;
+if (OT) { const Z = new THREE.Matrix4().makeScale(0, 0, 0), T4 = new THREE.Matrix4();
+  // near you: the real kit houses; further away: the plain one-box houses (cheap), so phones only draw full detail around you
+  OT.swap = (idx, on) => { idx.forEach(i => { const [x, z] = plots[i]; const m = on ? Z : T4.makeTranslation(x, 0, z); HB.setMatrixAt(i, m); HR.setMatrixAt(i, m); }); HB.instanceMatrix.needsUpdate = HR.instanceMatrix.needsUpdate = true; };
+  plots.forEach(([x, z], i) => { if (OT.inTown(x, z)) { HB.setMatrixAt(i, Z); HR.setMatrixAt(i, Z); } }); HB.instanceMatrix.needsUpdate = HR.instanceMatrix.needsUpdate = true; window.OT = OT;
+  OT.rad = PHONE ? 90 : 150; OT.lastX = 1e9; OT.lastZ = 1e9; }
 // solid lookup on a 16 m grid so collision stays cheap
 const GRID = {}, gk = (a, b) => a + ',' + b; solid.forEach((s, i) => { for (let a = Math.floor(s[0] / 16); a <= Math.floor(s[2] / 16); a++) for (let b = Math.floor(s[1] / 16); b <= Math.floor(s[3] / 16); b++) (GRID[gk(a, b)] = GRID[gk(a, b)] || []).push(s); });
 const blocked = (x, z, r) => (GRID[gk(Math.floor(x / 16), Math.floor(z / 16))] || []).some(s => x > s[0] - r && x < s[2] + r && z > s[1] - r && z < s[3] + r);
@@ -71,7 +93,31 @@ if (K && K.citizenM) { body = K.make('citizenM', { hairStyle: 'bowl', outfit: 't
 else { body = new THREE.Mesh(new THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(0.4, 1, 4, 8) : new THREE.BoxGeometry(0.8, 1.8, 0.5), mat('#3a7a5a')); body.position.y = 0.9; }
 body.scale.setScalar(1.1); me.add(body);
 const blob = new THREE.Mesh(new THREE.CircleGeometry(0.7, 16), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.22, depthWrite: false })); blob.rotation.x = -Math.PI / 2; blob.position.y = 0.13; scene.add(blob);
-const P = { x: 0, z: 60, y: 0, vy: 0, ang: Math.PI, yaw: Math.PI, pitch: 0.32, ph: 0, sp: 0 };
+const P = { x: 0, z: 60, y: 0, vy: 0, ang: Math.PI, yaw: Math.PI, pitch: 0.32, ph: 0, sp: 0, stam: 1 };
+{ const at = new URLSearchParams(location.search).get('at'); if (at) { const [ax, az, ay] = at.split(',').map(Number); P.x = ax; P.z = az; if (!isNaN(ay)) P.ang = P.yaw = ay; } }   // ?at=x,z,yaw: start anywhere (for previews)
+// ---- who you are: the same login as the site (DM KEY → vin_session). Your home = the same numbering as the map.
+const SESS = (() => { try { const v = JSON.parse(localStorage.getItem('vin_session') || 'null'); return v && v.user && v.token && (!v.exp || new Date(v.exp) > new Date()) ? v : null; } catch (e) { return null; } })();
+const QS = new URLSearchParams(location.search), VISIT = (QS.get('visit') || '').replace(/^@/, '').toLowerCase();
+const PL = S.plots.trim().split('\n').map(l => { const a = l.split(','); return { x: +a[0], z: +a[1], a: a[2], label: a.length > 7 ? a.slice(5, a.length - 1).join(', ') : (a[5] || ''), floor: +a[6] || 0 }; });
+function parseCSV(t) { const rows = []; let row = [], cell = '', q = false; for (let i = 0; i < t.length; i++) { const c = t[i];
+  if (q) { if (c === '"' && t[i + 1] === '"') { cell += '"'; i++; } else if (c === '"') q = false; else cell += c; } else if (c === '"') q = true; else if (c === ',') { row.push(cell); cell = ''; }
+  else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; } else cell += c; } if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  const h = (rows.shift() || []).map(x => x.trim().toLowerCase()); return rows.filter(r => r.some(v => v.trim())).map(r => Object.fromEntries(h.map((k, i) => [k, (r[i] || '').trim()]))); }
+const AREA = { F: 'Founder Square', M: 'Middle', E: 'East', W: 'West', NE: 'North-east', NW: 'North-west', S: 'South', SG: 'Garden Lane', SE: 'South-east', SW: 'South-west', NSE: 'North Shore east', NSW: 'North Shore west', L: 'Garden District', U: 'Suburb', R: 'Riverside' };
+function homesFrom(text) {   // same as build2D() in map/index.html
+  const seen = new Set(), byNum = new Map(), noNum = [], never = (S.never || []).map(x => x.toLowerCase()), out = new Map();
+  const st = v => { v = String(v || '').toLowerCase(); return /^(abandon|left|unfollow|gone)/.test(v) ? 'abandoned' : /^(hid|private|anon)/.test(v) ? 'hidden' : 'active'; };
+  parseCSV(text).map(r => ({ n: parseInt(String(r.number || '').replace(/[^\d]/g, ''), 10), user: String(r.username || '').trim().replace(/^@/, '').replace(/\s+/g, '').slice(0, 30), job: (r.profession || '').slice(0, 34), status: st(r.status) }))
+    .forEach(r => { const k = r.user.toLowerCase(); if (!r.user && r.status !== 'hidden') return; if (never.includes(k)) return; if (k && seen.has(k)) return; if (k) seen.add(k);
+      if (S.villas[k] && r.status === 'active') { const L = (S.lots || {})[S.villas[k]]; if (L) out.set(k, { user: r.user, job: r.job, x: L[0], z: L[1], label: 'Villa ' + S.villas[k] }); return; }
+      if (r.n > 0 && !byNum.has(r.n)) byNum.set(r.n, r); else noNum.push(r); });
+  let free = 1; noNum.forEach(r => { while (byNum.has(free)) free++; r.n = free; byNum.set(free, r); });
+  byNum.forEach(r => { const p = PL[r.n - 1]; if (p && r.user && r.status === 'active') out.set(r.user.toLowerCase(), { user: r.user, job: r.job, x: p.x, z: p.z, label: p.label || AREA[p.a] || '', n: r.n }); });
+  return out; }
+const HUD = { home: null, target: null, coins: null, arrived: false };
+// ---- landscape: on the first tap try full screen + lock sideways (works on Android Chrome; elsewhere the turn-your-phone screen shows)
+if (PHONE) addEventListener('pointerdown', function fs() { removeEventListener('pointerdown', fs); const d = document.documentElement, rq = d.requestFullscreen || d.webkitRequestFullscreen;
+  try { const p = rq && rq.call(d, { navigationUI: 'hide' }); Promise.resolve(p).then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape')).catch(() => {}); } catch (e) {} }, { passive: true });
 // ---- controls: keyboard, joystick, run, jump, drag to look
 const keys = {}; addEventListener('keydown', e => { keys[e.key.toLowerCase()] = 1; if (e.key === ' ') jump(); }); addEventListener('keyup', e => keys[e.key.toLowerCase()] = 0);
 const stick = document.getElementById('stick'), knob = document.getElementById('knob'), J = { id: null, x: 0, y: 0 };
@@ -88,19 +134,55 @@ addEventListener('pointermove', e => { if (!look || e.pointerId !== look.id) ret
 addEventListener('pointerup', e => { if (look && e.pointerId === look.id) look = null; });
 // ---- minimap: roads + places around you, turned so "up" is where you look
 const mini = document.getElementById('mini'), mc = mini.getContext('2d'), placeEl = document.getElementById('place');
-function drawMini() { const W = 264, sc = 1.1; mc.save(); mc.clearRect(0, 0, W, W); mc.beginPath(); mc.arc(W / 2, W / 2, W / 2, 0, 7); mc.clip(); mc.fillStyle = '#8fbf62'; mc.fillRect(0, 0, W, W);
+function drawMini() { const W = 300, sc = 1.25; mc.save(); mc.clearRect(0, 0, W, W); mc.beginPath(); mc.arc(W / 2, W / 2, W / 2, 0, 7); mc.clip(); mc.fillStyle = '#8fbf62'; mc.fillRect(0, 0, W, W);
   mc.translate(W / 2, W / 2); mc.rotate(P.yaw - Math.PI); mc.scale(sc, sc); mc.translate(-P.x, -P.z);
   mc.fillStyle = '#e6d9b8'; D.places.forEach(([n, x, z, w, d]) => { if (n && Math.abs(x - P.x) < 220 && Math.abs(z - P.z) < 220) mc.fillRect(x, z, w, d); });
   mc.fillStyle = '#5d5a55'; D.roads.forEach(([w, d, x, z]) => { if (Math.abs(x - P.x) < 120 + w && Math.abs(z - P.z) < 120 + d) mc.fillRect(x - w / 2, z - d / 2, w, d); });
   mc.fillStyle = '#f4e3c3'; plots.forEach(([x, z]) => { if (Math.abs(x - P.x) < 120 && Math.abs(z - P.z) < 120) mc.fillRect(x - 3, z - 3, 6, 6); });
-  mc.restore(); mc.save(); mc.translate(W / 2, W / 2); mc.rotate(P.yaw - P.ang); mc.fillStyle = '#e8473c'; mc.strokeStyle = '#fff'; mc.lineWidth = 3;
+  mc.restore();
+  if (HUD.home) { const dx = HUD.home.x - P.x, dz = HUD.home.z - P.z, r = P.yaw - Math.PI, c = Math.cos(r), s2 = Math.sin(r); let mx = (dx * c - dz * s2) * sc, my = (dx * s2 + dz * c) * sc; const m = Math.hypot(mx, my), lim = W / 2 - 22;
+    if (m > lim) { mx *= lim / m; my *= lim / m; } mc.font = '30px system-ui'; mc.textAlign = 'center'; mc.textBaseline = 'middle'; mc.fillStyle = '#ffd447'; mc.beginPath(); mc.arc(W / 2 + mx, W / 2 + my, 19, 0, 7); mc.fill(); mc.fillText('🏠', W / 2 + mx, W / 2 + my + 1); }
+  mc.save(); mc.translate(W / 2, W / 2); mc.rotate(P.yaw - P.ang); mc.fillStyle = '#e8473c'; mc.strokeStyle = '#fff'; mc.lineWidth = 3;
   mc.beginPath(); mc.moveTo(0, -14); mc.lineTo(10, 10); mc.lineTo(0, 5); mc.lineTo(-10, 10); mc.closePath(); mc.stroke(); mc.fill(); mc.restore();
   const near = D.places.find(([n, x, z, w, d]) => n && P.x > x - 6 && P.x < x + w + 6 && P.z > z - 6 && P.z < z + d + 6); placeEl.textContent = near ? near[0] : ''; }
+// ---- HUD: objective, coins, clock, pop-ups, home marker
+const $ = id => document.getElementById(id), objEl = $('obj'), bigEl = $('big');
+function toast(t) { const d = document.createElement('div'); d.textContent = t; $('feed').appendChild(d); setTimeout(() => d.remove(), 4600); }
+function big(t, sub) { bigEl.innerHTML = t + (sub ? `<small>${sub}</small>` : ''); bigEl.style.opacity = 1; clearTimeout(big.t); big.t = setTimeout(() => bigEl.style.opacity = 0, 3200); }
+function label(text) { const c = document.createElement('canvas'), x = c.getContext('2d'); c.width = 512; c.height = 96; x.font = '800 54px Poppins, system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  const w = Math.min(500, x.measureText(text).width + 48); x.fillStyle = '#10151fd0'; x.beginPath(); x.roundRect ? x.roundRect(256 - w / 2, 8, w, 80, 22) : x.rect(256 - w / 2, 8, w, 80); x.fill(); x.fillStyle = '#ffd447'; x.fillText(text, 256, 50);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, transparent: true, sizeAttenuation: false })); sp.scale.set(0.3, 0.056, 1); sp.renderOrder = 9; return sp; }
+const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 2.2, 16, 1, true), new THREE.MeshBasicMaterial({ color: '#ffd447', transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false })); beam.visible = false; scene.add(beam);
+let homeTag = null;
+function nearestRoad(x, z) { let best = null, bd = 1e9; D.roads.forEach(([w, d, cx, cz]) => { const px = Math.max(cx - w / 2 + 1, Math.min(cx + w / 2 - 1, x)), pz = Math.max(cz - d / 2 + 1, Math.min(cz + d / 2 - 1, z)), dd = Math.hypot(px - x, pz - z); if (dd < bd) { bd = dd; best = [px, pz, w > d]; } }); return best; }
+function setHome(h, mine) { HUD.home = h; HUD.mine = mine; const r = nearestRoad(h.x, h.z) || [h.x, h.z + 8];
+  P.x = r[0]; P.z = r[1]; P.ang = Math.atan2(h.x - P.x, h.z - P.z);   // you look at your home; the camera looks along the road, so the home is beside you
+  const ux = Math.sin(P.ang), uz = Math.cos(P.ang); P.x -= ux * 2.5; P.z -= uz * 2.5; P.yaw = P.ang - 0.12; P.pitch = 0.5;   // step back across the road so the whole home is in view
+  cam.position.set(P.x - Math.sin(P.yaw) * 8, 5, P.z - Math.cos(P.yaw) * 8);
+  { const dx = r[0] - h.x, dz = r[1] - h.z, m = Math.hypot(dx, dz) || 1; beam.position.set(h.x + dx / m * 5.2, 1.1, h.z + dz / m * 5.2); } beam.visible = true;   // the front door: just outside the house
+  homeTag = label('@' + h.user); homeTag.position.set(beam.position.x, 2.9, beam.position.z); scene.add(homeTag);
+  big(mine ? 'WELCOME HOME' : 'VISITING', '@' + h.user + (h.label ? ' · ' + h.label : '')); }
+function objective() { const h = HUD.home;
+  if (!h) { objEl.innerHTML = SESS ? 'Finding your home…' : `Explore Vinland<small>Comment HOME on our latest reel, then DM KEY to log in and start at your own home</small>`; return; }
+  const dd = Math.round(Math.hypot(beam.position.x - P.x, beam.position.z - P.z));
+  beam.visible = dd >= 3; if (dd < 3) { if (!HUD.arrived) { HUD.arrived = true; toast(HUD.mine ? 'You are at your front door 🏡' : 'You are at @' + h.user + "'s door"); } objEl.innerHTML = `${HUD.mine ? 'Your home' : '@' + h.user + "'s home"}<small>${h.label || 'Vinland'}${h.job ? ' · ' + h.job : ''}</small>`; }
+  else { HUD.arrived = false; objEl.innerHTML = `Go to ${HUD.mine ? 'your home' : '@' + h.user + "'s home"}<small>${dd} m · follow the yellow marker</small>`; } }
+function clock() { $('clock').textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' }); }
+$('who').textContent = SESS ? '@' + SESS.user : '';
+if (SESS) fetch('https://whhohzvvxhzpcsdcyuks.supabase.co/functions/v1/social', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'wallet', token: SESS.token }) })
+  .then(r => r.json()).then(r => { if (r && r.ok) $('coins').textContent = '🪙 ' + Number(r.coins || 0).toLocaleString('en-IN'); }).catch(() => {});
+// your home from the live citizens sheet
+const want = SESS ? SESS.user.toLowerCase() : VISIT;
+if (want) fetch(S.sheet).then(r => r.text()).then(t => { const H = homesFrom(t), h = H.get(want); if (h) setHome(h, !!SESS && want === SESS.user.toLowerCase()); else toast(SESS ? 'Your home is not on the map yet. Comment HOME on our latest reel.' : 'No home found for @' + want); })
+  .catch(() => toast('Could not load the homes. Check your internet.'));
+else setTimeout(() => toast('Welcome to Vinland'), 600);
 // ---- the loop
 let last = performance.now(), mt = 0;
 function frame(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (OT && Math.hypot(P.x - OT.lastX, P.z - OT.lastZ) > 15) { OT.lastX = P.x; OT.lastZ = P.z; OT.visTris = OT.show(P.x, P.z, OT.rad, OT.swap); }
   let ix = J.x, iy = J.y; if (keys.a || keys.arrowleft) ix -= 1; if (keys.d || keys.arrowright) ix += 1; if (keys.w || keys.arrowup) iy -= 1; if (keys.s || keys.arrowdown) iy += 1;
-  const mag = Math.min(1, Math.hypot(ix, iy)), run = running || keys.shift ? 1.9 : 1, speed = 5.2 * run * mag;
+  const mag = Math.min(1, Math.hypot(ix, iy)), wantRun = (running || keys.shift) && mag > 0.08 && P.stam > 0.02, run = wantRun ? 1.9 : 1, speed = 5.2 * run * mag;
+  P.stam = Math.max(0, Math.min(1, P.stam + (wantRun ? -dt / 9 : dt / 5))); if (P.stam <= 0.02 && running) { running = false; runB.classList.remove('on'); toast('Out of breath. Walk for a bit.'); }
   if (mag > 0.08) { const a = P.yaw + Math.atan2(-ix, -iy); let da = ((a - P.ang + Math.PI * 3) % (Math.PI * 2)) - Math.PI; P.ang += da * Math.min(1, dt * 12);
     const nx = P.x + Math.sin(a) * speed * dt, nz = P.z + Math.cos(a) * speed * dt; if (!blocked(nx, P.z, 0.5)) P.x = nx; if (!blocked(P.x, nz, 0.5)) P.z = nz; P.ph += dt * 7.5 * run * mag; P.sp = mag; }
   else { P.sp *= 0.8; P.ph *= 0.9; }
@@ -110,10 +192,11 @@ function frame(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now
   if (L) { L.legL.rotation.x = sw * 0.6; L.legR.rotation.x = -sw * 0.6; L.shinL.rotation.x = 0.06 + Math.max(0, sw) * 0.9; L.shinR.rotation.x = 0.06 + Math.max(0, -sw) * 0.9;
     L.armL.rotation.x = -sw * 0.6; L.armR.rotation.x = sw * 0.6; L.foreL.rotation.x = -0.22 + Math.min(0, -sw) * 0.5 - (run > 1 && P.sp > 0.1 ? 0.8 : 0); L.foreR.rotation.x = -0.22 + Math.min(0, sw) * 0.5 - (run > 1 && P.sp > 0.1 ? 0.8 : 0);
     if (P.y > 0.05) { L.legL.rotation.x = -0.5; L.shinL.rotation.x = 0.9; L.armL.rotation.x = L.armR.rotation.x = -2.6; } }
-  const dist = PHONE ? 8.5 : 7.5, tx = P.x - Math.sin(P.yaw) * dist * Math.cos(P.pitch), tz = P.z - Math.cos(P.yaw) * dist * Math.cos(P.pitch), ty = 1.6 + dist * Math.sin(P.pitch) + P.y * 0.5;
+  const dist = PHONE ? (innerWidth > innerHeight ? 6.6 : 8.5) : 7.5, tx = P.x - Math.sin(P.yaw) * dist * Math.cos(P.pitch), tz = P.z - Math.cos(P.yaw) * dist * Math.cos(P.pitch), ty = 1.6 + dist * Math.sin(P.pitch) + P.y * 0.5;
   const k = Math.min(1, dt * 8); cam.position.x += (tx - cam.position.x) * k; cam.position.y += (ty - cam.position.y) * k; cam.position.z += (tz - cam.position.z) * k; cam.lookAt(P.x, 1.7 + P.y * 0.5, P.z);
   sun.position.set(P.x + 40, 80, P.z + 25); sun.target.position.set(P.x, 0, P.z); sun.target.updateMatrixWorld();
-  if ((mt += dt) > 0.1) { mt = 0; drawMini(); }
+  if ((mt += dt) > 0.1) { mt = 0; drawMini(); objective(); clock(); $('st').style.width = (P.stam * 100).toFixed(0) + '%'; }
+  if (HUD.home && beam.visible) { beam.material.opacity = 0.28 + Math.sin(now / 300) * 0.08; beam.rotation.y += dt; }
   R.render(scene, cam); requestAnimationFrame(frame); }
 addEventListener('resize', () => { R.setSize(innerWidth, innerHeight); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); });
 cam.position.set(P.x, 5, P.z + 8); window.__P = P; window.__frame = frame;

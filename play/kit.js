@@ -3672,6 +3672,149 @@
 
   // ---------- tools ----------
   // how many triangles an asset has (outline lines are not counted)
+
+  // ---------- Life in Vinland: street-level pieces for the game (24 Nov) ----------
+  // Scale: citizen 2.2 m. Pivot = bottom centre, front faces +z, ground y = 0. Nothing floats: every piece stands on y = 0
+  // or is fixed to a wall (wallMount = back face at z = 0, put it on the wall face).
+  const GS_CAT = 'Life in Vinland';
+  const GS_PAVE = '#d6c7a8', GS_KERB = '#b9b2a4', GS_ROADMARK = '#f6f0e2', GS_CONCRETE = '#c9c3b6';
+  // flat mark on the ground: w along x, d along z, lying exactly at height y
+  const GS_DECAL = (p, w, d, m, x, y, z) => put(p, geo('pane', () => new THREE.PlaneGeometry(1, 1)), m, x, y, z, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [w, d, 1] }));
+  const GS_quarter = () => geo('quarterDisc', () => new THREE.CylinderGeometry(1, 1, 1, 6, 1, false, 0, Math.PI / 2));
+
+  def({ key: 'gsFootpath', name: 'Footpath + kerb', cat: GS_CAT, part: 3, budget: 40, size: '10 × 2.5 m, kerb 0.18 m high',
+    opts: { len: choices('Length', ['10', '5', '2.5']) },
+    make(o) { const g = new THREE.Group(), L = +(o.len || 10);
+      B(g, L, 0.15, 2.25, GS_PAVE, 0, 0, -0.125, { shadow: false });                      // paving, back edge at z = -1.25
+      B(g, L, 0.18, 0.25, GS_KERB, 0, 0, 1.125);                                        // kerb stone on the road side (+z)
+      for (let x = -L / 2 + 2.5; x < L / 2 - 0.1; x += 2.5) GS_DECAL(g, 0.04, 2.25, '#c4b490', x, 0.151, -0.125);   // paving joints
+      return g; } });
+
+  def({ key: 'gsFootpathCorner', name: 'Footpath corner', cat: GS_CAT, part: 3, budget: 40, size: '2.5 m radius', opts: {},
+    make() { const g = new THREE.Group();
+      put(g, GS_quarter(), GS_PAVE, 0, 0.075, 0, { s: [2.25, 0.15, 2.25], shadow: false });
+      put(g, geo('quarterRing', () => new THREE.CylinderGeometry(1, 1, 1, 6, 1, true, 0, Math.PI / 2)), GS_KERB, 0, 0.09, 0, { s: [2.5, 0.18, 2.5] });
+      put(g, GS_quarter(), GS_KERB, 0, 0.088, 0, { s: [2.49, 0.176, 2.49], edge: false, shadow: false });
+      put(g, GS_quarter(), GS_PAVE, 0, 0.09, 0, { s: [2.25, 0.181, 2.25], edge: false, shadow: false });
+      return g; } });
+
+  def({ key: 'gsRoadMarks', name: 'Road markings', cat: GS_CAT, part: 3, budget: 20, size: '10 m of road',
+    opts: { kind: choices('Kind', ['centre', 'stop', 'both']) },
+    make(o) { const g = new THREE.Group(), k = o.kind || 'centre';
+      if (k !== 'stop') for (let i = 0; i < 3; i++) GS_DECAL(g, 0.15, 2, GS_ROADMARK, 0, 0.02, -3.5 + i * 3.5);
+      if (k !== 'centre') GS_DECAL(g, 3.4, 0.35, GS_ROADMARK, 1.8, 0.02, 4.8);
+      return g; } });
+
+  def({ key: 'gsManhole', name: 'Manhole + drain', cat: GS_CAT, part: 3, budget: 30, size: '0.7 m cover, 0.9 m grate', opts: {},
+    make() { const g = new THREE.Group();
+      put(g, geo('disc8', () => new THREE.CircleGeometry(1, 8)), '#5b5f66', 0, 0.015, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [0.35, 0.35, 1] }));
+      put(g, geo('disc8', () => new THREE.CircleGeometry(1, 8)), '#4a4d52', 0, 0.018, 0, Object.assign({}, FLAT, { rx: -Math.PI / 2, s: [0.25, 0.25, 1] }));
+      GS_DECAL(g, 0.9, 0.4, '#3a3d42', 1.4, 0.015, 0);
+      for (let i = 0; i < 5; i++) GS_DECAL(g, 0.04, 0.34, '#6d7178', 1.04 + i * 0.18, 0.018, 0);
+      return g; } });
+
+  def({ key: 'gsElectricPole', name: 'Electric pole', cat: GS_CAT, part: 3, budget: 120, size: '8.5 m tall, wires every 30 m',
+    opts: { transformer: choices('Transformer', ['no', 'yes']) },
+    make(o) { const g = new THREE.Group();
+      B(g, 0.5, 0.3, 0.5, GS_CONCRETE, 0, 0, 0);                                          // footing in the ground
+      TAPER(g, 0.3, 8.2, 0.3, GS_CONCRETE, 0, 0.3, 0, { tw: 0.6, td: 0.6 });
+      B(g, 0.12, 0.12, 1.8, PAL.iron, 0, 7.6, 0);                                        // cross-arm across the street (z); wires run along x
+      [-0.8, 0, 0.8].forEach(z => CYL(g, 0.05, 0.07, 0.18, 6, '#e8e2d4', 0, 7.72, z, NE));   // insulators (wires attach on top, y 7.9)
+      if (o.transformer === 'yes') { B(g, 0.7, 0.9, 0.5, '#8a9096', 0.45, 5.4, 0); B(g, 0.35, 0.5, 0.08, PAL.iron, 0.25, 5.15, 0, NE); }
+      g.userData.wireTops = [[0, 7.9, -0.8], [0, 7.9, 0], [0, 7.9, 0.8]];
+      return g; } });
+
+  def({ key: 'gsLetterbox', name: 'Letterbox at the gate', cat: GS_CAT, part: 3, budget: 50, size: '1.25 m tall',
+    opts: { colour: colours('Box', ['#c8603f', '#2f7a68', '#3f5866', '#2f2b28']) },
+    make(o) { const g = new THREE.Group(); B(g, 0.1, 1.0, 0.1, PAL.iron, 0, 0, 0, NE);
+      B(g, 0.42, 0.3, 0.32, slot('colour', o.colour || '#c8603f'), 0, 0.95, 0); P(g, 0.26, 0.04, PAL.iron, 0, 1.15, 0.165); return g; } });
+
+  def({ key: 'gsPorchLight', name: 'Porch light (on a wall)', cat: GS_CAT, part: 3, budget: 40, size: '0.4 m, hang at 2.6 m', night: true, opts: {},
+    make() { const g = new THREE.Group(); B(g, 0.16, 0.24, 0.04, PAL.iron, 0, 0, 0.02, NE);
+      B(g, 0.05, 0.05, 0.22, PAL.iron, 0, 0.1, 0.14, NE); B(g, 0.2, 0.26, 0.2, LAMP(), 0, -0.12, 0.3); B(g, 0.24, 0.05, 0.24, PAL.iron, 0, 0.14, 0.3, NE);
+      return g; } });
+
+  def({ key: 'gsWaterTank', name: 'Roof water tank', cat: GS_CAT, part: 3, budget: 70, size: '1.1 m across, 1.6 m tall on its stand',
+    opts: { colour: colours('Tank', ['#2f2b28', '#e8e2d4', '#3f7fbf']) },
+    make(o) { const g = new THREE.Group();
+      [[-0.45, -0.45], [0.45, -0.45], [-0.45, 0.45], [0.45, 0.45]].forEach(([x, z]) => B(g, 0.08, 0.4, 0.08, PAL.iron, x, 0, z, NE));
+      B(g, 1.1, 0.06, 1.1, PAL.iron, 0, 0.4, 0, NE);
+      const c = slot('colour', o.colour || '#2f2b28'); CYL(g, 0.55, 0.55, 1.0, 10, c, 0, 0.46, 0, { open: true }); CAP(g, 0.56, c, 0, 1.46, 0, NE);
+      CYL(g, 0.12, 0.12, 0.08, 6, c, 0, 1.62, 0, NE); return g; } });
+
+  def({ key: 'gsAcUnit', name: 'Wall AC unit', cat: GS_CAT, part: 3, budget: 50, size: '0.9 × 0.6 m, back on the wall', opts: {},
+    make() { const g = new THREE.Group(); B(g, 0.9, 0.6, 0.32, '#ece8de', 0, 0, 0.16);
+      put(g, geo('disc8', () => new THREE.CircleGeometry(1, 8)), '#5b5f66', 0.15, 0.3, 0.325, Object.assign({}, FLAT, { s: [0.22, 0.22, 1] }));
+      [[-0.35, -0.08], [0.35, -0.08]].forEach(([x]) => B(g, 0.05, 0.05, 0.36, '#9aa3a8', x, -0.05, 0.16, NE));   // wall brackets under it
+      return g; } });
+
+  def({ key: 'gsNewsStand', name: 'Newspaper stand', cat: GS_CAT, part: 3, budget: 220, size: '1.8 × 1.2 m, 2.6 m tall', opts: {},
+    make() { const g = new THREE.Group();
+      B(g, 1.8, 1.0, 1.2, '#2f7a68', 0, 0, 0); B(g, 1.9, 0.08, 1.3, PAL.sand, 0, 1.0, 0);
+      [-0.85, 0.85].forEach(x => B(g, 0.08, 1.4, 0.08, PAL.iron, x, 1.08, -0.55, NE));
+      B(g, 2.1, 0.12, 1.6, '#2f7a68', 0, 2.48, 0.05);                                     // roof
+      const cols = ['#f6f0e2', '#e8b830', '#c8603f', '#3f7fbf', '#f6f0e2', '#d88fb0'];
+      cols.forEach((c, i) => P(g, 0.22, 0.3, c, -0.6 + (i % 3) * 0.6, 1.25 + Math.floor(i / 3) * 0.42, -0.5, { edge: true }));
+      cols.slice(0, 4).forEach((c, i) => B(g, 0.32, 0.04, 0.24, c, -0.55 + i * 0.36, 1.08, 0.35, NE));   // papers on the counter
+      return g; } });
+
+  def({ key: 'gsBicycle', name: 'Bicycle', cat: GS_CAT, part: 3, budget: 200, size: '1.7 m long', opts: { colour: colours('Frame', ['#c8603f', '#3f7fbf', '#2f2b28', '#2f7a68']) },
+    make(o) { const g = new THREE.Group(), c = slot('colour', o.colour || '#c8603f');
+      // wheels stand on the ground, axle along x in WHEEL(), so turn the bike: it runs along x
+      const w = grp(g, 0, 0, 0, Math.PI / 2); WHEEL(w, 0.34, 0.05, 0, -0.6, 10); WHEEL(w, 0.34, 0.05, 0, 0.6, 10);
+      B(g, 1.05, 0.05, 0.05, c, 0, 0.62, 0, NE); B(g, 0.05, 0.38, 0.05, c, -0.2, 0.34, 0, { rz: 0.35, edge: false }); B(g, 0.05, 0.45, 0.05, c, 0.45, 0.36, 0, { rz: -0.3, edge: false });
+      B(g, 0.26, 0.06, 0.1, PAL.iron, -0.3, 0.88, 0, NE); B(g, 0.04, 0.26, 0.04, PAL.iron, -0.3, 0.62, 0, NE);   // seat
+      B(g, 0.05, 0.06, 0.5, PAL.iron, 0.52, 0.95, 0, NE); B(g, 0.04, 0.3, 0.04, PAL.iron, 0.5, 0.66, 0, NE);       // handlebar
+      return g; } });
+
+  def({ key: 'gsCycleStand', name: 'Cycle stand', cat: GS_CAT, part: 3, budget: 600, size: '3.6 m, 5 spaces', opts: {},
+    make() { const g = new THREE.Group();
+      for (let i = 0; i < 5; i++) { const x = -1.6 + i * 0.8; B(g, 0.06, 0.8, 0.06, PAL.iron, x, 0, -0.3, NE); B(g, 0.06, 0.8, 0.06, PAL.iron, x, 0, 0.3, NE); B(g, 0.06, 0.06, 0.66, PAL.iron, x, 0.8, 0, NE); }
+      [[-1.2, '#3f7fbf'], [0.4, '#c8603f']].forEach(([x, c]) => { const b = KIT.gsBicycle({ colour: c }); b.rotation.y = Math.PI / 2; b.position.x = x; g.add(b); });
+      return g; } });
+
+  def({ key: 'gsCafeTable', name: 'Cafe table + chairs', cat: GS_CAT, part: 3, budget: 200, size: '2.2 m across, umbrella 2.6 m',
+    opts: { umbrella: colours('Umbrella', ['#2f7a68', '#c8603f', '#e8b830', 'none']) },
+    make(o) { const g = new THREE.Group();
+      CYL(g, 0.06, 0.25, 0.08, 6, PAL.iron, 0, 0, 0, NE); B(g, 0.06, 0.8, 0.06, PAL.iron, 0, 0.08, 0, NE); CYL(g, 0.42, 0.42, 0.05, 10, PAL.white, 0, 0.88, 0);
+      [0, Math.PI].forEach(r => { const c = grp(g, Math.sin(r) * 0.75, 0, Math.cos(r) * 0.75, r);
+        [[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]].forEach(([x, z]) => B(c, 0.04, 0.5, 0.04, PAL.iron, x, 0, z, NE));
+        B(c, 0.46, 0.05, 0.46, PAL.wood, 0, 0.5, 0); B(c, 0.46, 0.45, 0.05, PAL.wood, 0, 0.55, 0.21); });
+      if (o.umbrella !== 'none') { B(g, 0.04, 1.7, 0.04, PAL.iron, 0, 0.93, 0, NE); CYL(g, 0.02, 1.2, 0.4, 8, slot('umbrella', o.umbrella || '#2f7a68'), 0, 2.4, 0, { open: true }); }
+      return g; } });
+
+  def({ key: 'gsCrates', name: 'Fruit crates', cat: GS_CAT, part: 3, budget: 150, size: '1.3 × 0.5 m', opts: {},
+    make() { const g = new THREE.Group();
+      [[-0.33, 0, '#e64a3a'], [0.33, 0, '#e8b830'], [0, 0.36, '#76a052']].forEach(([x, y, f]) => { B(g, 0.6, 0.34, 0.45, '#b98a5e', x, y, 0); B(g, 0.52, 0.04, 0.37, f, x, y + 0.32, 0, NE);
+        [-0.12, 0.12].forEach(dx => ICO(g, 0.07, 0, f, x + dx, y + 0.38, 0.05, NE)); });
+      return g; } });
+
+  def({ key: 'gsGatePath', name: 'Gate-to-door path', cat: GS_CAT, part: 3, budget: 40, size: '1.2 m wide, length to fit',
+    opts: { len: choices('Length', ['4', '2', '6', '8']) },
+    make(o) { const g = new THREE.Group(), L = +(o.len || 4);
+      for (let z = 0.35; z < L; z += 0.7) B(g, 1.0, 0.06, 0.55, '#cdbf9f', 0, 0, z - L / 2, { shadow: false, edge: z < 0.5 || z > L - 0.8 });   // flush stones from gate (+z) to door (-z)
+      return g; } });
+
+  def({ key: 'gsShutter', name: 'Shop shutter (closed)', cat: GS_CAT, part: 3, budget: 40, size: '3 × 2.8 m, on the shop front', opts: {},
+    make() { const g = new THREE.Group(); B(g, 3.2, 0.3, 0.3, '#8a9096', 0, 2.8, 0.15);
+      P(g, 3.0, 2.8, '#b9bec4', 0, 0, 0.06, { edge: true }); for (let y = 0.2; y < 2.8; y += 0.2) P(g, 3.0, 0.03, '#8a9096', 0, y, 0.07);
+      B(g, 0.3, 0.06, 0.06, PAL.iron, 0, 0.25, 0.08, NE); return g; } });
+
+  def({ key: 'gsStreetSign', name: 'Street name sign', cat: GS_CAT, part: 3, budget: 60, size: '2.8 m tall',
+    opts: { name: choices('Street', ['Market Road', 'Plaza Lane', 'Founders Walk']) },
+    make(o) { const g = new THREE.Group(), name = o.name || 'Market Road';
+      B(g, 0.08, 2.8, 0.08, PAL.iron, 0, 0, 0, NE);
+      const c = document.createElement('canvas'); c.width = 256; c.height = 64; const x = c.getContext('2d');
+      x.fillStyle = '#2f5f8a'; x.fillRect(0, 0, 256, 64); x.strokeStyle = '#f6f0e2'; x.lineWidth = 4; x.strokeRect(5, 5, 246, 54);
+      x.fillStyle = '#f6f0e2'; x.font = 'bold 30px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(name, 128, 34);
+      const m = toon('#ffffff'); m.map = new THREE.CanvasTexture(c); m.side = THREE.DoubleSide;
+      put(g, geo('pane', () => new THREE.PlaneGeometry(1, 1)), m, 0.65, 2.55, 0.05, Object.assign({}, FLAT, { s: [1.2, 0.3, 1] }));
+      B(g, 1.24, 0.34, 0.04, '#2f5f8a', 0.65, 2.38, 0, NE);
+      return g; } });
+
+  def({ key: 'gsPottedPlant', name: 'Potted plant', cat: GS_CAT, part: 3, budget: 50, size: '0.6 m pot', opts: { flower: choices('Flowers', ['no', 'yes']) },
+    make(o) { const g = new THREE.Group(); pot(g, 0, 0, 0, 1.2, o.flower === 'yes'); return g; } });
+
   KIT.tris = function (g) { let n = 0; g.traverse(o => { if (o.isMesh) { const ge = o.geometry; n += (ge.index ? ge.index.count : ge.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1); } }); return Math.round(n); };
   KIT.make = (key, o) => KIT[key](o);
   // passport portrait: the citizen's head and shoulders, straight on, on the passport's pale blue.
