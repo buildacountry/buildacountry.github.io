@@ -1,7 +1,14 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 <title>Life in Vinland</title>
-<!-- Life in Vinland runs inside the real 3D map (map/?life + map/life.js), so the game world is always exactly the map. -->
-<script>location.replace('../map/?life' + (location.search ? '&' + location.search.slice(1) : ''));</script>
-<style>body{margin:0;background:#8fbf62;font:600 16px system-ui,sans-serif;color:#14233f;display:grid;place-items:center;height:100vh}</style>
-</head><body><p>Opening Life in Vinland… <a href="../map/?life">Tap here</a> if nothing happens.</p></body></html>
+<!-- Life in Vinland runs inside the real 3D map (map/?life + map/life.js), so the game world is always exactly the map.
+     Laptops and PCs only for now (Dev, 24 Nov): phones get a short note instead of a laggy game. ?phone forces it, for tests. -->
+<script>
+var PHONE = matchMedia('(hover: none) and (pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches;
+if (!PHONE || /[?&]phone\b/.test(location.search)) location.replace('../map/?life' + (location.search ? '&' + location.search.slice(1) : ''));
+</script>
+<style>body{margin:0;background:#8fbf62;font:600 16px/1.5 Poppins,system-ui,sans-serif;color:#14233f;display:grid;place-items:center;min-height:100vh;padding:24px;box-sizing:border-box;text-align:center}
+.c{max-width:340px;background:#fff8ef;border-radius:18px;padding:22px 20px;box-shadow:0 6px 24px rgba(0,0,0,.18)}h1{font:800 22px/1.25 Poppins,system-ui,sans-serif;margin:6px 0 8px}
+a{display:inline-block;margin-top:16px;background:#c8553d;color:#fff;border-radius:999px;padding:10px 18px;text-decoration:none}</style>
+</head><body><div class="c"><div style="font-size:40px">💻</div><h1>Life in Vinland is on laptop and PC for now</h1>
+<p>Open this same link on a laptop or computer to walk Vinland, visit your home and meet other citizens. A phone version is coming.</p><a href="../map/">See the map</a></div></body></html>
