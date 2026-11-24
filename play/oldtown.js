@@ -119,13 +119,14 @@
       const ch = chunks.get(k.ck); ch.groups.push(grp); ch.tris += b.tris * k.mats.length; });
     // ---- houses: full kit house near you, the page's plain box house far away (same spot, same colours idea).
     //      Only the near houses keep their ink outlines; the outline mesh is rebuilt when you have walked a bit.
+    const USE_MAP_HOMES = !!window.VIN_HOMES;   // the map's own exported homes are drawn by the page instead
     const hg = K.make ? K.make('houseStarter', {}) : K.houseStarter({}), hb = K.bake(hg), htris = K.tris(hg), Q = new THREE.Quaternion(), UP = new THREE.Vector3(0, 1, 0), ONE = new THREE.Vector3(1, 1, 1);
     const hmats = plots.map(p => new THREE.Matrix4().compose(new THREE.Vector3(p.x, 0, p.z), Q.setFromAxisAngle(UP, p.ry).clone(), ONE));
-    const hgrp = K.instances(hb, hmats, i => plots[i].tint); const hline = hgrp.children.find(c => c.isLineSegments); hgrp.remove(hline); scene.add(hgrp);
+    const hgrp = K.instances(hb, USE_MAP_HOMES ? [] : hmats, i => plots[i].tint); const hline = hgrp.children.find(c => c.isLineSegments); hgrp.remove(hline); if (!USE_MAP_HOMES) scene.add(hgrp);
     const hmeshes = hgrp.children.filter(c => c.isInstancedMesh), hcols = hmeshes.map(m => m.instanceColor ? m.instanceColor.array.slice() : null);
     const lineMat = new THREE.LineBasicMaterial({ color: '#3a2a20', transparent: true, opacity: 0.55 }), hl = new THREE.LineSegments(new THREE.BufferGeometry(), lineMat); hl.frustumCulled = false; scene.add(hl);
-    calls += hmeshes.length + 1; tris += htris * plots.length;
-    function houses(px, pz, rad, onSwap) { const near = [], far = [], v = new THREE.Vector3(), Lb = hb.lines;
+    if (!USE_MAP_HOMES) { calls += hmeshes.length + 1; tris += htris * plots.length; }
+    function houses(px, pz, rad, onSwap) { if (USE_MAP_HOMES) return 0; const near = [], far = [], v = new THREE.Vector3(), Lb = hb.lines;
       plots.forEach((p, i) => (Math.hypot(p.x - px, p.z - pz) < rad ? near : far).push(i));
       hmeshes.forEach((m, k) => { const col = hcols[k]; near.forEach((i, n) => { m.setMatrixAt(n, hmats[i]); if (col) m.instanceColor.array.set(col.subarray(i * 3, i * 3 + 3), n * 3); });
         m.count = near.length; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });   // only near houses are drawn at all

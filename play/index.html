@@ -43,7 +43,7 @@ canvas#g{display:block;width:100vw;height:100vh}
 // built for phones: only what is near you is drawn, no big 3D map, a minimap instead.
 const load = s => new Promise((ok, no) => { const e = document.createElement('script'); e.src = s; e.onload = ok; e.onerror = no; document.head.appendChild(e); });
 (async () => {
-  await load('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'); await load('kit.js').catch(() => null); await load('oldtown.js').catch(() => null);
+  await load('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'); await load('kit.js').catch(() => null); await load('homes.js').catch(() => null); await load('oldtown.js').catch(() => null);
   start();
 })();
 function start() {
@@ -74,7 +74,7 @@ const HB = new THREE.InstancedMesh(new THREE.BoxGeometry(6.4, 4.4, 6.4).translat
 const roofG = new THREE.ConeGeometry(5.1, 2.6, 4).rotateY(Math.PI / 4).translate(0, 4.4 + 1.3, 0), HR = new THREE.InstancedMesh(roofG, new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: grad }), plots.length);
 const WALL = ['#f4e3c3', '#e9d0b0', '#f6efe2', '#dcc9e8', '#cfe3ef', '#f2d0c0', '#e2ecc9'], ROOF = ['#b5543e', '#7b5a46', '#3f5a7a', '#5f7d4a', '#a8463c'];
 const M4 = new THREE.Matrix4(), C = new THREE.Color();
-plots.forEach(([x, z], i) => { M4.makeTranslation(x, 0, z); HB.setMatrixAt(i, M4); HR.setMatrixAt(i, M4); HB.setColorAt(i, C.set(WALL[(i * 7) % WALL.length])); HR.setColorAt(i, C.set(ROOF[(i * 3) % ROOF.length])); solid.push([x - 3.4, z - 3.4, x + 3.4, z + 3.4]); });
+plots.forEach(([x, z], i) => { M4.makeTranslation(x, 0, z); HB.setMatrixAt(i, M4); HR.setMatrixAt(i, M4); HB.setColorAt(i, C.set(WALL[(i * 7) % WALL.length])); HR.setColorAt(i, C.set(ROOF[(i * 3) % ROOF.length])); if (!window.VIN_HOMES) solid.push([x - 3.4, z - 3.4, x + 3.4, z + 3.4]); });
 scene.add(HB, HR);
 // ---- Old Town (Life in Vinland step 1): real kit houses, shops, footpaths, lamps, poles and trees replace the plain blocks there
 const OT = window.OldTown && window.VinlandKit ? window.OldTown.build(scene, window.VinlandKit, D, S, solid) : null;
@@ -83,6 +83,28 @@ if (OT) { const Z = new THREE.Matrix4().makeScale(0, 0, 0), T4 = new THREE.Matri
   OT.swap = (idx, on) => { idx.forEach(i => { const [x, z] = plots[i]; const m = on ? Z : T4.makeTranslation(x, 0, z); HB.setMatrixAt(i, m); HR.setMatrixAt(i, m); }); HB.instanceMatrix.needsUpdate = HR.instanceMatrix.needsUpdate = true; };
   plots.forEach(([x, z], i) => { if (OT.inTown(x, z)) { HB.setMatrixAt(i, Z); HR.setMatrixAt(i, Z); } }); HB.instanceMatrix.needsUpdate = HR.instanceMatrix.needsUpdate = true; window.OT = OT;
   OT.rad = PHONE ? 90 : 150; OT.lastX = 1e9; OT.lastZ = 1e9; }
+// ---- HOMES: the very same home buildings as the 3D map (exported from it into homes.js by tools/export_game_homes.js),
+//      drawn only near you (full detail within MH.rad), so every district looks like the map and phones stay fast.
+const MH = { list: [], rad: PHONE ? 110 : 170, lastX: 1e9, lastZ: 1e9 };
+if (window.VIN_HOMES) { const UP = new THREE.Vector3(0, 1, 0), ink = new THREE.LineBasicMaterial({ color: '#3a2a20', transparent: true, opacity: 0.55 }), bb = new THREE.Box3();
+  HB.count = 0; HR.count = 0;   // no plain block houses any more
+  window.VIN_HOMES.tpls.forEach(t => {
+    const mats = t.inst.map(([x, z, ry, s]) => new THREE.Matrix4().compose(new THREE.Vector3(x, 0, z), new THREE.Quaternion().setFromAxisAngle(UP, ry), new THREE.Vector3(s, s, s)));
+    const parts = t.parts.map(pt => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pt.pos, 3)); g.computeVertexNormals(); g.computeBoundingBox(); bb.union(g.boundingBox);
+      const im = new THREE.InstancedMesh(g, new THREE.MeshToonMaterial({ color: '#ffffff', gradientMap: grad }), t.inst.length); im.setColorAt(0, new THREE.Color(pt.color)); im.count = 0; im.frustumCulled = false; scene.add(im);   // colour buffer exists before the first draw
+      return { im, col: pt.cols ? pt.cols.map(h => new THREE.Color(h)) : null, base: new THREE.Color(pt.color) }; });
+    const ls = new THREE.LineSegments(new THREE.BufferGeometry(), ink); ls.frustumCulled = false; scene.add(ls);
+    // you can't walk through a building: its footprint (a little smaller than its outline, so gardens stay walkable)
+    const g0 = parts.reduce((a, p) => a.union(p.im.geometry.boundingBox), new THREE.Box3()), hx = Math.min(g0.max.x, -g0.min.x) * 0.62, hz = Math.min(g0.max.z, -g0.min.z) * 0.62;
+    t.inst.forEach(([x, z, ry, s]) => { const swap = Math.abs(Math.sin(ry)) > 0.7, ax = (swap ? hz : hx) * s, az = (swap ? hx : hz) * s; solid.push([x - ax, z - az, x + ax, z + az]); });
+    MH.list.push({ t, mats, parts, ls, lines: Float32Array.from(t.lines) }); });
+  MH.near = (px, pz) => { const v = new THREE.Vector3(); let n = 0;
+    MH.list.forEach(h => { const idx = []; h.t.inst.forEach(([x, z], i) => { if (Math.abs(x - px) < MH.rad && Math.abs(z - pz) < MH.rad && Math.hypot(x - px, z - pz) < MH.rad) idx.push(i); });
+      h.parts.forEach(p => { idx.forEach((i, k) => { p.im.setMatrixAt(k, h.mats[i]); p.im.setColorAt(k, p.col ? p.col[i] : p.base); }); p.im.count = idx.length; p.im.instanceMatrix.needsUpdate = true; if (p.im.instanceColor) p.im.instanceColor.needsUpdate = true; });
+      const L = h.lines, arr = new Float32Array(L.length * idx.length);
+      idx.forEach((i, k) => { const m = h.mats[i]; for (let j = 0; j < L.length; j += 3) { v.set(L[j], L[j + 1], L[j + 2]).applyMatrix4(m); arr.set([v.x, v.y, v.z], k * L.length + j); } });
+      h.ls.geometry.dispose(); h.ls.geometry = new THREE.BufferGeometry(); h.ls.geometry.setAttribute('position', new THREE.BufferAttribute(arr, 3)); n += idx.length; });
+    return n; }; window.MH = MH; }
 // solid lookup on a 16 m grid so collision stays cheap
 const GRID = {}, gk = (a, b) => a + ',' + b; solid.forEach((s, i) => { for (let a = Math.floor(s[0] / 16); a <= Math.floor(s[2] / 16); a++) for (let b = Math.floor(s[1] / 16); b <= Math.floor(s[3] / 16); b++) (GRID[gk(a, b)] = GRID[gk(a, b)] || []).push(s); });
 const blocked = (x, z, r) => (GRID[gk(Math.floor(x / 16), Math.floor(z / 16))] || []).some(s => x > s[0] - r && x < s[2] + r && z > s[1] - r && z < s[3] + r);
@@ -179,6 +201,7 @@ else setTimeout(() => toast('Welcome to Vinland'), 600);
 // ---- the loop
 let last = performance.now(), mt = 0;
 function frame(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (MH.near && Math.hypot(P.x - MH.lastX, P.z - MH.lastZ) > 15) { MH.lastX = P.x; MH.lastZ = P.z; MH.count = MH.near(P.x, P.z); }
   if (OT && Math.hypot(P.x - OT.lastX, P.z - OT.lastZ) > 15) { OT.lastX = P.x; OT.lastZ = P.z; OT.visTris = OT.show(P.x, P.z, OT.rad, OT.swap); }
   let ix = J.x, iy = J.y; if (keys.a || keys.arrowleft) ix -= 1; if (keys.d || keys.arrowright) ix += 1; if (keys.w || keys.arrowup) iy -= 1; if (keys.s || keys.arrowdown) iy += 1;
   const mag = Math.min(1, Math.hypot(ix, iy)), wantRun = (running || keys.shift) && mag > 0.08 && P.stam > 0.02, run = wantRun ? 1.9 : 1, speed = 5.2 * run * mag;
