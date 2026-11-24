@@ -198,6 +198,7 @@ body { background: var(--sky); color: var(--ink); font-family: var(--body); over
 .lbl { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--card); color: var(--ink); border: 1px solid var(--line); }
 .lbl.open { background: rgba(200,96,63,.12); color: #7a2f18; border: 1px dashed var(--terracotta); }
 .lbl.place { background: var(--copper); color: #f4fbf8; border-color: var(--copper); }
+.lbl.place.isl { background: #1f8a8a; border-color: #1f8a8a; pointer-events: auto; cursor: pointer; }
 .lbl.sel { background: var(--terracotta); color: #fff8ef; border-color: var(--terracotta); z-index: 2; }
 .topbar { position: fixed; z-index: 8; top: env(safe-area-inset-top, 0px); left: 0; right: 0; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding-block: 14px;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); pointer-events: none; }
@@ -2478,12 +2479,16 @@ function selectHome(h) {
 const labelsEl = document.getElementById('labels');
 const flagLbl = document.createElement('div'); flagLbl.className = 'lbl place'; flagLbl.textContent = 'The first flag'; labelsEl.appendChild(flagLbl);
 const flagPos = new THREE.Vector3(0, 18, 0), vv = new THREE.Vector3();
+const islLbl = document.createElement('div'); islLbl.className = 'lbl place isl'; islLbl.textContent = '🏝️ Introvert Island'; labelsEl.appendChild(islLbl);   // (Dev, 24 Nov) a pill like the flag's; tap = the island's card
+islLbl.onclick = () => { track('island-pill'); flyTo(new THREE.Vector3(-1590, 0, -2310), new THREE.Vector3(0, 380, 520)); showKey('island'); };
+const islPos = new THREE.Vector3(-1590, 40, -2350);
 const hallLbl = document.createElement('div'); hallLbl.className = 'lbl place hall'; hallLbl.hidden = true; labelsEl.appendChild(hallLbl);
 const hallPos = new THREE.Vector3(8, 5.5, 15);
 function updateLabels() { vv.copy(hallPos).project(camera); const nearH = camera.position.length() < 150 && vv.z < 1 && Math.abs(vv.x) < 1 && Math.abs(vv.y) < 1;
   hallLbl.hidden = !nearH || !hallCard; if (!hallLbl.hidden) { hallLbl.textContent = PLAZA.on ? "Citizens' Plaza" : "Citizens' Hall · " + (hallStage >= 7 ? 'open' : HALL_STAGES[hallStage][1].toLowerCase()); hallLbl.style.left = ((vv.x + 1) / 2 * wrap.clientWidth) + 'px'; hallLbl.style.top = ((1 - vv.y) / 2 * wrap.clientHeight) + 'px'; }
   flagPos.set(flagG.position.x, flagG.position.y + 18 * flagG.scale.y, flagG.position.z); vv.copy(flagPos).project(camera); const on = vv.z < 1 && Math.abs(vv.x) < 1 && Math.abs(vv.y) < 1;
   flagLbl.hidden = !on; if (on) { flagLbl.style.left = ((vv.x + 1) / 2 * wrap.clientWidth) + 'px'; flagLbl.style.top = ((1 - vv.y) / 2 * wrap.clientHeight) + 'px'; }
+  { vv.copy(islPos).project(camera); const io = vv.z < 1 && Math.abs(vv.x) < 1 && Math.abs(vv.y) < 1; islLbl.hidden = !io; if (io) { islLbl.style.left = ((vv.x + 1) / 2 * wrap.clientWidth) + 'px'; islLbl.style.top = ((1 - vv.y) / 2 * wrap.clientHeight) + 'px'; } }
   const W = wrap.clientWidth, H = wrap.clientHeight;
   const cardH = narrow && !card.hidden ? card.offsetHeight : 0;
   homes.forEach(h => { const sel = h === selected; const d = camera.position.distanceTo(h.lp);
@@ -2530,8 +2535,8 @@ const CONTENT = {
     `<p class="p">No one has built anything by the sea yet.</p>`],
   nap: ['Nap Valley', 'A sleepy green valley in the hills',
     `<p class="p">Lavender fields, hammocks in the trees, sheep and a windmill. The Dream Lodge is the only building so far. Homes come when the first nappers move in.</p>`],
-  island: ['Introvert Island', 'A quiet island out at sea',
-    `<p class="p">Palm jungle, a sandy bay and a shallow lagoon, a lighthouse and two jetties. A second home for citizens who bring friends.</p><p class="p">How to get one: 3 new friends follow @buildacountry and comment <b>HOME @yourname</b>. Then a cottage here is yours.</p>`],
+  island: ['Introvert Island', 'A quiet second home out at sea',
+    `<p class="p">Palm jungle, a sandy bay with a shallow lagoon, a lighthouse, two jetties and the Island Hall. 200 cottages hidden in the trees, far from the busy city.</p><p class="p"><b>How to get a cottage here:</b> bring 3 new friends to Vinland. Each friend follows @buildacountry and comments <b>HOME @yourname</b> on any post. When your 3rd friend joins, the next island cottage is yours, and your friends show up as Best friends on your passport.</p>`],
   sea: ['The sea', 'The edge of our country',
     `<p class="p">For now, the land ends here. It grows as the country grows.</p>`],
 
