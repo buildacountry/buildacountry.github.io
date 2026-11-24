@@ -725,114 +725,109 @@
     return g;
   }
 
-  // ---------- ISLAND PIONEERS v2 (Dev, 24 Nov, his picture): 6 islands round Introvert Island + tiny decoration islets ----------
-  // Each island is a long oval (~400 x 190 m) that bends round the big island, with sand, two looping paths, cottages in rows along
-  // the loops (doors on the path), a hall on a little plaza in the middle, a jetty toward the big island, a lighthouse on two of them.
-  // Positions are in the big island's frame. ~170 homes each (1,000+ in all); a cottage appears only when someone lives there
-  // (o.filled = islet homes taken, counted from the first island). Spots use their own dice, so they never change with phone/desktop.
+  // ---------- WILD ISLANDS (Dev, 24 Nov late: "naturally formed, no homes yet, just 1 or 2 extra islands") ----------
+  // Built the way real island groups look (Phi Phi, Bora Bora's motus, the Maldives, El Nido):
+  //  · a clear size step down from the main island: one medium island (~260 m), one small one (~140 m), then a few tiny bits;
+  //  · they cluster near the main island's tips (same reef line), not in a ring;
+  //  · coasts from noise (coves, headlands), never ovals: the medium island has a jungle hill, a rocky cliff on the open-sea side
+  //    and its beach on the sheltered side, plus a sand spit trailing off its end; the small one is low with palms and a rocky knob;
+  //  · two tiny sandy cays joined by a sandbar just above the water, and a few sea stacks (bare rock + a bush);
+  //  · each sits on a turquoise shelf that fades into the sea, with deeper water between them and the big island.
+  // No homes, no jetties: nature only. Positions are in the big island's frame (same origin). userData.spots = [] for now.
   function islets(o = {}) {
-    const r = rng(o.seed || 7070), g = new T.Group(), fast = !!o.fast, B = Batch(), TR = [], filled = Math.max(0, o.filled || 0);
-    // centre, half length a, half width b, bend (tips curve toward the big island), lighthouse
-    const ISL = [[0, -570, 225, 94, 0.13, 0], [-640, -340, 215, 92, 0.12, 1], [640, -340, 215, 92, 0.12, 0], [-720, 240, 215, 94, 0.11, 0], [720, 240, 215, 94, 0.11, 1], [0, 720, 225, 94, 0.12, 0]]
-      .map(([x, z, a, b, k, lh]) => { const m = Math.atan2(-x, 30 - z); return { x, z, a, b, k, lh, m }; });   // m: direction from the island to the big one
-    const spots = [], SAND = 13;
-    ISL.forEach((I, ii) => {
-      const cm = Math.cos(I.m), sm = Math.sin(I.m);
-      // local frame: v points away from the big island, u along the island
-      const toW = (u, v) => [I.x - Math.sin(I.m) * v + Math.cos(I.m) * u, I.z - Math.cos(I.m) * v - Math.sin(I.m) * u];
-      const toL = (x, z) => { const dx = x - I.x, dz = z - I.z; return [dx * cm - dz * sm, -(dx * sm + dz * cm)]; };
-      const bend = u => -I.k * u * u / I.a;                                                      // tips pulled toward the big island
-      const wob = (u, v) => 3 * Math.sin(u * 0.045 + ii) + 2 * Math.cos(v * 0.07 + u * 0.02 + ii * 2);
-      const rho = (x, z) => { const [u, v] = toL(x, z); return Math.hypot(u / I.a, (v - bend(u)) / I.b); };
-      const dist = (x, z) => { const [u, v] = toL(x, z); return (1 - Math.hypot(u / I.a, (v - bend(u)) / I.b)) * I.b + wob(u, v); };   // ~metres inland
-      const P = (rh, t) => { const u = Math.cos(t) * I.a * rh, v = Math.sin(t) * I.b * rh + bend(u); return toW(u, v); };   // a point on the oval at size rh
-      const hRaw = (x, z) => { const d = dist(x, z); if (d < 0) return Math.max(-3, 0.1 + d * 0.06); if (d < SAND) return 0.9 + 0.9 * d / SAND; return 1.8 + 2.2 * Math.min(1, (d - SAND) / 50); };
-      // ---- plan: two loop paths, cottage rows on both sides of each, hall plaza in the middle, jetty on the big-island side ----
-      const LOOPS = [0.72, 0.36], ROWS = [[0.84, 0], [0.60, 0], [0.48, 1], [0.24, 1]];     // [size, which loop it faces]
-      const rh = rng(7070 + ii * 97 + 1), homes = [];
-      const jt = Math.atan2(-1, 0) + 0.0;                                                       // the side facing the big island (v < 0)
-      ROWS.forEach(([rr, li]) => { const L = LOOPS[li], N = 720; let last = null, acc = 0;
-        for (let i = 0; i <= N; i++) { const t = i / N * Math.PI * 2, [x, z] = P(rr, t);
-          if (last) acc += Math.hypot(x - last[0], z - last[1]); last = [x, z];
-          if (acc < 11.5) continue; acc = 0;
-          if (Math.abs(Math.atan2(Math.sin(t - jt), Math.cos(t - jt))) < (rr > 0.5 ? 0.16 : 0.3)) continue;   // gap for the path from the jetty to the hall
-          const [px, pz] = P(L, t), ry = Math.atan2(px - x, pz - z) + (rh() - 0.5) * 0.12;     // the door faces its loop path
-          homes.push({ x, z, ry, rr, t }); } });
-      homes.forEach((p, k) => { p.y = hRaw(p.x, p.z) + 0.1; p.type = (spots.length + k) % 5 === 2 ? 'a' : (spots.length + k) % 5 === 4 ? 'c' : 'l';
-        const fwd = p.type === 'a' ? 8 : p.type === 'c' ? 6.5 : 7; p.door = { x: p.x + Math.sin(p.ry) * fwd, z: p.z + Math.cos(p.ry) * fwd }; });
-      const [jx0, jz0] = P(1.0, jt), JT = { x: jx0, z: jz0 }; JT.ry = Math.atan2(JT.x - I.x, JT.z - I.z);
-      // fill order: the outer row near the jetty first, then round the island, then the inner rows
-      homes.sort((p, q) => (p.rr < 0.55) - (q.rr < 0.55) || Math.hypot(p.x - JT.x, p.z - JT.z) - Math.hypot(q.x - JT.x, q.z - JT.z));
-      const first = spots.length; homes.forEach(p => spots.push(p)); const mine = homes.filter((p, k) => first + k < filled);
-      const HALL = { x: I.x, z: I.z, y: hRaw(I.x, I.z) };
-      const PADS = homes.map(p => ({ x: p.x, z: p.z, y: p.y, r0: 6, r1: 9 })).concat([{ x: HALL.x, z: HALL.z, y: HALL.y, r0: 16, r1: 24 }]);
-      const sstep = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
-      const h = (x, z) => { let y = hRaw(x, z); for (const p of PADS) { const q = Math.hypot(x - p.x, z - p.z); if (q < p.r1) { const kk = sstep((q - p.r0) / (p.r1 - p.r0)); y = p.y + (y - p.y) * kk; } } return y; };
-      // ---- ground: an oval mesh in rings (water edge -> centre), vertex colours ----
-      { const RS = fast ? [1.35, 1.12, 1.03, 0.97, 0.9, 0.8, 0.66, 0.5, 0.3, 0.12, 0] : [1.35, 1.2, 1.1, 1.04, 1.0, 0.96, 0.92, 0.86, 0.78, 0.68, 0.56, 0.44, 0.3, 0.16, 0.06, 0], SN = fast ? 64 : 96, pos = [], col = [];
-        const SA = new T.Color('#f0dca6'), WET = new T.Color('#d9bf86'), GR = [new T.Color('#6f9a45'), new T.Color('#79a64c'), new T.Color('#668f40')];
-        const v = (j, i) => { const [x, z] = P(RS[j], i / SN * Math.PI * 2), d = dist(x, z); return [x, h(x, z), z, d < 0 ? WET : d < SAND ? SA : GR[(i + j) % 3]]; };
-        for (let j = 0; j < RS.length - 1; j++) for (let i = 0; i < SN; i++) { const q = [v(j, i), v(j, i + 1), v(j + 1, i), v(j + 1, i + 1)];
-          [0, 1, 2, 1, 3, 2].forEach(n => { pos.push(q[n][0], q[n][1], q[n][2]); col.push(q[n][3].r, q[n][3].g, q[n][3].b); }); }
-        const G = new T.BufferGeometry(); G.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); G.setAttribute('color', new T.Float32BufferAttribute(col, 3)); G.computeVertexNormals();
-        const m = new T.Mesh(G, new T.MeshLambertMaterial({ vertexColors: true, flatShading: true })); m.receiveShadow = true; g.add(m);
-        // the shallows: a pale turquoise band from the beach out ~45 m
-        const sp = [], sc = [], cA = new T.Color('#b8efe6'), cB = new T.Color('#62d0d8'), SR = [0.97, 1.06, 1.15, 1.24];
-        const w = (j, i) => { const [x, z] = P(SR[j], i / SN * Math.PI * 2), c = j < 2 ? cA : cB.clone().lerp(new T.Color('#4fbfd0'), j - 2); return [x, 0.6, z, c]; };
-        for (let j = 0; j < SR.length - 1; j++) for (let i = 0; i < SN; i++) { const q = [w(j, i), w(j, i + 1), w(j + 1, i), w(j + 1, i + 1)];
-          [0, 2, 1, 1, 2, 3].forEach(n => { sp.push(q[n][0], q[n][1], q[n][2]); sc.push(q[n][3].r, q[n][3].g, q[n][3].b); }); }
-        const G2 = new T.BufferGeometry(); G2.setAttribute('position', new T.Float32BufferAttribute(sp, 3)); G2.setAttribute('color', new T.Float32BufferAttribute(sc, 3)); G2.computeVertexNormals();
-        g.add(new T.Mesh(G2, new T.MeshLambertMaterial({ vertexColors: true, side: T.DoubleSide }))); }
-      // ---- paths: the two loops + one straight path jetty -> hall (sandy, 2.4 m), drawn even before anyone moves in ----
-      const PATHPTS = [], pos = [], strip = pts => { for (let i = 0; i < pts.length - 1; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1], l = Math.hypot(bx - ax, bz - az) || 1, ox = -(bz - az) / l * 1.2, oz = (bx - ax) / l * 1.2;
-          const q = [[ax + ox, az + oz], [ax - ox, az - oz], [bx + ox, bz + oz], [bx - ox, bz - oz]].map(([x, z]) => [x, h(x, z) + 0.12, z]); pos.push(...q[0], ...q[2], ...q[1], ...q[1], ...q[2], ...q[3]); PATHPTS.push({ x: ax, y: az }); } };
-      LOOPS.forEach(L => { const pts = []; for (let i = 0; i <= 160; i++) pts.push(P(L, i / 160 * Math.PI * 2)); strip(pts); });
-      { const pts = []; for (let i = 0; i <= 40; i++) pts.push(P(0.96 * (1 - i / 40) + 0.08 * (i / 40), jt)); strip(pts); }
-      // short garden paths from each taken cottage's door to its loop
-      mine.forEach(p => { const L = LOOPS[p.rr > 0.55 ? 0 : 1], [px, pz] = P(L, p.t); strip([[p.door.x, p.door.z], [px, pz]]); });
-      { const G = new T.BufferGeometry(); G.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); B.add(G, '#e3cf9c', null); }
-      // ---- cottages (only the taken ones) ----
-      mine.forEach(p => { const base = at(p.x, p.y, p.z, p.ry), b2 = at(p.x, p.y + 0.2, p.z, p.ry);
-        if (p.type === 'c') { cottage(B, base, r, true); return; }
-        box(B, '#a39a8c', base, p.type === 'a' ? 8 : 7.8, 1.2, p.type === 'a' ? 8.6 : 6.8, 0, -1.0, p.type === 'a' ? 0 : -0.2);
-        if (p.type === 'a') aFrame(B, b2, r); else logCabin(B, b2, r, fast);
-        box(B, '#a39a8c', base, 2.0, 0.12, 0.7, 0, 0, p.type === 'a' ? 6.75 : 5.55); });
-      // ---- the hall on its plaza (12 x 9 m, faces the jetty) ----
-      { const ry = Math.atan2(JT.x - HALL.x, JT.z - HALL.z), hb = at(HALL.x, HALL.y, HALL.z, ry);
-        B.add(new T.CircleGeometry(15, 24).rotateX(-Math.PI / 2), '#e3cf9c', null, HALL.x, HALL.y + 0.06, HALL.z);
-        box(B, '#a39a8c', hb, 13, 1.2, 10, 0, -0.9, 0); box(B, ['#b5774a', '#e6d8b8', '#c98f5a'][ii % 3], hb, 12, 5, 9, 0, 0.3, 0);
-        B.add(prismGeo(9.6, 3.6, 13.4), ['#8a6a3a', '#c8603f', '#6e5230'][ii % 3], hb, 0, 5.3, 0, 1, 1, 1, 0, Math.PI / 2, 0);
-        box(B, '#5a3a24', hb, 2.2, 2.6, 0.12, 0, 0.3, 4.56); [-3.4, 3.4].forEach(x => box(B, 'glow', hb, 1.4, 1.4, 0.12, x, 1.6, 4.56)); box(B, '#a39a8c', hb, 3.2, 0.25, 1.0, 0, 0, 5.0); }
-      // ---- jetty (3 m deck on posts) + 2 rowboats ----
-      { const L = 26, base = at(JT.x - Math.sin(JT.ry) * 6, 0, JT.z - Math.cos(JT.ry) * 6, JT.ry);
-        box(B, '#b08055', base, 3, 0.25, L, 0, 1.3, L / 2); for (let z = 2; z <= L; z += 4) [-1.35, 1.35].forEach(x => box(B, '#7a5236', base, 0.3, 4.5, 0.3, x, -3, z));
-        [[3.2, L * 0.65, 0.1], [-3.2, L * 0.85, -0.15]].forEach(([x, z, rr], kk) => { const bb = base.clone().multiply(at(x, 0, z, rr)); box(B, ['#f6f0e2', '#3f6fa8', '#c8603f'][(ii + kk) % 3], bb, 1.6, 0.8, 4.6, 0, 0.3, 0); box(B, '#b08055', bb, 1.4, 0.08, 4.2, 0, 1.05, 0); }); }
-      // ---- lighthouse on the far tip (two islands) ----
-      if (I.lh) { const [lx, lz] = P(0.9, Math.PI + 0.05), Y = h(lx, lz); box(B, '#8f877b', null, 7, 1.6, 7, lx, Y - 1.2, lz);
-        B.add(new T.CylinderGeometry(1.6, 2.2, 11, 12).translate(0, 5.5, 0), '#f6f0e2', null, lx, Y + 0.4, lz);
-        [3.5, 7.5].forEach(y => B.add(new T.CylinderGeometry(2.0 - y * 0.05, 2.05 - y * 0.05, 1.0, 12).translate(0, 0.5, 0), '#c8603f', null, lx, Y + 0.4 + y - 0.5, lz));
-        B.add(new T.CylinderGeometry(2.2, 2.2, 0.3, 12), '#2f2b28', null, lx, Y + 11.5, lz); B.add(new T.CylinderGeometry(1.1, 1.1, 1.6, 10).translate(0, 0.8, 0), 'glow', null, lx, Y + 11.7, lz);
-        B.add(new T.ConeGeometry(1.6, 1.4, 12).translate(0, 0.7, 0), '#c8603f', null, lx, Y + 13.3, lz); }
-      // ---- trees: palms on the beach edge, round trees in the gardens, clear of homes, paths, hall ----
-      const near = (x, z) => homes.some(p => Math.hypot(x - p.x, z - p.z) < 8.5) || Math.hypot(x - HALL.x, z - HALL.z) < 20 || PATHPTS.some(p => Math.hypot(p.x - x, p.y - z) < 3);
-      const step = fast ? 10 : 7;
-      for (let u = -I.a; u < I.a; u += step) for (let v = -I.b - 40; v < I.b + 40; v += step) { const [x, z] = toW(u + (r() - 0.5) * step, v + (r() - 0.5) * step), d = dist(x, z);
-        if (d < SAND - 5 || near(x, z)) continue; const edge = d < SAND + 5; if (!edge && r() < 0.45) continue; const y = h(x, z) - 0.3;
-        if (edge || r() < 0.3) { const out = Math.atan2(x - I.x, z - I.z); TR.push({ k: 'palm', x, z, y, r: r() * 6, s: 0.8 + r() * 0.4, c: (r() * 9) | 0, lx: edge ? Math.cos(out) * 0.16 : 0, lz: edge ? -Math.sin(out) * 0.16 : 0 }); }
-        else TR.push({ k: 'bush', x, z, y, r: r() * 6, s: 0.8 + r() * 0.6, c: (r() * 9) | 0 }); }
-      // ---- tiny decoration islets near the tips: sand, a rock, a palm or two ----
-      [[1.22, 0.25], [1.2, Math.PI - 0.3], [1.35, Math.PI * 1.5 + 0.6]].forEach(([rr, t], kk) => { const [x, z] = P(rr, t), R = 7 + ((ii + kk) % 3) * 4;
-        B.add(new T.CylinderGeometry(R * 0.75, R, 1.6, 12).translate(0, -0.1, 0), '#f0dca6', null, x, 0, z);
-        B.add(new T.CylinderGeometry(R * 0.5, R * 0.75, 0.6, 12).translate(0, 1.5, 0), '#79a64c', null, x, 0, z);
-        B.add(new T.DodecahedronGeometry(R * 0.35, 0), '#8f877b', null, x + R * 0.3, 1.4, z - R * 0.2);
-        for (let q = 0; q < 1 + (kk % 2); q++) TR.push({ k: 'palm', x: x - R * 0.2 + q * 3, z: z + R * 0.2, y: 1.5, r: r() * 6, s: 0.75, c: (r() * 9) | 0, lx: 0.12, lz: -0.08 }); });
-    });
-    // a few small sailboats out on the water
-    for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2 + 0.3, R = 470 + (i % 3) * 140, x = Math.sin(a) * R, z = 30 - Math.cos(a) * R, bb = at(x, 0.2, z, a);
-      box(B, '#f6f0e2', bb, 1.8, 0.8, 5.2, 0, 0, 0); box(B, '#7a5236', bb, 0.15, 7, 0.15, 0, 0.8, 0.4);
-      const sail = new T.BufferGeometry(); sail.setAttribute('position', new T.Float32BufferAttribute([0, 1.4, 0.6, 0, 7.4, 0.6, 0, 1.4, -2.4, 0, 1.4, -2.4, 0, 7.4, 0.6, 0, 1.4, 0.6], 3)); B.add(sail, '#ffffff', bb); }
+    const fast = !!o.fast, g = new T.Group(), B = Batch(), TR = [], r = rng(o.seed || 4242);
+    const hsh = (i, j, s) => { let h = Math.imul(i, 374761393) ^ Math.imul(j, 668265263) ^ Math.imul(s, 1442695041); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+    const vn = (x, z, s) => { const i = Math.floor(x), j = Math.floor(z), fx = x - i, fz = z - j, ux = fx * fx * (3 - 2 * fx), uz = fz * fz * (3 - 2 * fz);
+      const a = hsh(i, j, s), b = hsh(i + 1, j, s), c = hsh(i, j + 1, s), d = hsh(i + 1, j + 1, s); return (a + (b - a) * ux + (c - a) * uz + (a - b - c + d) * ux * uz) * 2 - 1; };
+    const fbm = (x, z, s) => vn(x, z, s) * 0.55 + vn(x * 2.07, z * 2.07, s + 7) * 0.27 + vn(x * 4.3, z * 4.3, s + 13) * 0.12 + vn(x * 8.9, z * 8.9, s + 29) * 0.06;
+    const sst = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+    // kind: 'hill' (jungle hill + sea cliff), 'low' (palms, a rocky knob), 'cay' (sand + a palm or two)
+    // a / b: half length / half width, rot: long axis (radians from +x toward +z), sea: the open-sea side, H: hill height (m)
+    const ISL = [
+      { kind: 'hill', x: 462, z: 34, a: 132, b: 64, rot: 1.40, H: 11, sea: [1, -0.25], s: 11, cove: [404, 44, 34] },   // a sandy cove on the sheltered side
+      { kind: 'low', x: -330, z: 320, a: 86, b: 48, rot: 0.62, H: 3.6, sea: [-0.6, 0.8], s: 23 },
+      { kind: 'cay', x: -202, z: 432, a: 23, b: 13, rot: 0.35, H: 0, s: 37 },
+      { kind: 'cay', x: -134, z: 462, a: 14, b: 9, rot: 0.15, H: 0, s: 41 } ];
+    ISL.forEach(I => { I.sea = I.sea || [1, 0]; const n = Math.hypot(I.sea[0], I.sea[1]); I.c = Math.cos(I.rot); I.sn = Math.sin(I.rot); I.sx = I.sea[0] / n; I.sz = I.sea[1] / n; I.far = Math.max(I.a, I.b) * 1.6 + 90; });
+    const BARS = [[-184, 438, -144, 457, 5.5], [-268, 372, -214, 424, 4.5], [478, 150, 452, 206, 6.5]];   // sandbars (x0, z0, x1, z1, half width): cay-cay, small island-cay, the spit
+    const STACKS = [[500, -150, 9, 14], [527, -121, 6, 9], [-154, -338, 7, 8], [-372, 262, 5, 6]];       // sea stacks: x, z, radius, height
+    const dIsl = (I, x, z) => { const dx = x - I.x, dz = z - I.z, R0 = Math.hypot(dx, dz); if (R0 > I.far) return I.a - R0;
+      const wx = dx + fbm(x / 70, z / 70, I.s) * I.b * 0.5, wz = dz + fbm(x / 70 + 31, z / 70 - 17, I.s + 3) * I.b * 0.5;   // the outline wanders: coves + headlands
+      const u = wx * I.c + wz * I.sn, v = -wx * I.sn + wz * I.c;
+      let d = (1 - Math.hypot(u / I.a, v / I.b)) * I.b + fbm(x / 22, z / 22, I.s + 5) * Math.min(5, I.b * 0.12);
+      if (I.cove) { const e = Math.hypot(x - I.cove[0], z - I.cove[1]) - I.cove[2], kk = 18, hh = Math.max(kk - Math.abs(d - e), 0) / kk; d = Math.min(d, e) - hh * hh * kk / 4; }   // smooth bite = a bay
+      return d; };
+    const dBar = ([x0, z0, x1, z1, w], x, z) => { const px = x - x0, pz = z - z0, bx = x1 - x0, bz = z1 - z0, t = Math.max(0, Math.min(1, (px * bx + pz * bz) / (bx * bx + bz * bz)));
+      return w * (1 - 0.35 * Math.sin(t * Math.PI) * 0) - Math.hypot(px - bx * t, pz - bz * t) + fbm(x / 14, z / 14, 99) * 1.6; };
+    const at2 = (x, z) => { let L = -1e9, I = null; for (const J of ISL) { const d = dIsl(J, x, z); if (d > L) { L = d; I = J; } }
+      let bar = -1e9; for (const b of BARS) bar = Math.max(bar, dBar(b, x, z));
+      let y, t, cl = 0;                                                                                  // t: 0 water, 1 sand, 2 green
+      if (L < 0) { y = L > -6.7 ? 0.9 + L * 0.12 : 0.1 + Math.max(L + 6.7, -50) * 0.06; t = 0; }   // the beach slopes on under the water: a smooth waterline, no steps
+      else { const dx = x - I.x, dz = z - I.z; cl = I.kind === 'hill' ? sst(((dx * I.sx + dz * I.sz) / I.b - 0.25) / 0.6) : 0;   // 0 sheltered side .. 1 open-sea side (smooth, no kink at the centre)
+        const sw = I.kind === 'cay' ? 1e9 : 14 - 11 * cl;
+        if (L < sw) { y = 0.9 + 0.5 * Math.min(1, L / Math.min(sw, 12)); t = 1; }
+        else { const k = L - sw; y = 1.4 + I.H * sst(k / (I.b * 0.85 * (1 - cl) + 13 * cl)) + fbm(x / 30, z / 30, I.s + 9) * 0.7 * Math.min(1, k / 8); t = 2; } }   // sea side: the hill rises in ~13 m = a rock cliff
+      const yb = bar < 0 ? 0.78 + Math.max(bar, -8) * 0.12 : 0.78 + Math.min(0.32, bar * 0.07); if (yb > y) { y = yb; t = bar < 0 ? 0 : 1; L = Math.max(L, bar); }
+      return { y, t, L: Math.max(L, bar), I, cl }; };
+    const shelfD = (x, z) => { let d = at2(x, z).L; for (const [sx, sz, sr] of STACKS) d = Math.max(d, (sr - Math.hypot(x - sx, z - sz)) * 3.3); return d; };   // stacks: only a small pale ring
+    // ---- the ground: one grid over all the islands, only cells near land are kept ----
+    const CELL = fast ? 5 : 3, SHELF = 46;
+    let X0 = 1e9, X1 = -1e9, Z0 = 1e9, Z1 = -1e9;
+    ISL.forEach(I => { const m = I.a + SHELF + 20; X0 = Math.min(X0, I.x - m); X1 = Math.max(X1, I.x + m); Z0 = Math.min(Z0, I.z - m); Z1 = Math.max(Z1, I.z + m); });
+    STACKS.forEach(([x, z]) => { X0 = Math.min(X0, x - 70); X1 = Math.max(X1, x + 70); Z0 = Math.min(Z0, z - 70); Z1 = Math.max(Z1, z + 70); });
+    X0 = Math.floor(X0 / CELL) * CELL; Z0 = Math.floor(Z0 / CELL) * CELL; const NX = Math.ceil((X1 - X0) / CELL), NZ = Math.ceil((Z1 - Z0) / CELL);
+    // the big island's own outline (same formula as introvertIsland5) so our shelf stays off its lagoon sheet
+    const mainD = (x, z) => { const k = 50, a = 300 - Math.hypot(x, z * 1.25), b = Math.hypot(x, z - 270) - 205, hh = Math.max(k - Math.abs(a - b), 0) / k;
+      return Math.min(a, b) - hh * hh * k / 4 + 5 * Math.sin(x * 0.021 + 0.4) * Math.cos(z * 0.017) + 3 * Math.sin(x * 0.05 + z * 0.04); };
+    const GY = new Float32Array((NX + 1) * (NZ + 1)), GT = new Uint8Array(GY.length), GL = new Float32Array(GY.length), GC = new Float32Array(GY.length), GS = new Float32Array(GY.length);
+    for (let j = 0; j <= NZ; j++) for (let i = 0; i <= NX; i++) { const x = X0 + i * CELL, z = Z0 + j * CELL, k = j * (NX + 1) + i, P = at2(x, z);
+      GY[k] = P.y; GT[k] = P.t; GL[k] = P.L; GC[k] = P.cl; let d = P.L; for (const [sx, sz, sr] of STACKS) d = Math.max(d, (sr - Math.hypot(x - sx, z - sz)) * 3.3); GS[k] = d + fbm(x / 40, z / 40, 77) * 7; }
+    const id = (i, j) => j * (NX + 1) + i;
+    { const SAND = new T.Color('#f0dca6'), SAND2 = new T.Color('#e8cf92'), WET = new T.Color('#d9bf86'), GR = [new T.Color('#6f9a45'), new T.Color('#79a64c'), new T.Color('#668f40')], ROCK = new T.Color('#8f877b'), ROCK2 = new T.Color('#7d756a');
+      const col = k => { const i = k % (NX + 1), j = (k / (NX + 1)) | 0;
+        if (GT[k] === 0) return WET; if (GT[k] === 1) return (i + j) % 4 ? SAND : SAND2;
+        const sl = Math.max(Math.abs(GY[id(Math.min(i + 1, NX), j)] - GY[id(Math.max(i - 1, 0), j)]), Math.abs(GY[id(i, Math.min(j + 1, NZ))] - GY[id(i, Math.max(j - 1, 0))])) / (2 * CELL);
+        return sl > 0.42 ? ((i * 7 + j * 3) % 3 ? ROCK : ROCK2) : GR[(Math.floor(i / 2) * 7 + Math.floor(j / 2) * 3 & 7) % 3]; };
+      const pos = [], cc = [];
+      for (let j = 0; j < NZ; j++) for (let i = 0; i < NX; i++) { const q = [id(i, j), id(i + 1, j), id(i, j + 1), id(i + 1, j + 1)]; if (Math.max(GL[q[0]], GL[q[1]], GL[q[2]], GL[q[3]]) < -3) continue;
+        [0, 2, 1, 1, 2, 3].forEach(n => { const k = q[n], x = X0 + (k % (NX + 1)) * CELL, z = Z0 + ((k / (NX + 1)) | 0) * CELL, c = col(k); pos.push(x, GY[k], z); cc.push(c.r, c.g, c.b); }); }
+      const G = new T.BufferGeometry(); G.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); G.setAttribute('color', new T.Float32BufferAttribute(cc, 3)); G.computeVertexNormals();
+      const m = new T.Mesh(G, new T.MeshLambertMaterial({ vertexColors: true, flatShading: true })); m.receiveShadow = true; g.add(m); }
+    // ---- the shelf: pale turquoise at the sand, deeper turquoise, then the sea's own colour at the edge (no hard line) ----
+    { const cA = new T.Color('#b8efe6'), cB = new T.Color('#62d0d8'), cC = new T.Color('#3fb2cc'), SEA = new T.Color('#3f9cc2'), tmp = new T.Color();
+      const col = d => { const f = Math.max(0, -d) / SHELF; return f < 0.35 ? tmp.copy(cA).lerp(cB, f / 0.35) : f < 0.75 ? tmp.copy(cB).lerp(cC, (f - 0.35) / 0.4) : tmp.copy(cC).lerp(SEA, Math.min(1, (f - 0.75) / 0.25)); };
+      const pos = [], cc = [];
+      for (let j = 0; j < NZ; j++) for (let i = 0; i < NX; i++) { const q = [id(i, j), id(i + 1, j), id(i, j + 1), id(i + 1, j + 1)];
+        if (Math.max(GS[q[0]], GS[q[1]], GS[q[2]], GS[q[3]]) < -SHELF) continue;
+        const xm = X0 + (i + 0.5) * CELL, zm = Z0 + (j + 0.5) * CELL; if (mainD(xm, zm) > -60) continue;      // the big island's lagoon sheet is there already
+        [0, 2, 1, 1, 2, 3].forEach(n => { const k = q[n], c = col(GS[k]); pos.push(X0 + (k % (NX + 1)) * CELL, 0.6, Z0 + ((k / (NX + 1)) | 0) * CELL); cc.push(c.r, c.g, c.b); }); }
+      const G = new T.BufferGeometry(); G.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); G.setAttribute('color', new T.Float32BufferAttribute(cc, 3)); G.computeVertexNormals();
+      const m = new T.Mesh(G, new T.MeshLambertMaterial({ vertexColors: true, side: T.DoubleSide })); m.receiveShadow = true; g.add(m); }
+    // ---- rocks: sea stacks (a few stacked low-poly boulders + a bush on top), boulders at the cliff foot, a rocky knob on the small island ----
+    const DOD = new T.DodecahedronGeometry(1, 0), RC = ['#8f877b', '#7d756a', '#a39a8c'];
+    STACKS.forEach(([x, z, R, Hh], si) => { const n = 3 + (si % 2);
+      for (let k = 0; k < n; k++) { const a = r() * 6.28, d = k ? R * (0.35 + r() * 0.4) : 0, s = k ? R * (0.4 + r() * 0.25) : R * 0.7;
+        B.add(DOD, RC[(si + k) % 3], null, x + Math.cos(a) * d, k ? 0.2 : Hh * 0.35, z + Math.sin(a) * d, s, k ? s * (0.8 + r() * 0.6) : Hh * 0.62, s * (0.8 + r() * 0.3), r() * 0.4, r() * 6, r() * 0.4); }
+      if (Hh > 7) TR.push({ k: 'bush', x: x + 0.5, z: z - 0.4, y: Hh * 0.85, r: r() * 6, s: 0.8 + R * 0.04, c: si }); });
+    const boulder = (x, z, s, c) => { const P = at2(x, z); B.add(DOD, RC[c % 3], null, x, P.y - s * 0.35, z, s * (0.9 + r() * 0.4), s * (0.6 + r() * 0.4), s * (0.9 + r() * 0.4), r() * 0.5, r() * 6, r() * 0.5); };
+    ISL.forEach((I, ii) => { if (I.kind === 'cay') return;
+      for (let k = 0; k < (I.kind === 'hill' ? 160 : 40); k++) { const a = r() * 6.28, d = r() * I.a * 1.15, x = I.x + Math.cos(a) * d, z = I.z + Math.sin(a) * d, P = at2(x, z);
+        const seaSide = ((x - I.x) * I.sx + (z - I.z) * I.sz) / (Math.hypot(x - I.x, z - I.z) || 1);
+        if (P.I !== I || P.L < -2 || P.L > 6 || seaSide < (I.kind === 'hill' ? 0.25 : 0.55)) continue; boulder(x, z, 1.2 + r() * 2.6, ii + k); } });
+    // ---- trees: palms along the beaches leaning out to sea, thick jungle (palms + bushy trees) inland, nothing on rock faces ----
+    const step = fast ? 6.4 : 4.6;
+    ISL.forEach(I => { if (I.kind === 'cay') { const n = I.a > 18 ? 3 : 1; for (let k = 0; k < n; k++) { const a = r() * 6.28, d = r() * I.b * 0.4, x = I.x + Math.cos(a) * d, z = I.z + Math.sin(a) * d;
+        TR.push({ k: 'palm', x, z, y: at2(x, z).y - 0.3, r: r() * 6, s: 0.75 + r() * 0.3, c: (r() * 9) | 0, lx: (r() - 0.5) * 0.3, lz: (r() - 0.5) * 0.3 }); } return; }
+      for (let x = I.x - I.a - 12; x < I.x + I.a + 12; x += step) for (let z = I.z - I.a - 12; z < I.z + I.a + 12; z += step) {
+        const tx = x + (r() - 0.5) * step, tz = z + (r() - 0.5) * step, P = at2(tx, tz); if (P.I !== I || P.L < 0) continue;
+        const sw = 14 - 11 * P.cl; if (P.t === 1 && P.L < sw - 5) continue;
+        const sl = Math.max(Math.abs(at2(tx + 2, tz).y - at2(tx - 2, tz).y), Math.abs(at2(tx, tz + 2).y - at2(tx, tz - 2).y)) / 4; if (sl > 0.38) continue;   // bare rock
+        const edge = P.L < sw + 6; if (!edge && r() < (I.kind === 'hill' ? 0.22 : 0.3)) continue;
+        if (edge || r() < (I.kind === 'low' ? 0.42 : 0.35)) { const out = Math.atan2(tx - I.x, tz - I.z);
+          TR.push({ k: 'palm', x: tx, z: tz, y: P.y - 0.3, r: r() * 6, s: 0.8 + r() * 0.45, c: (r() * 9) | 0, lx: edge ? Math.cos(out) * 0.18 : (r() - 0.5) * 0.12, lz: edge ? -Math.sin(out) * 0.18 : (r() - 0.5) * 0.12 }); }
+        else TR.push({ k: 'bush', x: tx, z: tz, y: P.y - 0.3, r: r() * 6, s: 1.0 + r() * 0.9, c: (r() * 9) | 0 }); } });
     B.build(g, !fast); jungle(g, TR, fast);
-    g.userData.spots = spots.map(({ x, y, z, ry, type }) => ({ x, y, z, ry, type })); g.userData.islets = ISL; g.userData.treeCount = TR.length;
+    g.userData.spots = []; g.userData.islands = ISL; g.userData.treeCount = TR.length; g.userData.at = at2; g.userData.mainD = mainD; g.userData.shelfD = shelfD;
     return g;
   }
   root.VinlandDistricts3 = { introvertIsland3, introvertIsland4, introvertIsland5, islets, napValley3, napValley4, cottage, logCabin, aFrame, CT };
