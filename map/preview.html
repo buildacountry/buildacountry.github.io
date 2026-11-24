@@ -859,17 +859,28 @@ const RIVER_WD = z => z < 1850 ? 0 : Math.min(40, (z - 1850) / 60);   // and slo
   const VN = (x, z) => { const i = Math.floor(x), j = Math.floor(z), fx = x - i, fz = z - j, u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz);
     return (HASH(i, j) * (1 - u) + HASH(i + 1, j) * u) * (1 - v) + (HASH(i, j + 1) * (1 - u) + HASH(i + 1, j + 1) * u) * v; };
   const FBM = (x, z) => 0.55 * VN(x / 1500, z / 1500) + 0.3 * VN(x / 640 + 7, z / 640 + 3) + 0.15 * VN(x / 250 + 13, z / 250 + 5);
-  const WMASK = (x, z) => SS(-2000, -3000, x) * SS(7000, 5700, z) * SS(-8000, -7500, x);   // how much of the hill country a point is in (0 = flat land)
-  HILLS.splice(0, 1);   // the old lone west mountain: the hill country replaces it
-  const hillsOnly = (x, z) => { let h = 0; HILLS.forEach(([hx, hz, r, hh, tg]) => { const d = Math.hypot(x - hx, (z - hz) * 1.3) / r; if (d < 1) h += hh * (tg ? Math.pow(1 - d * d, 3) : Math.pow(Math.cos(d * Math.PI / 2), 2)) * (0.75 + 0.25 * Math.sin(x * 0.004) * Math.cos(z * 0.005)); }); return h; };
+  HILLS.splice(0, 1);   // the old lone west mountain: the mountain range replaces it
+  const hillsOnly = (x, z) => { let h = 0; HILLS.forEach(([hx, hz, r, hh]) => { const d = Math.hypot(x - hx, (z - hz) * 1.3) / r; if (d < 1) h += hh * Math.pow(Math.cos(d * Math.PI / 2), 2) * (0.75 + 0.25 * Math.sin(x * 0.004) * Math.cos(z * 0.005)); }); return h; };
   const segD = (x, z, [x1, z1], [x2, z2]) => { const dx = x2 - x1, dz = z2 - z1, t = Math.max(0, Math.min(1, ((x - x1) * dx + (z - z1) * dz) / (dx * dx + dz * dz))); return Math.hypot(x - x1 - dx * t, z - z1 - dz * t); };
-  const hillH = window.__hillH = (x, z) => { let h = hillsOnly(x, z); const m = WMASK(x, z); if (m <= 0) return h;
-    h += m * SS(-650, 400, z) * (30 + 400 * Math.pow(SS(0.28, 0.8, FBM(x * 1.35 + 400, z * 1.35)), 1.4)) + m * 12 * VN(x / 220 + 5, z / 220 + 9);   // many rounded green hills and mountains, right from behind the beach                                // rolling land, rising steadily inland, flat near the sea                                                          // rolling land, flat near the sea
-    let f = 1; VIL.forEach(([vx, vz]) => { f *= 0.1 + 0.9 * SS(160, 420, Math.hypot(x - vx, z - vz)); });   // villages on level ground
-    lakes.forEach(([lx, lz, lr]) => { f *= SS(lr + 40, lr + 320, Math.hypot(x - lx, (z - lz) / 0.7)); });     // lakes lie flat
-    { let rdm = 1e9; ROADS.forEach(rd => { for (let k = 0; k < rd.length - 1; k++) rdm = Math.min(rdm, segD(x, z, rd[k], rd[k + 1])); }); f *= 0.5 + 0.5 * SS(30, 260, rdm); }   // roads run through lower passes
-    f *= SS(-700, -420, z);                                                                                     // the beach and the shore stay flat
-    return h * (1 - m * (1 - f)); };
+  // PREVIEW (Dev, 24 Nov v8): THE WEST MOUNTAINS, real low-poly: big flat faces, sharp ridges and peaks (ridged noise on a coarse grid with
+  // random diagonals), green where gentle, brown where steep, rocks, clumps of trees. Starts well west of the city (x < -3000). Villages,
+  // lakes and the country roads keep flat ground (roads run through passes). One mesh, ~16k triangles (fewer on phones).
+  const MG = { X0: -8000, X1: -2900, Z0: -800, Z1: 7000, cs: FAST ? 95 : 70 };
+  const mtnRaw = (x, z) => { const m = SS(-3000, -3800, x) * SS(7000, 5800, z) * SS(-8000, -7600, x) * SS(-600, 300, z); if (m <= 0) return 0;
+    const r1 = 1 - Math.abs(2 * VN(x / 900, z / 900) - 1), r2 = 1 - Math.abs(2 * VN(x / 420 + 11, z / 420 + 7) - 1), ridge = 0.65 * r1 * r1 + 0.35 * r2 * r2;
+    let h = m * (SS(0.25, 0.68, FBM(x * 1.1 + 400, z * 1.1)) * (50 + 400 * ridge) + 14 * VN(x / 180 + 3, z / 180 + 1));
+    let f = 1; VIL.forEach(([vx, vz]) => { f *= SS(200, 520, Math.hypot(x - vx, z - vz)); });                       // villages on flat ground
+    lakes.forEach(([lx, lz, lr]) => { f *= SS(lr + 60, lr + 360, Math.hypot(x - lx, (z - lz) / 0.7)); });           // lakes lie flat
+    { let rdm = 1e9; ROADS.forEach(rd => { for (let k = 0; k < rd.length - 1; k++) rdm = Math.min(rdm, segD(x, z, rd[k], rd[k + 1])); }); f *= SS(50, 330, rdm); }   // roads through passes
+    return h * f; };
+  let MGH = null; const mgBuild = () => { const nx = Math.round((MG.X1 - MG.X0) / MG.cs), nz = Math.round((MG.Z1 - MG.Z0) / MG.cs); MG.nx = nx; MG.nz = nz;
+    MGH = new Float32Array((nx + 1) * (nz + 1)); for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) MGH[j * (nx + 1) + i] = mtnRaw(MG.X0 + i * MG.cs, MG.Z0 + j * MG.cs); };
+  const mgDiag = (i, j) => HASH(i + 0.5, j + 0.25) < 0.5;   // which way each grid square is cut: random, so the faces look hand-made
+  const meshH = (x, z) => { if (!MGH) mgBuild(); const u = (x - MG.X0) / MG.cs, v = (z - MG.Z0) / MG.cs; if (u < 0 || v < 0 || u >= MG.nx || v >= MG.nz) return 0;
+    const i = Math.floor(u), j = Math.floor(v), fx = u - i, fz = v - j, W = MG.nx + 1, a = MGH[j * W + i], b = MGH[j * W + i + 1], c = MGH[(j + 1) * W + i], d = MGH[(j + 1) * W + i + 1];
+    if (mgDiag(i, j)) return fx >= fz ? a + fx * (b - a) + fz * (d - b) : a + fz * (c - a) + fx * (d - c);
+    return fx + fz <= 1 ? a + fx * (b - a) + fz * (c - a) : d + (1 - fx) * (c - d) + (1 - fz) * (b - d); };
+  const hillH = window.__hillH = (x, z) => hillsOnly(x, z) + meshH(x, z);   // the ground under anything out here (on the mountain faces exactly)
   const cv = document.createElement('canvas'); cv.width = cv.height = N; const c = cv.getContext('2d');
   c.fillStyle = '#86ad5c'; c.fillRect(0, 0, N, N);
   const hlPine = [], hlRound = [];   // PREVIEW: highland trees (filled once the highland ground is made)
@@ -914,28 +925,26 @@ const RIVER_WD = z => z < 1850 ? 0 : Math.min(40, (z - 1850) / 60);   // and slo
   for (let z = 1000; z < 9000; z += 20) { const x = 430 + RIVER_MX(z), w = 110 + RIVER_WD(z); c.clearRect(px(x - w), pz(z), px(x + w) - px(x - w), pz(z + 22) - pz(z)); }
   // clear holes for the built land, Power & Water and the river (the real ones are drawn there)
   KEEP.forEach(([a, b, d0, d1]) => c.clearRect(px(a), pz(d0), px(b) - px(a), pz(d1) - pz(d0)));
-  { // PREVIEW: THE WEST HIGHLANDS GROUND: the painted land for x -8000..-2000, z -830..7000 cut out onto one height mesh
-    const GX0 = -8000, GX1 = -2000, GZ0 = -790, GZ1 = 7000, cs = FAST ? 60 : 36, nx = Math.round((GX1 - GX0) / cs), nz = Math.round((GZ1 - GZ0) / cs);
-    const H = new Float32Array((nx + 1) * (nz + 1)); for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) H[j * (nx + 1) + i] = hillH(GX0 + i * cs, GZ0 + j * cs);
-    const sx = px(GX0), sz = pz(GZ0), sw = px(GX1) - sx, sh = pz(GZ1) - sz, K = 2, gc = document.createElement('canvas'); gc.width = Math.round(sw * K); gc.height = Math.round(sh * K);
-    const g2 = gc.getContext('2d'); g2.imageSmoothingEnabled = true; g2.drawImage(cv, sx, sz, sw, sh, 0, 0, gc.width, gc.height);
-    const cpx = gc.width / (GX1 - GX0), cpz = gc.height / (GZ1 - GZ0);
-    { const tc = document.createElement('canvas'); tc.width = nx; tc.height = nz; const t2 = tc.getContext('2d'), id = t2.createImageData(nx, nz), D8 = id.data;   // woods uphill, grassy tops, rock where steep: one pixel a cell, smoothed
-      for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const h = H[j * (nx + 1) + i], hx = H[j * (nx + 1) + i + 1] - h, hz = H[(j + 1) * (nx + 1) + i] - h, sl = Math.hypot(hx, hz) / cs;
-        const fo = SS(15, 60, h) * (1 - SS(260, 320, h)) * 0.6, rk = Math.max(SS(0.8, 1.2, sl), SS(330, 390, h)) * 0.55, tp = SS(250, 310, h) * 0.45;
-        let r0 = 78, g0 = 118, b0 = 56, a = fo; if (tp > a) { r0 = 160; g0 = 180; b0 = 104; a = tp; } if (rk > 0.05) { const k = rk / Math.max(rk, a); r0 = r0 * (1 - k) + 176 * k; g0 = g0 * (1 - k) + 170 * k; b0 = b0 * (1 - k) + 148 * k; a = Math.max(a, rk); }
-        const o = (j * nx + i) * 4; D8[o] = r0; D8[o + 1] = g0; D8[o + 2] = b0; D8[o + 3] = Math.round(a * 255); }
-      t2.putImageData(id, 0, 0); g2.imageSmoothingEnabled = true; g2.drawImage(tc, 0, 0, gc.width, gc.height); }
-    c.clearRect(sx, sz, sw, sh);   // the flat land leaves a hole here; the highland ground fills it
-    const gt = new THREE.CanvasTexture(gc); gt.anisotropy = 4;
-    const geo = new THREE.PlaneGeometry(GX1 - GX0, GZ1 - GZ0, nx, nz); geo.rotateX(-Math.PI / 2); const P = geo.attributes.position, cx0 = (GX0 + GX1) / 2, cz0 = (GZ0 + GZ1) / 2;
-    for (let k = 0; k < P.count; k++) { const i = Math.round((P.getX(k) + cx0 - GX0) / cs), j = Math.round((P.getZ(k) + cz0 - GZ0) / cs); P.setY(k, H[j * (nx + 1) + i] + 0.22); }
-    geo.computeVertexNormals(); const gm = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: gt, flatShading: true })); gm.position.set(cx0, 0, cz0); gm.userData.place = 'land'; scene.add(gm); pickables.push(gm);
-    // highland trees: woods on the slopes, thinning to the grassy tops, never on farms, lakes, villages, roads or in Nap Valley
-    const NW = FAST ? 3600 : 9500; for (let t = 0, put = 0; t < NW * 6 && put < NW; t++) { const x = GX0 + R() * (GX1 - GX0), z = GZ0 + 300 + R() * (GZ1 - GZ0 - 300), m = WMASK(x, z); if (m < 0.3) continue;
-      const h = hillH(x, z), sl = Math.abs(hillH(x + 20, z) - h) / 20 + Math.abs(hillH(x, z + 20) - h) / 20, pr = SS(10, 40, h) * (1 - SS(260, 320, h)) * (1 - SS(0.8, 1.1, sl));
-      if (R() > pr * 0.9 + 0.02 || inKeep(x, z, 30) || cen.some(([fx, fz, fr]) => Math.hypot(fx - x, fz - z) < fr)) continue;
-      (h > 55 || R() < 0.35 ? hlPine : hlRound).push([x, h, z, 13 + R() * 11]); put++; } }
+  { // PREVIEW: THE WEST MOUNTAINS MESH (non-indexed, flat faces coloured by steepness and height)
+    if (!MGH) mgBuild(); const { X0: GX0, Z0: GZ0, cs, nx, nz } = MG, GX1m = MG.X1, W = nx + 1, pos = [], col = [], cc = new THREE.Color();
+    const GREEN = ['#93b257', '#86a94f', '#9cba5c', '#8aab52'], OLIVE = ['#8f9a52', '#83904b', '#99a15a'], BROWN = ['#8b7457', '#7f6a50', '#977f60', '#6f5d47'], PALE = ['#c2bb95', '#b5ae88'];
+    const V = (i, j) => [GX0 + i * cs, MGH[j * W + i], GZ0 + j * cs];
+    const tri = (A, B, C, k) => { if (A[1] < 0.3 && B[1] < 0.3 && C[1] < 0.3) return;
+      const ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2], vx = C[0] - A[0], vy = C[1] - A[1], vz = C[2] - A[2], nxv = uy * vz - uz * vy, nyv = uz * vx - ux * vz, nzv = ux * vy - uy * vx, ny = Math.abs(nyv) / Math.hypot(nxv, nyv, nzv), hm = (A[1] + B[1] + C[1]) / 3;
+      const P = hm > 340 ? PALE : ny < 0.74 ? BROWN : ny < 0.87 ? OLIVE : GREEN; cc.set(P[Math.floor(HASH(k, 3.7) * P.length)]); cc.multiplyScalar(0.94 + 0.12 * HASH(k, 9.1));
+      [A, B, C].forEach(p => { pos.push(p[0], p[1] + 0.17, p[2]); col.push(cc.r, cc.g, cc.b); }); };
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const a = V(i, j), b = V(i + 1, j), c2 = V(i, j + 1), d = V(i + 1, j + 1), k = j * nx + i;
+      if (mgDiag(i, j)) { tri(a, d, b, k * 2); tri(a, c2, d, k * 2 + 1); } else { tri(a, c2, b, k * 2); tri(b, c2, d, k * 2 + 1); } }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.computeVertexNormals();
+    const mm = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true })); mm.userData.place = 'land'; mm.receiveShadow = true; scene.add(mm); pickables.push(mm);
+    // clumps of trees on the gentler faces, rocks on the steep ones
+    const slope = (x, z) => Math.hypot(meshH(x + 6, z) - meshH(x - 6, z), meshH(x, z + 6) - meshH(x, z - 6)) / 12, NC = FAST ? 260 : 650, rocks = [];
+    for (let t = 0, put = 0; t < NC * 8 && put < NC; t++) { const x = GX0 + R() * (GX1m - GX0), z = GZ0 + R() * (MG.Z1 - GZ0), h = meshH(x, z); if (h < 6 || h > 330 || slope(x, z) > 0.45) continue; put++;
+      const n = 4 + ((R() * 9) | 0); for (let q = 0; q < n; q++) { const a = R() * 6.283, d = R() * 38, tx = x + Math.cos(a) * d, tz = z + Math.sin(a) * d, th = meshH(tx, tz); if (th < 1 || slope(tx, tz) > 0.6) continue;
+        (R() < 0.55 ? hlPine : hlRound).push([tx, th - 0.4, tz, 9 + R() * 7]); } }
+    for (let t = 0; t < (FAST ? 1500 : 4000) && rocks.length < (FAST ? 120 : 320); t++) { const x = GX0 + R() * (GX1m - GX0), z = GZ0 + R() * (MG.Z1 - GZ0), h = meshH(x, z); if (h < 15 || slope(x, z) < 0.55) continue; rocks.push([x, h - 1, z, 4 + R() * 7]); }
+    const rk = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0).scale(1.2, 0.8, 1), new THREE.MeshLambertMaterial({ color: '#9a968c', flatShading: true }), rocks.length), M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), E3 = new THREE.Euler();
+    rocks.forEach(([x, y, z, s2], i) => { E3.set(R() * 3, R() * 6, R() * 3); Q.setFromEuler(E3); M4.compose(new THREE.Vector3(x, y, z), Q, new THREE.Vector3(s2, s2, s2)); rk.setMatrixAt(i, M4); }); rk.frustumCulled = false; scene.add(rk); }
   const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4;
   const land = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshLambertMaterial({ map: tex, transparent: true, alphaTest: 0.5 })); land.rotation.x = -Math.PI / 2; land.position.set((X0 + X1) / 2, 0.22, (Z0 + Z1) / 2);   // well above the base ground: no stripes from far away
   land.receiveShadow = false; land.userData.place = 'land'; scene.add(land); pickables.push(land);
