@@ -12,11 +12,12 @@
   function Batch() { const m = new Map();
     return { add(geo, c, base, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0, rz = 0) {
         const L = new T.Matrix4().compose(V.set(x, y, z), Q.setFromEuler(E.set(rx, ry, rz)), S.set(sx, sy, sz)), g = (geo.index ? geo.toNonIndexed() : geo.clone()).applyMatrix4(base ? base.clone().multiply(L) : L);
-        if (!m.has(c)) m.set(c, []); m.get(c).push(g); },
+        if (this.tag != null) g.userData.tag = this.tag; if (!m.has(c)) m.set(c, []); m.get(c).push(g); }, tag: null,   // tag: pieces drawn while B.tag is set can be found again later (one island cottage, for the pop)
       build(group, shadow) { m.forEach((list, c) => { let n = 0; list.forEach(g => { n += g.attributes.position.count; }); const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3); let o = 0;
-          list.forEach(g => { g.computeVertexNormals(); pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); o += g.attributes.position.count; g.dispose(); });
+          let tags = null; list.forEach(g => { g.computeVertexNormals(); pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); const cn = g.attributes.position.count, t = g.userData.tag;
+            if (t != null) { tags = tags || new Map(); const R = tags.get(t); if (R && R[R.length - 1][0] + R[R.length - 1][1] === o) R[R.length - 1][1] += cn; else if (R) R.push([o, cn]); else tags.set(t, [[o, cn]]); } o += cn; g.dispose(); });
           const G = new T.BufferGeometry(); G.setAttribute('position', new T.BufferAttribute(pos, 3)); G.setAttribute('normal', new T.BufferAttribute(nor, 3)); G.computeBoundingSphere();
-          const me = new T.Mesh(G, c === 'glass' ? glass : c === 'glow' ? glow : mat(c)); me.castShadow = shadow && c !== 'glow'; me.receiveShadow = true; group.add(me); }); } }; }
+          const me = new T.Mesh(G, c === 'glass' ? glass : c === 'glow' ? glow : mat(c)); me.castShadow = shadow && c !== 'glow'; me.receiveShadow = true; if (tags) me.userData.tags = tags; group.add(me); }); } }; }
   const at = (x, y, z, ry = 0, s = 1) => new T.Matrix4().compose(new T.Vector3(x, y, z), new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), ry), new T.Vector3(s, s, s));
   const BOX = new T.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);           // unit box, pivot bottom-centre
   const box = (B, c, base, w, h, d, x, y, z, ry = 0, rx = 0) => B.add(BOX, c, base, x, y, z, w, h, d, rx, ry, 0);
@@ -419,13 +420,14 @@
       const fwd = p.type === 'a' ? 8 : p.type === 'c' ? 6.5 : 7; p.door = { x: p.x + Math.sin(p.ry) * fwd, z: p.z + Math.cos(p.ry) * fwd }; });
     homes.sort((a, b) => Math.hypot(a.x - HALL.x, a.z - HALL.z) - Math.hypot(b.x - HALL.x, b.z - HALL.z));
     const filled = o.filled == null ? homes.length : Math.min(o.filled, homes.length);
-    homes.forEach((p, i) => { if (i >= filled) return; const base = at(p.x, p.y, p.z, p.ry), b2 = at(p.x, p.y + 0.2, p.z, p.ry);
-      if (p.type === 'c') { cottage(B, base, r, true); return; }
+    const has = o.taken ? i => o.taken.has(i + 1) : i => i < filled;   // (25 Nov) o.taken = the cottage numbers people really have (1-200), so #201+ never fills this island
+    homes.forEach((p, i) => { if (!has(i)) return; const base = at(p.x, p.y, p.z, p.ry), b2 = at(p.x, p.y + 0.2, p.z, p.ry); B.tag = i + 1;
+      if (p.type === 'c') { cottage(B, base, r, true); B.tag = null; return; }
       box(B, '#a39a8c', base, p.type === 'a' ? 8 : 7.8, 1.2, p.type === 'a' ? 8.6 : 6.8, 0, -1.0, p.type === 'a' ? 0 : -0.2);
       if (p.type === 'a') aFrame(B, b2, r); else logCabin(B, b2, r, fast);
-      box(B, '#a39a8c', base, 2.0, 0.12, 0.7, 0, 0, p.type === 'a' ? 6.75 : 5.55); });
+      box(B, '#a39a8c', base, 2.0, 0.12, 0.7, 0, 0, p.type === 'a' ? 6.75 : 5.55); B.tag = null; });
     // ---- sandy footpaths (shortest-path tree over doors, hall, jetties, lighthouse) ----
-    const nodes = [{ x: HALL.x, z: HALL.z + 15 }, { x: LH.x - 6, z: LH.z }].concat(JET.map(j => ({ x: j.x, z: j.z - 6 })), homes.slice(0, Math.max(filled, 0)).map(p => p.door));
+    const nodes = [{ x: HALL.x, z: HALL.z + 15 }, { x: LH.x - 6, z: LH.z }].concat(JET.map(j => ({ x: j.x, z: j.z - 6 })), homes.filter((p, i) => has(i)).map(p => p.door));
     const n = nodes.length, inT = new Uint8Array(n), best = new Float64Array(n).fill(1e18), par = new Int32Array(n).fill(-1); best[0] = 0; const edges = [];
     for (let it = 0; it < n; it++) { let u = -1; for (let i = 0; i < n; i++) if (!inT[i] && (u < 0 || best[i] < best[u])) u = i; inT[u] = 1; if (par[u] >= 0) edges.push([par[u], u]);
       for (let v = 0; v < n; v++) if (!inT[v]) { const d = Math.hypot(nodes[u].x - nodes[v].x, nodes[u].z - nodes[v].z); if (d < best[v]) { best[v] = d; par[v] = u; } } }
@@ -471,7 +473,7 @@
       if (palm) { const out = Math.atan2(tx, tz * 1.25); TR.push({ k: 'palm', x: tx, z: tz, y, r: r() * 6, s: 0.8 + r() * 0.45, c: (r() * 9) | 0, lx: edge ? Math.cos(out) * 0.18 : (r() - 0.5) * 0.12, lz: edge ? -Math.sin(out) * 0.18 : (r() - 0.5) * 0.12 }); }
       else TR.push({ k: 'bush', x: tx, z: tz, y, r: r() * 6, s: 1.0 + r() * 0.9, c: (r() * 9) | 0 }); }
     B.build(g, !fast); jungle(g, TR, fast);
-    g.userData.spots = homes.map(({ x, y, z, ry, type }) => ({ x, y, z, ry, type })); g.userData.radius = 400; g.userData.hall = HALL; g.userData.treeCount = TR.length;
+    g.userData.spots = homes.map(({ x, y, z, ry, type, door }, i) => ({ x, y, z, ry, type, door, no: i + 1 })); g.userData.radius = 400; g.userData.hall = HALL; g.userData.treeCount = TR.length;
     return g;
   }
   // ---------- NAP VALLEY v3 (Dev, 24 Nov: his reference image) ----------
@@ -818,7 +820,8 @@
     const raw = (typeof ISLET_SPOTS !== 'undefined' && ISLET_SPOTS.d.length) ? ISLET_SPOTS.d : [].concat(...isletSpots(Wd)), spots = [];
     for (let i = 0; i < raw.length; i += 4) { const x = raw[i] / 10, z = raw[i + 1] / 10, ry = raw[i + 2] / 100, isl = raw[i + 3], n = spots.length, type = n % 5 === 2 ? 'a' : n % 5 === 4 ? 'c' : 'l', fwd = type === 'a' ? 8 : type === 'c' ? 6.5 : 7;
       spots.push({ x, z, y: at2(x, z).y + 0.1, ry, isl, type, door: { x: x + Math.sin(ry) * fwd, z: z + Math.cos(ry) * fwd } }); }
-    const mine = spots.slice(0, filled), PH = new Map(), pk = (x, z) => Math.floor(x / 20) * 100003 + Math.floor(z / 20);
+    const first = o.first || 201; spots.forEach((p, i) => { p.no = first + i; });   // cottage number on the sheet (Islander #N): Introvert Island has 1-200, these are 201+
+    const mine = o.taken ? spots.filter(p => o.taken.has(p.no)) : spots.slice(0, filled), PH = new Map(), pk = (x, z) => Math.floor(x / 20) * 100003 + Math.floor(z / 20);
     mine.forEach(p => { const k = pk(p.x, p.z); if (!PH.has(k)) PH.set(k, []); PH.get(k).push(p); });
     const pad = (x, z, y) => { for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) { const L = PH.get(pk(x + i * 20, z + j * 20)); if (!L) continue;
         for (const p of L) { const q = Math.hypot(x - p.x, z - p.z); if (q < 10) { const kk = sst((q - 6) / 4); y = p.y + (y - p.y) * kk; } } } return y; };   // levelled pads under taken cottages
@@ -834,7 +837,7 @@
     const isNear = (x, z) => { const ci = Math.floor((x - X0) / CO), cj = Math.floor((z - Z0) / CO); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const ii = ci + a, jj = cj + b; if (ii >= 0 && jj >= 0 && ii <= CX && jj <= CZ && near[jj * (CX + 1) + ii]) return true; } return false; };
     const GY = new Float32Array((NX + 1) * (NZ + 1)), GT = new Uint8Array(GY.length), GL = new Float32Array(GY.length).fill(-999), GS = new Float32Array(GY.length).fill(-999), GI = new Int8Array(GY.length).fill(-1), GC = new Float32Array(GY.length);
     for (let j = 0; j <= NZ; j++) for (let i = 0; i <= NX; i++) { const x = X0 + i * CELL, z = Z0 + j * CELL, k = id(i, j); if (!isNear(x, z)) { GY[k] = -2; continue; }
-      const P = at2(x, z); GY[k] = filled ? pad(x, z, P.y) : P.y; GT[k] = P.t; GL[k] = P.L; GC[k] = P.cl; if (P.L > -3) GI[k] = ISL.indexOf(P.I); GS[k] = Math.max(P.L, stackD(x, z)) + fbm(x / 40, z / 40, 77) * 7; }
+      const P = at2(x, z); GY[k] = mine.length ? pad(x, z, P.y) : P.y; GT[k] = P.t; GL[k] = P.L; GC[k] = P.cl; if (P.L > -3) GI[k] = ISL.indexOf(P.I); GS[k] = Math.max(P.L, stackD(x, z)) + fbm(x / 40, z / 40, 77) * 7; }
     // one indexed mesh from the grid: keep(q, i, j) picks the cells, yOf / colOf give each grid point its height and colour
     const mesh = (keep, yOf, colOf) => { const vm = new Int32Array(GY.length).fill(-1), pos = [], cc = [], idx = [];
       const vid = k => { if (vm[k] < 0) { vm[k] = pos.length / 3; const c = colOf(k); pos.push(X0 + (k % (NX + 1)) * CELL, yOf(k), Z0 + ((k / (NX + 1)) | 0) * CELL); cc.push(c.r, c.g, c.b); } return vm[k]; };
@@ -882,11 +885,11 @@
               const v = [[p.x + ox, p.y + oz], [p.x - ox, p.y - oz], [q.x + ox, q.y + oz], [q.x - ox, q.y - oz]].map(([x, z]) => [x, h(x, z) + 0.12, z]); pos.push(...v[0], ...v[2], ...v[1], ...v[1], ...v[2], ...v[3]); } }
           for (let v = 0; v < n; v++) if (!inT[v]) { const d = Math.hypot(nodes[u].x - nodes[v].x, nodes[u].z - nodes[v].z); if (d < best[v]) { best[v] = d; par[v] = u; } } } });
       if (pos.length) { const G = new T.BufferGeometry(); G.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); B.add(G, '#e3cf9c', null); } }
-    mine.forEach(p => { const base = at(p.x, p.y, p.z, p.ry), b2 = at(p.x, p.y + 0.2, p.z, p.ry);
-      if (p.type === 'c') { cottage(B, base, r, true); return; }
+    mine.forEach(p => { const base = at(p.x, p.y, p.z, p.ry), b2 = at(p.x, p.y + 0.2, p.z, p.ry); B.tag = p.no;
+      if (p.type === 'c') { cottage(B, base, r, true); B.tag = null; return; }
       box(B, '#a39a8c', base, p.type === 'a' ? 8 : 7.8, 1.2, p.type === 'a' ? 8.6 : 6.8, 0, -1.0, p.type === 'a' ? 0 : -0.2);
       if (p.type === 'a') aFrame(B, b2, r); else logCabin(B, b2, r, fast);
-      box(B, '#a39a8c', base, 2.0, 0.12, 0.7, 0, 0, p.type === 'a' ? 6.75 : 5.55); });
+      box(B, '#a39a8c', base, 2.0, 0.12, 0.7, 0, 0, p.type === 'a' ? 6.75 : 5.55); B.tag = null; });
     // ---- trees: palms along the beaches leaning out to sea, jungle inland (palms + bushy trees) with open meadows here and there,
     //      nothing on rock faces, gardens cleared round taken cottages, paths and jetties kept clear ----
     const PT = new Map(); PATHPTS.forEach(p => { const k = pk(p.x, p.y); if (!PT.has(k)) PT.set(k, []); PT.get(k).push(p); });
@@ -904,14 +907,27 @@
       const sl = Math.max(Math.abs(GY[k + 1] - GY[k - 1]), Math.abs(GY[k + NX + 1] - GY[k - NX - 1])) / (2 * CELL); if (sl > 0.38) continue;   // bare rock
       const sp = edge ? CELL : CELL * S, tx = X0 + i * CELL + (r() - 0.5) * sp * 0.9, tz = Z0 + j * CELL + (r() - 0.5) * sp * 0.9;
       if (big && !edge && L > sw + 10 && fbm(tx / 75, tz / 75, I.s + 41) < -0.18) continue;                       // open meadows
-      if (!edge && r() < (I.kind === 'hill' ? 0.18 : 0.25)) continue; if (filled && clear(tx, tz)) continue; const y = gy(tx, tz) - 0.3;
+      if (!edge && r() < (I.kind === 'hill' ? 0.18 : 0.25)) continue; if (mine.length && clear(tx, tz)) continue; const y = gy(tx, tz) - 0.3;
       if (edge || r() < (I.kind === 'low' ? 0.42 : 0.33)) { const out = Math.atan2(tx - I.x, tz - I.z);
         TR.push({ k: 'palm', x: tx, z: tz, y, r: r() * 6, s: 0.8 + r() * 0.45, c: (r() * 9) | 0, lx: edge ? Math.cos(out) * 0.18 : (r() - 0.5) * 0.12, lz: edge ? -Math.sin(out) * 0.18 : (r() - 0.5) * 0.12 }); }
       else TR.push({ k: 'bush', x: tx, z: tz, y, r: r() * 6, s: big ? (fast ? 1.9 : 1.6) + r() * 1.1 : 1.0 + r() * 0.9, c: (r() * 9) | 0 }); }
     B.build(g, !fast); jungle(g, TR, fast);
-    g.userData.spots = spots.map(({ x, y, z, ry, type }) => ({ x, y, z, ry, type })); g.userData.islands = ISL; g.userData.treeCount = TR.length;
+    g.userData.spots = spots.map(({ x, y, z, ry, type, door, no }) => ({ x, y, z, ry, type, door, no })); g.userData.islands = ISL; g.userData.treeCount = TR.length;
     g.userData.at = at2; g.userData.mainD = mainD; g.userData.shelfD = (x, z) => Math.max(at2(x, z).L, stackD(x, z)); g.userData.spotIsl = spots.map(p => p.isl);
     return g;
   }
-  root.VinlandDistricts3 = { introvertIsland3, introvertIsland4, introvertIsland5, islets, isletWorld, isletSpots, napValley3, napValley4, cottage, logCabin, aFrame, CT };
+  // (25 Nov) one tagged piece (an island cottage, tag = its number) lifted out of the merged meshes, for the pop animation.
+  // Returns { g, hide(on) }: g holds a copy of the piece with its pivot at (px, py, pz) in root's frame; hide(true) blanks the merged copy.
+  function piece(root, tag, px, py, pz) {
+    const g = new T.Group(), found = [], inv = new T.Matrix4(); root.updateMatrixWorld(true); inv.copy(root.matrixWorld).invert();
+    root.traverse(m => { const R = m.isMesh && m.userData.tags && m.userData.tags.get(tag); if (!R) return; found.push([m, R]);
+      const P = m.geometry.attributes.position.array, N = m.geometry.attributes.normal.array, rel = inv.clone().multiply(m.matrixWorld); let n = 0; R.forEach(([, c]) => { n += c; });
+      const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3); let o = 0; R.forEach(([s0, c]) => { pos.set(P.subarray(s0 * 3, (s0 + c) * 3), o * 3); nor.set(N.subarray(s0 * 3, (s0 + c) * 3), o * 3); o += c; });
+      const G = new T.BufferGeometry(); G.setAttribute('position', new T.BufferAttribute(pos, 3)); G.setAttribute('normal', new T.BufferAttribute(nor, 3)); G.applyMatrix4(rel); G.translate(-px, -py, -pz);
+      const me = new T.Mesh(G, m.material); me.receiveShadow = true; g.add(me); });
+    g.position.set(px, py, pz); let saved = null;
+    const hide = on => { if (on && !saved) saved = found.map(([m, R]) => { const A = m.geometry.attributes.position; const c = R.map(([s0, n]) => { const k = A.array.slice(s0 * 3, (s0 + n) * 3); A.array.fill(0, s0 * 3, (s0 + n) * 3); return k; }); A.needsUpdate = true; return c; });
+      else if (!on && saved) { found.forEach(([m, R], i) => { const A = m.geometry.attributes.position; R.forEach(([s0], j) => A.array.set(saved[i][j], s0 * 3)); A.needsUpdate = true; }); saved = null; } };
+    return { g, hide, ok: found.length > 0 }; }
+  root.VinlandDistricts3 = { piece, introvertIsland3, introvertIsland4, introvertIsland5, islets, isletWorld, isletSpots, napValley3, napValley4, cottage, logCabin, aFrame, CT };
 })(window);
