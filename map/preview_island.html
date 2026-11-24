@@ -2538,7 +2538,7 @@ const CONTENT = {
   nap: ['Nap Valley', 'A sleepy green valley in the hills',
     `<p class="p">Lavender fields, hammocks in the trees, sheep and a windmill. The Dream Lodge is the only building so far. Homes come when the first nappers move in.</p>`],
   island: ['Introvert Island', 'A quiet second home out at sea',
-    `<p class="p">Palm jungle, a sandy bay with a shallow lagoon, a lighthouse, two jetties and the Island Hall, with 22 small islets all around. Cottages hidden in the palms, far from the busy city.</p><p class="p"><b>Island Pioneers:</b> follow @buildacountry and comment <b>ISLAND</b> under any post. The first 1,000 people get a cottage here, no friends needed.</p><p class="p">After that, bring 3 new friends to Vinland: tag them under any post, <b>HOME @friend1 @friend2 @friend3</b>. When your 3rd friend joins, the next cottage is yours.</p><p class="p" id="islCount"></p>`],
+    `<p class="p">Palm jungle, a sandy bay with a shallow lagoon, a lighthouse, two jetties and the Island Hall, with 6 more islands and little islets all around. Cottages hidden in the palms, far from the busy city.</p><p class="p"><b>Island Pioneers:</b> follow @buildacountry and comment <b>ISLAND</b> under any post. The first 1,000 people get a cottage here, no friends needed.</p><p class="p">After that, bring 3 new friends to Vinland: tag them under any post, <b>HOME @friend1 @friend2 @friend3</b>. When your 3rd friend joins, the next cottage is yours.</p><p class="p" id="islCount"></p>`],
   sea: ['The sea', 'The edge of our country',
     `<p class="p">For now, the land ends here. It grows as the country grows.</p>`],
 
@@ -4490,7 +4490,7 @@ const SH = COAST.shore + 660;   // beach things below were placed for a shore at
 // Built by map/districts2.js (loaded after the map is up, so it never slows the first paint). No houses yet: only the hall, the
 // lighthouse and a small harbour; a cottage is added on the next saved spot when a citizen moves in (userData.spots).
 const ISLAND = { x: -1590, z: -2350, ry: 0 };
-setTimeout(() => { const sc = document.createElement('script'); sc.src = 'districts3.js?v=2411p';   // (Dev, 24 Nov) the new bean-shaped island (districts3.js introvertIsland5); old island + old Nap Valley gone
+setTimeout(() => { const sc = document.createElement('script'); sc.src = 'districts3.js?v=2411s';   // (Dev, 24 Nov) the new bean-shaped island (districts3.js introvertIsland5); old island + old Nap Valley gone
   sc.onload = () => { let tries = 0; const go = () => { if (!window.__homesReady && tries++ < 120) return setTimeout(go, 500);   // wait for the citizens list: a cottage only for each real islander
     try { const isl = (window.__islanders || []), filled = Math.max(isl.reduce((m, h) => Math.max(m, h.island), 0), +(new URLSearchParams(location.search).get('fill') || 0));   /* PREVIEW ONLY: ?fill=N shows N cottages */
       const g = VinlandDistricts3.introvertIsland5({ fast: PHONE, filled }); g.position.set(ISLAND.x, 0, ISLAND.z);
