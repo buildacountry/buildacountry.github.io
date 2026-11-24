@@ -56,9 +56,48 @@ function objective() { const h = LF.home;
   beam.visible = dd >= 3;
   if (dd < 3) { if (!LF.arrived) { LF.arrived = true; walkToast(LF.mine ? 'You are at your front door 🏡' : 'You are at @' + h.user + "'s door"); } objEl.innerHTML = (LF.mine ? 'Your home' : '@' + h.user + "'s home") + '<small>' + esc(where) + '</small>'; }
   else { LF.arrived = false; objEl.innerHTML = 'Go to ' + esc(who) + '<small>' + dd + ' m · follow the yellow marker</small>'; } }
+// ---- PHONES: the map draws the whole country every frame. In the game you only see the street around you, so phones
+//      (or ?lite on a laptop) get: a near horizon with soft haze, far things switched off, sharp-enough resolution, fewer tag updates.
+LF.lite = (PHONE || /[?&]lite\b/.test(location.search)) && !/[?&]full\b/.test(location.search);
+if (LF.lite) {
+  const FAR = 260; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1)); renderer.setSize(wrap.clientWidth, wrap.clientHeight, false);
+  camera.far = FAR + 40; camera.updateProjectionMatrix(); if (scene.fog) { scene.fog.near = 90; scene.fog.far = FAR; }
+  // far things off: every static mesh gets its world bounding sphere once; every half second, what is out of reach is hidden
+  const hidden = new Set(), list = [], big = []; scene.updateMatrixWorld(true);
+  scene.traverse(o => { if (!(o.isMesh || o.isLineSegments || o.isPoints) || o.isInstancedMesh || !o.geometry) return; const g = o.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); const bs = g.boundingSphere; if (!bs || !isFinite(bs.radius)) return;
+    const c = bs.center.clone().applyMatrix4(o.matrixWorld), r = bs.radius * o.matrixWorld.getMaxScaleOnAxis(); if (r > 3000) return;
+    if (r > 150 && !o.isPoints) big.push({ o, g }); list.push({ o, x: c.x, z: c.z, r }); });
+  // big merged meshes (a whole district baked into one): draw only their triangles / outline segments near you, through an index list
+  big.forEach(e => { const g = e.g, pos = g.attributes.position, per = e.o.isLineSegments ? 2 : 3, src = g.index ? g.index.array : null, np = (src ? src.length : pos.count) / per, M = e.o.matrixWorld, v = new THREE.Vector3();
+    e.cx = new Float32Array(np); e.cz = new Float32Array(np); e.per = per; e.src = src; e.np = np;
+    for (let t = 0; t < np; t++) { let x = 0, z = 0; for (let k = 0; k < per; k++) { const vi = src ? src[t * per + k] : t * per + k; v.fromBufferAttribute(pos, vi).applyMatrix4(M); x += v.x; z += v.z; } e.cx[t] = x / per; e.cz[t] = z / per; } });
+  let bx = 1e9, bz = 1e9;
+  LF.cullBig = () => { const px = WALK.x, pz = WALK.z; if (Math.hypot(px - bx, pz - bz) < 40) return; bx = px; bz = pz; const R2 = (FAR + 30) ** 2, L2 = 150 * 150;
+    big.forEach(e => { const out = [], lim = e.per === 2 ? L2 : R2; for (let t = 0; t < e.np; t++) { const dx = e.cx[t] - px, dz = e.cz[t] - pz; if (dx * dx + dz * dz > lim) continue; for (let k = 0; k < e.per; k++) out.push(e.src ? e.src[t * e.per + k] : t * e.per + k); }
+      e.g.setIndex(new THREE.BufferAttribute(e.g.attributes.position.count > 65535 ? new Uint32Array(out) : new Uint16Array(out), 1)); }); };   // an empty list draws nothing
+  LF.cull = () => { const px = WALK.x, pz = WALK.z; let n = 0; list.forEach(e => { const far = Math.hypot(e.x - px, e.z - pz) - e.r > FAR;
+    if (far && e.o.visible) { e.o.visible = false; hidden.add(e.o); } else if (!far && hidden.has(e.o)) { e.o.visible = true; hidden.delete(e.o); } if (!e.o.visible) n++; }); return n; };
+  // instanced things (homes, trees, lamps…) are drawn all at once by the map: keep only the instances near you, packed at the front
+  const skipI = new Set([...(WALK.batches || []).map(b => b.im), ...((walkers && walkers.batches) ? Object.values(walkers.batches).flat().map(b => b.im) : [])]), inst = [];
+  scene.traverse(o => { if (o.isInstancedMesh && !skipI.has(o) && o.count > 8) inst.push({ o, m: o.instanceMatrix.array.slice(0, o.count * 16), c: o.instanceColor ? o.instanceColor.array.slice(0, o.count * 3) : null, n: o.count }); });
+  const sum = a => { let t = 0; for (let i = 12; i < a.length; i += 16) t += a[i] * 1.3 + a[i + 2]; return t; };
+  inst.forEach(e => { e.s = sum(e.m); });
+  LF.inst = inst;
+  LF.cullI = () => { const px = WALK.x, pz = WALK.z, R2 = (FAR * 0.9) ** 2;
+    inst.forEach(e => { if (e.dyn) return; const a = e.o.instanceMatrix.array;
+      if (!e.packed && Math.abs(sum(a.subarray(0, e.n * 16)) - e.s) > 1e-3) { e.dyn = true; return; }   // something the map moves itself (cars, people): leave it alone
+      let k = 0; for (let i = 0; i < e.n; i++) { const dx = e.m[i * 16 + 12] - px, dz = e.m[i * 16 + 14] - pz; if (dx * dx + dz * dz > R2) continue;
+        if (k !== i || e.packed) { a.set(e.m.subarray(i * 16, i * 16 + 16), k * 16); if (e.c) e.o.instanceColor.array.set(e.c.subarray(i * 3, i * 3 + 3), k * 3); } k++; }
+      e.packed = true; e.o.count = k; e.o.instanceMatrix.needsUpdate = true; if (e.c) e.o.instanceColor.needsUpdate = true; }); };
+  // the map's name tags are hidden while walking anyway: update them 4 times a second instead of every frame
+  const slow = f => { let t = 0; return function () { const n = performance.now(); if (n - t < 250) return; t = n; return f.apply(this, arguments); }; };
+  updateLabels = slow(updateLabels); updateLayoutLabels = slow(updateLayoutLabels); updateEduLabels = slow(updateEduLabels); updateSupTags = slow(updateSupTags);
+}
 // ---- start walking: from your front door (the map's own walk start puts you outside it, looking at it) ----
 const prevTick = PLAYHOOK.tick; let t0 = 0;
-PLAYHOOK.tick = (dt, now) => { if (prevTick) prevTick(dt, now); if (now - t0 < 120) return; t0 = now; drawMini(); objective(); beam.rotation.y += 0.02; };
+let tc = performance.now() + 1500;   // first pass after the cars have moved a little, so they are known as moving
+PLAYHOOK.tick = (dt, now) => { if (prevTick) prevTick(dt, now); if (LF.cull && now - tc > 500) { tc = now; LF.cull(); if (WALK.on) { LF.cullI(); LF.cullBig(); } } if (now - t0 < 120) return; t0 = now; drawMini(); objective(); beam.rotation.y += 0.02; };
+if (/[?&]perf\b/.test(location.search)) window.__lifeR = { renderer, scene, camera };   // headless speed tests only
 document.getElementById('walkExit').onclick = () => { location.href = './' + (LF.home ? '?home=' + encodeURIComponent(LF.home.user) : ''); };
 startWalk(LF.home || undefined);
 setTimeout(() => { if (LF.home) { const h = LF.home, dx = WALK.x - h.x, dz = WALK.z - h.z, m = Math.hypot(dx, dz) || 1, k = Math.min(m - 1, h.villa ? (isMansion(h.villa) ? 20 : 9) : 5.5);
