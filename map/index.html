@@ -846,11 +846,9 @@ const RIVER_WD = z => z < 1850 ? 0 : Math.min(40, (z - 1850) / 60);   // and slo
   const X0 = -8000, X1 = 8000, Z0 = -830, Z1 = 15000, W = X1 - X0, D = Z1 - Z0, N = 2048, px = x => (x - X0) / W * N, pz = z => (z - Z0) / D * N;
   const R = (a => () => (a = (a * 16807) % 2147483647) / 2147483647)(2026);
   const KEEP = [[-1160, 1500, -830, 1260], [480, 960, 1000, 1820]];   // built land, Power & Water: left clear (the river corridor follows its bends)
-  const NAP = [-2560, -2160, 680, 1980];   // 24 Nov: Nap Valley (districts2.js napValley): no farms, woods or hill trees inside
+  const NAP = [0, 0, 0, 0];   // (Dev, 24 Nov) the old Nap Valley is gone: the west side is plain farmland until Nap Valley is planned again
   const inKeep = (x, z, m = 0) => (x > NAP[0] - m && x < NAP[1] + m && z > NAP[2] - m && z < NAP[3] + m) || KEEP.some(([a, b, c, d]) => x > a - m && x < b + m && z > c - m && z < d + m) || (z < 9000 && Math.abs(x - 430 - RIVER_MX(z)) < 110 + RIVER_WD(z) + m);
-  const HILLS = [[-4300, 3900, 1700, 260], [4300, 4800, 1500, 220], [-1200, 9800, 3000, 380], [5200, 10200, 2100, 300], [-6200, 8200, 1400, 240],
-    // 24 Nov (Dev's green line): the land rises west of the city: a low east ridge (gap at z 700-1100 for the village road) and higher hills west of Nap Valley
-    [-1950, -350, 330, 90], [-1950, 0, 330, 90], [-1950, 350, 330, 90], [-1950, 1450, 330, 90], [-1950, 1800, 330, 90], [-1950, 2150, 330, 90], [-1950, 2500, 330, 90], [-3050, 300, 560, 210], [-3050, 700, 560, 210], [-3050, 1100, 560, 210], [-3050, 1500, 560, 210], [-3050, 1900, 560, 210]];   // x, z, radius, height
+  const HILLS = [[4300, 4800, 1500, 220], [-1200, 9800, 3000, 380], [5200, 10200, 2100, 300], [-6200, 8200, 1400, 240]];   // x, z, radius, height ((Dev, 24 Nov) the west hills and the lone west mountain removed: plain land)
   const hillH = window.__hillH = (x, z) => { let h = 0; HILLS.forEach(([hx, hz, r, hh]) => { const d = Math.hypot(x - hx, (z - hz) * 1.3) / r; if (d < 1) h += hh * Math.pow(Math.cos(d * Math.PI / 2), 2) * (0.75 + 0.25 * Math.sin(x * 0.004) * Math.cos(z * 0.005)); }); return h; };
   const cv = document.createElement('canvas'); cv.width = cv.height = N; const c = cv.getContext('2d');
   c.fillStyle = '#86ad5c'; c.fillRect(0, 0, N, N);
@@ -2341,7 +2339,7 @@ function selectOpen(o) {
 }
 function buildHomes(rows) {
   const seenUser = new Set(), byNum = new Map(), noNum = [], villaRows = [];
-  rows.map(r => ({ n: parseInt(String(r.number || '').replace(/[^\d]/g, ''), 10), user: cleanName(r.username), job: (r.profession || r.job || '').trim().slice(0, 34), status: normStatus(r.status), joined: joinedDay(r.joined), shopCol: r.shop === undefined ? undefined : /^(y|yes|true|shop|\d+|staff\s*\d+)$/i.test(String(r.shop).trim()), shopNum: /b\d/i.test(String(r.shop || '')) ? 0 : parseInt(String(r.shop || '').replace(/[^\d]/g, ''), 10) || 0, staff: !/b\d/i.test(String(r.shop || '')) && /staff/i.test(String(r.shop || '')), bigLot: +((/^(?:staff\s*)?b(\d+)$/i.exec(String(r.shop || '').trim()) || [])[1] || 0), bigStaff: /^staff\s*b\d/i.test(String(r.shop || '').trim()) }))
+  rows.map(r => ({ n: parseInt(String(r.number || '').replace(/[^\d]/g, ''), 10), user: cleanName(r.username), job: (r.profession || r.job || '').trim().slice(0, 34), status: normStatus(r.status), joined: joinedDay(r.joined), shopCol: r.shop === undefined ? undefined : /^(y|yes|true|shop|\d+|staff\s*\d+)$/i.test(String(r.shop).trim()), shopNum: /b\d/i.test(String(r.shop || '')) ? 0 : parseInt(String(r.shop || '').replace(/[^\d]/g, ''), 10) || 0, staff: !/b\d/i.test(String(r.shop || '')) && /staff/i.test(String(r.shop || '')), bigLot: +((/^(?:staff\s*)?b(\d+)$/i.exec(String(r.shop || '').trim()) || [])[1] || 0), bigStaff: /^staff\s*b\d/i.test(String(r.shop || '').trim()), island: parseInt(String(r.island || '').replace(/[^\d]/g, ''), 10) || 0, invitedBy: cleanName(r.invited_by || '') }))
     .forEach(r => {
       const key = r.user.toLowerCase();
       if (!r.user && r.status !== 'hidden') return;              // empty row
@@ -2369,6 +2367,8 @@ function buildHomes(rows) {
     const h = { ...r, n: 10000 + lot, x: L.x, z: L.z, ry: L.ry, flat: null, founder: false, villa: lot, shown: '@' + r.user }; h.gold = supRank(r.user) >= 2;
     const el = document.createElement('div'); el.className = 'lbl home villa'; el.innerHTML = `<b>✨ ${isMansion(lot) ? 'MANSION' : 'VILLA'}</b> ${esc(h.shown)} <i>⭐</i>`;
     homeLabels.appendChild(el); h.el = el; h.lp = new THREE.Vector3(L.x, 10, L.z); homes.push(h); });
+  { const byInv = new Map(); homes.forEach(h => { if (h.invitedBy && h.status === 'active' && h.user) { const k = h.invitedBy.toLowerCase(); if (!byInv.has(k)) byInv.set(k, []); byInv.get(k).push(h.user); } });   // (Dev, 24 Nov) best friends = the new citizens they brought
+    homes.forEach(h => { h.friends = (h.user && byInv.get(h.user.toLowerCase())) || []; }); window.__islanders = homes.filter(h => h.island > 0 && h.status === 'active' && !h.villa); window.__homesReady = true; }
   drawHomes(homes.filter(h => !h.flat && !h.villa));   // Riverside flats live inside their apartment buildings; villas are drawn on Villa Lane
   rsDrawBlds(new Set(homes.filter(h => h.flat).map(h => h.flat.bid)));
   buildSupTags();
@@ -2455,9 +2455,11 @@ function selectHome(h) {
   }
   const link = h.status === 'hidden' ? '' : `<a class="ig" href="https://www.instagram.com/${encodeURIComponent(h.user)}/" target="_blank" rel="noopener">View @${esc(h.user)} on Instagram</a>`;
   show(h.villa ? `Villa owner · ${where}` : `Citizen #${h.n} · ${where}`, h.shown,
-    `${h.villa ? (isMansion(h.villa) ? `<div class="vip">🏰 Mansion owner${h.villa === 101 ? " · Mansion Lane's first owner" : ''} ⭐</div>` : `<div class="vip">🏡 Villa owner${villaRank(h.user) === 1 ? " · Villa Lane's first owner" : ''} ⭐</div>`) : ''}<dl class="facts"><dt>Home</dt><dd>${h.villa ? '🏡 Villa · Villa Lane, plot ' + h.villa : h.flat ? esc(h.flat.label) + ' · Building R' + h.flat.bid + ' · #' + h.n : (h.founder ? 'Founder home' : 'Home') + ' #' + h.n}</dd>${isPioneer(h) ? '<dt>Pioneer</dt><dd>🏅 One of the first 1,000 citizens</dd>' : ''}${h.status !== 'hidden' && supRank(h.user) ? `<dt>Supporter</dt><dd>⭐ ${supRank(h.user) >= 2 ? 'Supporter of Vinland' : "Name on the Supporters' Wall"}</dd>` : ''}${h.job ? `<dt>Profession</dt><dd>${esc(h.job)}</dd>` : ''}${h.staffOf ? `<dt>Works at</dt><dd>@${esc(h.staffOf.owner.user)}'s ${esc(h.staffOf.job.toLowerCase().replace(/\s*(owner|landlord)$/, ''))} · ${h.staffOf.area === 'se' ? 'New Market' : 'Market'} shop ${h.staffOf.n}</dd>` : ''}<dt>Joined</dt><dd>Day ${h.joined}</dd></dl>
+    `${h.villa ? (isMansion(h.villa) ? `<div class="vip">🏰 Mansion owner${h.villa === 101 ? " · Mansion Lane's first owner" : ''} ⭐</div>` : `<div class="vip">🏡 Villa owner${villaRank(h.user) === 1 ? " · Villa Lane's first owner" : ''} ⭐</div>`) : ''}<dl class="facts"><dt>Home</dt><dd>${h.villa ? '🏡 Villa · Villa Lane, plot ' + h.villa : h.flat ? esc(h.flat.label) + ' · Building R' + h.flat.bid + ' · #' + h.n : (h.founder ? 'Founder home' : 'Home') + ' #' + h.n}</dd>${h.island ? `<dt>Second home</dt><dd>🏝️ Introvert Island · home ${h.island}</dd>` : ''}${h.friends && h.friends.length ? `<dt>Best friends</dt><dd>${h.friends.slice(0, 6).map(u => '@' + esc(u)).join(' ')}</dd>` : ''}${isPioneer(h) ? '<dt>Pioneer</dt><dd>🏅 One of the first 1,000 citizens</dd>' : ''}${h.status !== 'hidden' && supRank(h.user) ? `<dt>Supporter</dt><dd>⭐ ${supRank(h.user) >= 2 ? 'Supporter of Vinland' : "Name on the Supporters' Wall"}</dd>` : ''}${h.job ? `<dt>Profession</dt><dd>${esc(h.job)}</dd>` : ''}${h.staffOf ? `<dt>Works at</dt><dd>@${esc(h.staffOf.owner.user)}'s ${esc(h.staffOf.job.toLowerCase().replace(/\s*(owner|landlord)$/, ''))} · ${h.staffOf.area === 'se' ? 'New Market' : 'Market'} shop ${h.staffOf.n}</dd>` : ''}<dt>Joined</dt><dd>Day ${h.joined}</dd></dl>
      <div class="row2"><button class="btn ghost" id="shareHome">Copy link to this home</button>${h.shopRef || h.staffOf ? `<button class="btn ghost" id="visitShop">${h.shopRef ? 'Visit their shop' : 'Visit their workplace'}</button>` : ''}${link}</div>`);
   const vs = document.getElementById('visitShop'); if (vs) vs.onclick = () => selectShop(h.shopRef || h.staffOf);
+  { const row = cardBody.querySelector('.row2'), sp = h.island && ISLAND.spots && ISLAND.spots[h.island - 1]; if (row && sp) { const ib = document.createElement('button'); ib.className = 'btn ghost'; ib.textContent = '🏝️ Visit island home';
+    ib.onclick = () => flyTo(new THREE.Vector3(ISLAND.x + sp.x, sp.y + 3, ISLAND.z + sp.z), new THREE.Vector3(30, 42, 48)); row.appendChild(ib); } }
   { const row = cardBody.querySelector('.row2'); if (row && FX.reg.has(fxKey(h))) { const rb = document.createElement('button'); rb.className = 'btn ghost'; rb.textContent = '▶ Replay build'; rb.onclick = () => { track('replay-build'); fxPlay(fxKey(h), 0.2); }; row.appendChild(rb); } }
   { const row = cardBody.querySelector('.row2'); if (row && h.status !== 'hidden') { const pb = document.createElement('button'); pb.className = 'btn'; pb.textContent = (window.VSOC && window.VSOC.user && h.user && h.user.toLowerCase() === window.VSOC.user) ? '🛂 My passport' : '🛂 Passport'; pb.onclick = () => openPassport(h, where); row.prepend(pb); } }
   { const row = PHONE && !OLDP ? null : cardBody.querySelector('.row2'); if (row) { const wb = document.createElement('button'); wb.className = 'btn ghost'; wb.textContent = '🚶 Walk from this home'; wb.onclick = () => startWalk(h); row.prepend(wb); const db = document.createElement('button'); db.className = 'btn ghost'; db.textContent = '🚗 Drive from here'; db.onclick = () => startDrive(h); wb.after(db); } }
@@ -2529,7 +2531,7 @@ const CONTENT = {
   nap: ['Nap Valley', 'A sleepy green valley in the hills',
     `<p class="p">Lavender fields, hammocks in the trees, sheep and a windmill. The Dream Lodge is the only building so far. Homes come when the first nappers move in.</p>`],
   island: ['Introvert Island', 'A quiet island out at sea',
-    `<p class="p">Woods, a hill, a lighthouse and a little harbour. The Island Hall is the only building so far. Homes come when the first islanders move in.</p>`],
+    `<p class="p">Palm jungle, a sandy bay and a shallow lagoon, a lighthouse and two jetties. A second home for citizens who bring friends.</p><p class="p">How to get one: 3 new friends follow @buildacountry and comment <b>HOME @yourname</b>. Then a cottage here is yours.</p>`],
   sea: ['The sea', 'The edge of our country',
     `<p class="p">For now, the land ends here. It grows as the country grows.</p>`],
 
@@ -4463,12 +4465,12 @@ const SH = COAST.shore + 660;   // beach things below were placed for a shore at
 // ================= INTROVERT ISLAND (Dev, 23 Nov): the first Second Home district, an island in the sea off the north coast =================
 // Built by map/districts2.js (loaded after the map is up, so it never slows the first paint). No houses yet: only the hall, the
 // lighthouse and a small harbour; a cottage is added on the next saved spot when a citizen moves in (userData.spots).
-const ISLAND = { x: -1590, z: -2350, ry: Math.PI / 2 }, NAPV = { x: -2360, z: 1330 };
-setTimeout(() => { const sc = document.createElement('script'); sc.src = 'districts2.js';
-  sc.onload = () => { try { const g = VinlandDistricts.introvertIsland2({ fast: PHONE }); g.position.set(ISLAND.x, 0, ISLAND.z); g.rotation.y = ISLAND.ry;
-    g.traverse(m => { if (m.isMesh) { m.castShadow = false; m.userData.place = 'island'; if (!m.isInstancedMesh) pickables.push(m); } }); scene.add(g); ISLAND.g = g; } catch (e) { console.error('island', e); }
-    try { const v = VinlandDistricts.napValley({ fast: PHONE, ground: (x, z) => (window.__hillH ? window.__hillH(x + NAPV.x, z + NAPV.z) : 0) }); v.position.set(NAPV.x, 0, NAPV.z);   // NAP VALLEY (24 Nov), between the new hills west of the city
-      v.traverse(m => { if (m.isMesh) { m.castShadow = false; m.userData.place = 'nap'; if (!m.isInstancedMesh) pickables.push(m); } }); scene.add(v); NAPV.g = v; } catch (e) { console.error('nap', e); } };   // tap the island → its card (trees left out: cheaper clicks)
+const ISLAND = { x: -1590, z: -2350, ry: 0 };
+setTimeout(() => { const sc = document.createElement('script'); sc.src = 'districts3.js';   // (Dev, 24 Nov) the new bean-shaped island (districts3.js introvertIsland5); old island + old Nap Valley gone
+  sc.onload = () => { let tries = 0; const go = () => { if (!window.__homesReady && tries++ < 120) return setTimeout(go, 500);   // wait for the citizens list: a cottage only for each real islander
+    try { const isl = (window.__islanders || []), filled = isl.reduce((m, h) => Math.max(m, h.island), 0);
+      const g = VinlandDistricts3.introvertIsland5({ fast: PHONE, filled }); g.position.set(ISLAND.x, 0, ISLAND.z);
+      g.traverse(m => { if (m.isMesh) { m.castShadow = false; m.userData.place = 'island'; if (!m.isInstancedMesh) pickables.push(m); } }); scene.add(g); ISLAND.g = g; ISLAND.spots = g.userData.spots; } catch (e) { console.error('island', e); } }; go(); };
   document.head.appendChild(sc); }, 1500);
 
 // ================= VINLAND BEACH (Day 9): Beach Boulevard, beach shops, the boardwalk, beach life =================
@@ -6211,7 +6213,10 @@ async function drawPassport(h, where) {
   const pc = document.createElement('canvas'); pc.width = page.width; pc.height = page.height; const p = pc.getContext('2d');
   p.drawImage(page, 0, 0); p.fillStyle = '#1b2a4a'; p.textBaseline = 'middle';
   const X = 878, MAXW = 560, rows = [['@' + h.user, 120], [h.villa ? 'Villa ' + h.villa : '#' + h.n, 212], [where, 302], [h.job || 'Citizen', 392], ['Day ' + (h.joined || 0), 482]];
+  if (h.island) rows[2][0] = where + ' · Island ' + h.island;
   rows.forEach(([t, y]) => { fitText(p, t, MAXW, 46, 600); p.fillText(t, X, y + 2); });
+  if (h.friends && h.friends.length) { p.font = '500 24px Lora, Georgia, serif'; p.letterSpacing = '3px'; p.fillStyle = '#3c4a66'; p.fillText('BEST FRIENDS', 576, 668); p.letterSpacing = '0px';   // (Dev, 24 Nov)
+    const t = h.friends.slice(0, 3).map(u => '@' + u).join('  '); fitText(p, t, MAXW, 34, 600); p.fillStyle = '#1b2a4a'; p.fillText(t, X, 668); }
   const badge = h.founder ? 'FOUNDER · FIRST 20' : isPioneer(h) ? 'PIONEER · FIRST 1,000' : 'CITIZEN';
   p.font = '600 30px Lora, Georgia, serif'; const bw = p.measureText(badge).width + 70, bx = X - 14, by = 568;
   const gr = p.createLinearGradient(0, by, 0, by + 58); gr.addColorStop(0, badge === 'CITIZEN' ? '#e9e1d2' : '#f4d793'); gr.addColorStop(1, badge === 'CITIZEN' ? '#d8cdb8' : '#d9a94c');
