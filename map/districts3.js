@@ -724,5 +724,85 @@
     g.userData.spots = homes.map(({ x, y, z, ry }) => ({ x, y, z, ry })); g.userData.lodge = LODGE; g.userData.treeCount = TR.length;   // v4
     return g;
   }
-  root.VinlandDistricts3 = { introvertIsland3, introvertIsland4, introvertIsland5, napValley3, napValley4, cottage, logCabin, aFrame, CT };
+
+  // ---------- ISLAND PIONEERS (Dev, 24 Nov): a ring of small islets round Introvert Island, 1,000 more cottages ----------
+  // Same style as the big island: sand rim, low green dome, palms + bushes, one jetty each (toward the big island), sandy paths.
+  // Positions are in the big island's frame (same group origin). 22 islets: 12 in an inner ring, 10 in an outer ring, none on the
+  // lagoon mouth (+z, the mainland side). ~46 homes each, 14 m+ apart, on levelled pads; a cottage appears only when someone lives
+  // there (o.filled = how many islet homes are taken, counted from the first islet). Spots go islet by islet, nearest the hall first.
+  function islets(o = {}) {
+    const r = rng(o.seed || 7070), g = new T.Group(), fast = !!o.fast, B = Batch(), TR = [], PER = o.per || 46, N = o.count || 22;
+    const ISL = []; const ring = (n, R, a0, skip) => { for (let i = 0; i < n; i++) { const a = a0 + i / n * Math.PI * 2; if (skip(a)) continue;
+        ISL.push({ x: Math.sin(a) * R * 1.05 + (r() - 0.5) * 40, z: 30 - Math.cos(a) * R + (r() - 0.5) * 40, R: 72 + r() * 14 }); } };
+    const mouth = a => { const d = Math.abs(Math.atan2(Math.sin(a - Math.PI), Math.cos(a - Math.PI))); return d < 0.32; };   // keep the lagoon mouth (+z) open
+    ring(13, 520, 0.12, mouth); ring(11, 700, 0.4, mouth);
+    ISL.sort((p, q) => Math.hypot(p.x, p.z - 120) - Math.hypot(q.x, q.z - 120)); ISL.length = Math.min(ISL.length, N);
+    const spots = [];
+    const filled = Math.max(0, o.filled || 0), SWAMP = 10;
+    ISL.forEach((I, ii) => {
+      const wob = (x, z) => 4 * Math.sin(x * 0.05 + ii) * Math.cos(z * 0.043 + ii * 0.7) + 2.5 * Math.sin(x * 0.11 + z * 0.09);
+      const dist = (x, z) => I.R - Math.hypot(x - I.x, z - I.z) + wob(x, z);                  // metres inland from the water line
+      const hRaw = (x, z) => { const d = dist(x, z); if (d < 0) return Math.max(-3, 0.1 + d * 0.06); if (d < SWAMP) return 0.9 + 0.9 * d / SWAMP;
+        return 1.8 + 3.2 * Math.min(1, (d - SWAMP) / 45) * Math.exp(-((x - I.x) ** 2 + (z - I.z) ** 2) / (I.R * 0.7) ** 2); };
+      // the jetty points at the big island's hall side
+      const ja = Math.atan2(-I.x, 120 - I.z); let jx = I.x, jz = I.z; for (let t = 0; t < I.R + 30; t += 1) { jx = I.x + Math.sin(ja) * t; jz = I.z + Math.cos(ja) * t; if (dist(jx, jz) < 0) break; }
+      const JT = { x: jx, z: jz, ry: ja };
+      const rh = rng(7070 + ii * 97 + 1);   // homes have their own dice: spots never change with phone/desktop or how many are taken
+      const homes = [], far = (x, z, m) => homes.every(p => Math.hypot(p.x - x, p.z - z) > m);
+      for (let tries = 0, gap = 17; homes.length < PER && tries < 30000; tries++) { if (tries % 5000 === 4999) gap -= 1;
+        const a = rh() * Math.PI * 2, t = Math.sqrt(rh()) * I.R, x = I.x + Math.sin(a) * t, z = I.z + Math.cos(a) * t;
+        if (dist(x, z) < SWAMP + 7 || Math.hypot(x - JT.x, z - JT.z) < 16 || !far(x, z, gap)) continue; homes.push({ x, z }); }
+      homes.forEach(p => { p.y = hRaw(p.x, p.z) + 0.1; const out = Math.atan2(p.x - I.x, p.z - I.z); p.ry = out + (rh() - 0.5) * 0.8;   // face the sea
+        p.type = (spots.length + homes.indexOf(p)) % 5 === 2 ? 'a' : (spots.length + homes.indexOf(p)) % 5 === 4 ? 'c' : 'l';
+        const fwd = p.type === 'a' ? 8 : p.type === 'c' ? 6.5 : 7; p.door = { x: p.x + Math.sin(p.ry) * fwd, z: p.z + Math.cos(p.ry) * fwd }; });
+      homes.sort((a, b) => Math.hypot(a.x - JT.x, a.z - JT.z) - Math.hypot(b.x - JT.x, b.z - JT.z));
+      const first = spots.length; homes.forEach(p => spots.push(p));
+      const mine = homes.filter((p, k) => first + k < filled);
+      const PADS = homes.map(p => ({ x: p.x, z: p.z, y: p.y, r0: 6, r1: 10 }));
+      const sstep = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+      const h = (x, z) => { let y = hRaw(x, z); for (const p of PADS) { const q = Math.hypot(x - p.x, z - p.z); if (q < p.r1) { const kk = sstep((q - p.r0) / (p.r1 - p.r0)); y = p.y + (y - p.y) * kk; } } return y; };
+      // ground: a disc mesh, rings x segments, vertex colours (sand rim, grass top), plus a shallow turquoise ring round it
+      { const RN = fast ? 9 : 14, SN = fast ? 28 : 40, RR = I.R + 14, pos = [], col = [];
+        const SAND = new T.Color('#f0dca6'), WET = new T.Color('#d9bf86'), GR = [new T.Color('#6f9a45'), new T.Color('#79a64c'), new T.Color('#668f40')];
+        const v = (j, i) => { const t = j / RN, a = i / SN * Math.PI * 2, x = I.x + Math.sin(a) * RR * t, z = I.z + Math.cos(a) * RR * t, d = dist(x, z); return [x, h(x, z), z, d < 0 ? WET : d < SWAMP ? SAND : GR[(i + j) % 3]]; };
+        for (let j = 0; j < RN; j++) for (let i = 0; i < SN; i++) { const q = [v(j, i), v(j, i + 1), v(j + 1, i), v(j + 1, i + 1)];
+          [0, 2, 1, 1, 2, 3].forEach(n => { pos.push(q[n][0], q[n][1], q[n][2]); col.push(q[n][3].r, q[n][3].g, q[n][3].b); }); }
+        const G = new T.BufferGeometry(); G.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); G.setAttribute('color', new T.Float32BufferAttribute(col, 3)); G.computeVertexNormals();
+        const m = new T.Mesh(G, new T.MeshLambertMaterial({ vertexColors: true, flatShading: true })); m.receiveShadow = true; g.add(m);
+        const sh = new T.Mesh(new T.RingGeometry(I.R - 4, ISL.reduce((m, J) => J === I ? m : Math.min(m, I.R + (Math.hypot(J.x - I.x, J.z - I.z) - I.R - J.R) / 2 - 1), I.R + 34), SN).rotateX(-Math.PI / 2), new T.MeshLambertMaterial({ color: '#7fdcdc', transparent: true, opacity: 0.75 }));
+        sh.position.set(I.x, 0.6, I.z); g.add(sh); }
+      // cottages (only the taken ones)
+      mine.forEach(p => { const base = at(p.x, p.y, p.z, p.ry), b2 = at(p.x, p.y + 0.2, p.z, p.ry);
+        if (p.type === 'c') { cottage(B, base, r, true); return; }
+        box(B, '#a39a8c', base, p.type === 'a' ? 8 : 7.8, 1.2, p.type === 'a' ? 8.6 : 6.8, 0, -1.0, p.type === 'a' ? 0 : -0.2);
+        if (p.type === 'a') aFrame(B, b2, r); else logCabin(B, b2, r, fast);
+        box(B, '#a39a8c', base, 2.0, 0.12, 0.7, 0, 0, p.type === 'a' ? 6.75 : 5.55); });
+      // sandy paths: shortest tree from the jetty to every taken home's door
+      const nodes = [{ x: JT.x - Math.sin(JT.ry) * 6, z: JT.z - Math.cos(JT.ry) * 6 }].concat(mine.map(p => p.door)), n = nodes.length, pos = [], PATHPTS = [];
+      if (n > 1) { const inT = new Uint8Array(n), best = new Float64Array(n).fill(1e18), par = new Int32Array(n).fill(-1); best[0] = 0;
+        for (let it = 0; it < n; it++) { let u = -1; for (let i = 0; i < n; i++) if (!inT[i] && (u < 0 || best[i] < best[u])) u = i; inT[u] = 1;
+          if (par[u] >= 0) { const A = nodes[par[u]], Bn = nodes[u], L = Math.hypot(Bn.x - A.x, Bn.z - A.z), st = Math.max(2, Math.round(L / 2.5));
+            for (let k = 0; k < st; k++) { const p = { x: A.x + (Bn.x - A.x) * k / st, y: A.z + (Bn.z - A.z) * k / st }, q = { x: A.x + (Bn.x - A.x) * (k + 1) / st, y: A.z + (Bn.z - A.z) * (k + 1) / st };
+              PATHPTS.push(p); const ox = -(q.y - p.y) / (L / st) * 0.9, oz = (q.x - p.x) / (L / st) * 0.9;
+              const w = [[p.x + ox, p.y + oz], [p.x - ox, p.y - oz], [q.x + ox, q.y + oz], [q.x - ox, q.y - oz]].map(([x, z]) => [x, h(x, z) + 0.12, z]); pos.push(...w[0], ...w[2], ...w[1], ...w[1], ...w[2], ...w[3]); } }
+          for (let v2 = 0; v2 < n; v2++) if (!inT[v2]) { const d = Math.hypot(nodes[u].x - nodes[v2].x, nodes[u].z - nodes[v2].z); if (d < best[v2]) { best[v2] = d; par[v2] = u; } } }
+        const G = new T.BufferGeometry(); G.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); B.add(G, '#e3cf9c', null); }
+      // the jetty (3 m deck on posts) + a rowboat
+      { const L = 22, base = at(JT.x - Math.sin(JT.ry) * 4, 0, JT.z - Math.cos(JT.ry) * 4, JT.ry);
+        box(B, '#b08055', base, 3, 0.25, L, 0, 1.3, L / 2); for (let z = 2; z <= L; z += 4) [-1.35, 1.35].forEach(x => box(B, '#7a5236', base, 0.3, 4.5, 0.3, x, -3, z));
+        const bb = base.clone().multiply(at(3.2, 0, L * 0.7, 0.1)); box(B, ['#f6f0e2', '#3f6fa8', '#c8603f'][ii % 3], bb, 1.6, 0.8, 4.6, 0, 0.3, 0); box(B, '#b08055', bb, 1.4, 0.08, 4.2, 0, 1.05, 0); }
+      // palms + bushes: palms on the rim, a few bushes inland, clear of homes (taken or not) and paths
+      const step = fast ? 11 : 8;
+      for (let x = I.x - I.R - 8; x < I.x + I.R + 8; x += step) for (let z = I.z - I.R - 8; z < I.z + I.R + 8; z += step) {
+        const tx = x + (r() - 0.5) * step, tz = z + (r() - 0.5) * step, d = dist(tx, tz); if (d < SWAMP - 4) continue;
+        if (homes.some(p => Math.hypot(tx - p.x, tz - p.z) < 9) || Math.hypot(tx - JT.x, tz - JT.z) < 8 || PATHPTS.some(p => Math.hypot(p.x - tx, p.y - tz) < 2.2)) continue;
+        const edge = d < SWAMP + 6; if (!edge && r() < 0.55) continue; const y = h(tx, tz) - 0.3;
+        if (edge || r() < 0.5) { const out = Math.atan2(tx - I.x, tz - I.z); TR.push({ k: 'palm', x: tx, z: tz, y, r: r() * 6, s: 0.8 + r() * 0.4, c: (r() * 9) | 0, lx: edge ? Math.cos(out) * 0.16 : 0, lz: edge ? -Math.sin(out) * 0.16 : 0 }); }
+        else TR.push({ k: 'bush', x: tx, z: tz, y, r: r() * 6, s: 0.9 + r() * 0.7, c: (r() * 9) | 0 }); }
+    });
+    B.build(g, !fast); jungle(g, TR, fast);
+    g.userData.spots = spots.map(({ x, y, z, ry, type }) => ({ x, y, z, ry, type })); g.userData.islets = ISL; g.userData.treeCount = TR.length;
+    return g;
+  }
+  root.VinlandDistricts3 = { introvertIsland3, introvertIsland4, introvertIsland5, islets, napValley3, napValley4, cottage, logCabin, aFrame, CT };
 })(window);
