@@ -4507,7 +4507,7 @@ setTimeout(() => { const sc = document.createElement('script'); sc.src = 'distri
       g.traverse(m => { if (m.isMesh) { m.castShadow = false; m.userData.place = 'island'; if (!m.isInstancedMesh) pickables.push(m); } }); scene.add(g); ISLAND.g = g; ISLAND.spots = spots; } catch (e) { console.error('island', e); } }; go(); };
   document.head.appendChild(sc); }, 1500);
 // ================= VINLAND FORCES (Dev, 26 Nov): fenced zone on the west coast: Army base, Air Force airstrip, Navy harbour (map/forces.js, loaded after the map is up) =================
-setTimeout(() => { const sc = document.createElement('script'); sc.src = 'forces.js?v=2611f';
+setTimeout(() => { const sc = document.createElement('script'); sc.src = 'forces.js?v=2611h';
   sc.onload = () => { try { const f = VinlandForces.forces({ fast: PHONE }); f.traverse(m => { if (m.isMesh) { m.userData.place = 'forces'; if (!m.isInstancedMesh) pickables.push(m); } }); scene.add(f); window.__forces = f; } catch (e) { console.error('forces', e); } };
   document.head.appendChild(sc); }, 2500);
 // (Dev, 25 Nov) a cottage POP: the cottage squashes up out of the ground with a bounce and a puff of dust, then its gate sign

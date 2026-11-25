@@ -4,7 +4,7 @@
 // Layers (so nothing flickers): ground 0 . farm paint 0.22 . lawn 0.30 . yards 0.38 . roads 0.46 . road marks 0.52 . plinths 0.30..0.70 . quay 1.0
 // Returns one THREE.Group (merged meshes: ~30 draw calls) with userData.tris. Phones: fast = true (fewer posts, windows, vehicles, trees).
 (function (root) {
-  const T = root.THREE;
+  const T = root.THREE; let FASTMODE = false;
   const M = {}, mat = c => M[c] || (M[c] = new T.MeshLambertMaterial({ color: c, flatShading: true }));
   const glass = new T.MeshLambertMaterial({ color: '#a9cdd8', flatShading: true });
   const wire = new T.MeshLambertMaterial({ color: '#8d9690', transparent: true, opacity: 0.45, side: T.DoubleSide, depthWrite: false });
@@ -31,7 +31,7 @@
 
   // ---------- the land ----------
   const Z = { x0: -2520, x1: -1700, z0: -818, z1: -210 }, GATE = { x: -1700, z: -420 }, SHORE = -820, G = 0.3, FL = 0.7;   // G = lawn, FL = floor of a building on its plinth
-  const ROAD = '#5d5f63', DIRT = '#b79b6c', SAND = '#cdb88a', CONC = '#9a9c96', WALL = ['#cfc5a3', '#c2b88f', '#b9b894'], ROOF = '#5c6b43', ROOF2 = '#6b5f4a', STEEL = '#7c8791', DARK = '#3b3d41';
+  const ROAD = '#5d5f63', DIRT = '#b79b6c', SAND = '#cdb88a', CONC = '#9a9c96', WALL = ['#8f8d5e', '#c4ae84', '#9a9466'], ROOF = '#6c7177', ROOF2 = '#7b7f84', STEEL = '#7c8791', SANDSTEEL = '#a7a194', CAMO = ['#8f7a52', '#cdb98a', '#7d7a4e'], DARK = '#3b3d41';
   const noise = (x, z, s) => { const f = v => v - Math.floor(v), h = (a, b) => f(Math.sin(a * 127.1 + b * 311.7 + s * 74.7) * 43758.5453), xi = Math.floor(x), zi = Math.floor(z), u = f(x), v = f(z), a = h(xi, zi), b = h(xi + 1, zi), c = h(xi, zi + 1), d = h(xi + 1, zi + 1), uu = u * u * (3 - 2 * u), vv = v * v * (3 - 2 * v); return a + (b - a) * uu + (c - a) * vv + (a - b - c + d) * uu * vv; };
   const sst = k => { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); };
   // low gentle hills ringing the base (never inside the fence, never on the approach road, never at the shore). Max about 26 m, wide and soft.
@@ -45,16 +45,19 @@
     const { x, z, w, d } = o, fl = o.fl || 1, FH = 3.2, H = fl * FH, y0 = o.y0 == null ? G : o.y0, base = at(x, y0, z, o.ry || 0), nd = o.doors || 1;
     box(B, '#a8a396', base, w + 0.6, 0.4, d + 0.6, 0, 0, 0);                                            // plinth 0.4
     box(B, o.wall, base, w, H, d, 0, 0.4, 0);                                                          // walls
-    if (o.flat) { box(B, o.roof, base, w + 0.5, 0.4, d + 0.5, 0, 0.4 + H, 0); box(B, o.wall, base, w + 0.1, 0.5, d + 0.1, 0, 0.8 + H, 0); box(B, o.roof, base, w - 0.7, 0.45, d - 0.7, 0, 0.82 + H, 0); }
-    else B.add(prismGeo(d + 1.4, 0.2 * (d + 1.4), w + 1.4), o.roof, base, 0, 0.4 + H, 0, 1, 1, 1, 0, Math.PI / 2, 0);   // gable roof, 20 deg, 0.7 m overhang, ridge along x
+    if (o.flat) { box(B, o.roof, base, w + 0.5, 0.4, d + 0.5, 0, 0.4 + H, 0); box(B, o.wall, base, w + 0.1, 0.5, d + 0.1, 0, 0.8 + H, 0); box(B, o.roof, base, w - 0.7, 0.45, d - 0.7, 0, 0.82 + H, 0);
+      if (!fast) { for (let k = 0; k < Math.min(4, Math.floor(w / 12)); k++) { box(B, '#c9c6bd', base, 2.0, 1.1, 1.6, -w / 2 + 4 + k * 10, 1.27 + H, -d / 4); box(B, '#8c8e8c', base, 1.2, 0.12, 1.2, -w / 2 + 4 + k * 10, 2.37 + H, -d / 4); } box(B, '#5f646b', base, 0.1, 4.5, 0.1, w / 2 - 2, 1.27 + H, -d / 2 + 2); box(B, '#c9c6bd', base, 1.6, 1.8, 1.4, w / 2 - 4, 1.27 + H, d / 4); } }
+    else { B.add(prismGeo(d + 1.4, 0.2 * (d + 1.4), w + 1.4), o.roof, base, 0, 0.4 + H, 0, 1, 1, 1, 0, Math.PI / 2, 0);   // gable roof, 20 deg, 0.7 m overhang, ridge along x
+      if (false) { let cx = -w / 2 + 2 + ((Math.abs(o.x * 7 + o.z * 3) | 0) % 5); for (let k = 0; cx < w / 2 - 3 && k < 9; k++) { const cw = Math.min(3 + ((k * 7 + Math.abs(o.x | 0)) % 5), w / 2 + 0.7 - cx); B.add(prismGeo(d + 1.5, 0.2 * (d + 1.5), cw), CAMO[(k + Math.abs(o.z | 0)) % 3], base, cx + cw / 2, 0.4 + H - 0.02, 0, 1, 1, 1, 0, Math.PI / 2, 0); cx += cw + 3 + ((k * 5) % 6); } } }
     const dx = k => (k - (nd - 1) / 2) * Math.min(w / nd, 12), dxs = []; for (let k = 0; k < nd; k++) dxs.push(dx(k));
-    dxs.forEach(px => { box(B, '#d8d0b8', base, 1.8, 2.7, 0.1, px, 0.4, d / 2 + 0.005); box(B, '#3b2f26', base, 1.4, 2.4, 0.15, px, 0.4, d / 2 + 0.03); box(B, '#a8a396', base, 2.4, 0.2, 1.0, px, 0, d / 2 + 0.5); box(B, '#cbbd9f', base, 2.4, 0.08, o.path || 6, px, 0, d / 2 + 1.0 + (o.path || 6) / 2 - 0.0); });   // door 1.4 x 2.4 + one step + a path from the door
+    dxs.forEach(px => { box(B, '#d8d0b8', base, 1.8, 2.7, 0.1, px, 0.4, d / 2 + 0.005); box(B, '#3b2f26', base, 1.4, 2.4, 0.15, px, 0.4, d / 2 + 0.03); box(B, '#a8a396', base, 2.4, 0.2, 1.0, px, 0, d / 2 + 0.5); box(B, '#b9b4a6', base, 2.4, 0.08, o.path || 6, px, 0, d / 2 + 1.0 + (o.path || 6) / 2 - 0.0); });   // door 1.4 x 2.4 + one step + a path from the door
     if (o.win !== false) for (let f = 0; f < fl; f++) for (let wx = -w / 2 + 3; wx <= w / 2 - 2.9; wx += 4) {
       const wy = 0.4 + f * FH + 1.0; [1, -1].forEach(sd => { if (sd < 0 && fast) return; if (sd > 0 && f === 0 && dxs.some(px => Math.abs(px - wx) < 1.8)) return;
         box(B, '#d8d0b8', base, 1.4, 1.6, 0.1, wx, wy - 0.15, sd * d / 2); box(B, 'glass', base, 1.1, 1.3, 0.14, wx, wy, sd * d / 2 + sd * 0.01); }); }
   }
-  function hangar(B, x, z, w, len, ry) { const base = at(x, G, z, ry || 0);
-    box(B, CONC, base, w + 1, 0.4, len + 1, 0, 0, 0); B.add(archGeo(w, 13, len), STEEL, base, 0, 0.4, 0);                       // barrel roof: w wide, 13.4 m high at the crown
+  function hangar(B, x, z, w, len, ry, col) { const base = at(x, G, z, ry || 0);
+    box(B, CONC, base, w + 1, 0.4, len + 1, 0, 0, 0); B.add(archGeo(w, 13, len), col || SANDSTEEL, base, 0, 0.4, 0);
+    if (false) for (let k = 0; k < 6; k++) { const L = 4 + (k * 5) % 5, zc = -len / 2 + 5 + k * (len - 10) / 5; B.add(archGeo(w + 0.3, 13.15, L), CAMO[k % 3], base, 0, 0.38, zc); }                       // barrel roof: w wide, 13.4 m high at the crown
     box(B, DARK, base, w * 0.62, 8, 0.3, 0, 0.4, len / 2 + 0.02);                                                           // big door opening (shadowed), inside the arch
     [-1, 1].forEach(s => box(B, '#5f6a73', base, 0.8, 8.2, 0.5, s * w * 0.31, 0.4, len / 2 + 0.05)); box(B, '#5f6a73', base, w * 0.62 + 0.8, 0.8, 0.5, 0, 8.4, len / 2 + 0.05);
     box(B, '#d8d0b8', base, 1.8, 2.7, 0.1, w / 2 - 3, 0.4, len / 2 + 0.005); box(B, '#3b2f26', base, 1.4, 2.4, 0.15, w / 2 - 3, 0.4, len / 2 + 0.03); }   // side door 1.4 x 2.4
@@ -70,10 +73,10 @@
     box(B, '#6a5a44', b, 4.2, 0.3, 4.2, 0, 7.2, 0); box(B, '#7a8a5a', b, 3.8, 2.4, 3.8, 0, 7.5, 0); box(B, 'glass', b, 4.0, 1.0, 4.0, 0, 8.3, 0); box(B, '#4c5a3a', b, 4.9, 0.4, 4.9, 0, 9.9, 0);
     for (let i = 0; i < 6; i++) box(B, '#6a5a44', b, 0.9, 0.12, 0.35, 0, i * 1.2 + 0.4, 2.0); box(B, '#6a5a44', b, 0.1, 7, 0.1, -0.5, 0, 2.2); box(B, '#6a5a44', b, 0.1, 7, 0.1, 0.5, 0, 2.2); }
   function flagpole(B, x, z, h, col, y0) { box(B, '#e9e4d8', null, 0.16, h, 0.16, x, y0 == null ? G : y0, z); box(B, col, null, 0.05, 1.9, 3.0, x, (y0 == null ? G : y0) + h - 2.1, z + 1.6); box(B, '#e2c44a', null, 0.07, 0.35, 3.1, x, (y0 == null ? G : y0) + h - 1.2, z + 1.6); }
-  function jeep(B, x, z, ry, col, y) { const b = at(x, y == null ? 0.46 : y, z, ry), c = col || '#6b7550';
+  function jeep(B, x, z, ry, col, y) { const b = at(x, y == null ? 0.46 : y, z, ry), c = col || '#b5a574';
     box(B, c, b, 1.9, 0.9, 4.0, 0, 0.5, 0); box(B, c, b, 1.8, 0.8, 1.6, 0, 1.4, -0.5); box(B, 'glass', b, 1.7, 0.5, 1.4, 0, 1.55, -0.5); [[-1, -1.3], [1, -1.3], [-1, 1.3], [1, 1.3]].forEach(([sx, sz]) => box(B, '#222', b, 0.3, 0.7, 0.7, sx * 0.9, 0, sz)); }
-  function truck(B, x, z, ry, col, y) { const b = at(x, y == null ? 0.46 : y, z, ry), c = col || '#6b7550';
-    box(B, c, b, 2.4, 1.2, 7.2, 0, 0.7, -0.4); box(B, c, b, 2.4, 1.5, 2.0, 0, 1.9, 2.4); box(B, 'glass', b, 2.2, 0.7, 0.2, 0, 2.3, 3.4); box(B, '#8a8466', b, 2.5, 2.2, 4.6, 0, 1.9, -1.6);
+  function truck(B, x, z, ry, col, y) { const b = at(x, y == null ? 0.46 : y, z, ry), c = col || '#b5a574';
+    box(B, c, b, 2.4, 1.2, 7.2, 0, 0.7, -0.4); box(B, c, b, 2.4, 1.5, 2.0, 0, 1.9, 2.4); box(B, 'glass', b, 2.2, 0.7, 0.2, 0, 2.3, 3.4); box(B, '#6f7a45', b, 2.5, 2.2, 4.6, 0, 1.9, -1.6);
     [[-1, 2.4], [1, 2.4], [-1, -0.6], [1, -0.6], [-1, -2.6], [1, -2.6]].forEach(([sx, sz]) => box(B, '#222', b, 0.4, 1.0, 1.0, sx * 1.2, 0, sz)); }
   function apc(B, x, z, ry, y) { const b = at(x, y == null ? 0.46 : y, z, ry);
     box(B, '#59623f', b, 2.7, 1.5, 6.2, 0, 0.7, 0); box(B, '#59623f', b, 2.2, 1.0, 3.2, 0, 2.1, -0.6); box(B, '#3b3d41', b, 0.5, 0.35, 3.0, 0, 2.6, 1.6); box(B, '#3b3d41', b, 0.5, 0.3, 6.6, -1.4, 0.2, 0); box(B, '#3b3d41', b, 0.5, 0.3, 6.6, 1.4, 0.2, 0); }
@@ -90,19 +93,48 @@
     B.add(new T.IcosahedronGeometry(1.6, 0), c, b, 0, 2.2, 0.6, 1, 0.95, 1.5); box(B, 'glass', b, 2.2, 1.1, 1.6, 0, 2.2, 2.0); box(B, c, b, 0.6, 0.7, 6.8, 0, 2.4, -3.6); box(B, c, b, 0.15, 2.0, 1.0, 0, 2.5, -7.0);
     box(B, '#222', b, 0.3, 0.7, 0.3, 0, 3.6, 0.3); box(B, '#33383d', b, 11, 0.08, 0.5, 0, 4.25, 0.3); box(B, '#33383d', b, 0.5, 0.08, 11, 0, 4.2, 0.3);
     [-1, 1].forEach(s => { box(B, '#222', b, 0.14, 0.14, 4.2, s * 1.5, 0.15, 0.4); box(B, '#222', b, 0.1, 1.1, 0.1, s * 1.5, 0.2, 1.4); box(B, '#222', b, 0.1, 1.1, 0.1, s * 1.5, 0.2, -0.6); }); }
+  function tank(B, x, z, ry, y) { const b = at(x, y == null ? 0.46 : y, z, ry), c = '#bda978';
+    box(B, '#3b3d41', b, 1.0, 1.2, 8.2, -1.55, 0.0, 0); box(B, '#3b3d41', b, 1.0, 1.2, 8.2, 1.55, 0.0, 0); box(B, c, b, 3.2, 1.0, 7.6, 0, 0.5, 0.2); box(B, c, b, 2.7, 0.9, 3.6, 0, 1.5, -0.4); box(B, '#a8966a', b, 0.8, 0.5, 0.8, 0.7, 2.4, -0.9); box(B, '#3b3d41', b, 0.3, 0.3, 5.2, 0, 1.9, 4.2); box(B, c, b, 0.6, 0.6, 1.0, 0, 1.8, 1.4); }
+  function radar(B, x, z) { [[-1.8, -1.8], [1.8, -1.8], [-1.8, 1.8], [1.8, 1.8]].forEach(([a, c]) => box(B, '#6f6a60', null, 0.35, 9.4, 0.35, x + a * 1.2, G, z + c * 1.2)); box(B, '#6f6a60', null, 6.2, 0.4, 6.2, x, G + 9, z); for (let k = 0; k < 3; k++) box(B, '#6f6a60', null, 4.4 - k * 0.2, 0.2, 0.2, x, G + 2.5 + k * 2.4, z + 2.3); B.add(new T.IcosahedronGeometry(4.6, 1), '#e6e1d3', null, x, G + 13.2, z); }
+  function sandbags(B, x, z, len, ry) { const b = at(x, G, z, ry || 0), n = Math.max(2, Math.round(len / 1.2)); for (let r = 0; r < 3; r++) for (let i = 0; i < n - (r % 2); i++) box(B, r % 2 ? '#b99d6a' : '#c8ad7a', b, 1.1, 0.42, 0.7, -len / 2 + 0.6 + i * 1.2 + (r % 2) * 0.6, r * 0.4, 0); }
+  function pole(B, x, z, ry) { const b = at(x, 0.3, z, ry || 0); box(B, '#6f5a42', b, 0.28, 9.2, 0.28, 0, 0, 0); box(B, '#6f5a42', b, 3.2, 0.18, 0.18, 0, 8.4, 0); box(B, '#6f5a42', b, 2.0, 0.14, 0.14, 0, 7.4, 0); box(B, '#4a4d52', b, 0.5, 0.9, 0.4, 0.3, 6.2, 0.3); }
+  function crates(B, x, z, ry) { const b = at(x, G, z, ry || 0), c = ['#a07e4c', '#8f703f', '#b08c58']; [[0, 0, 0], [1.4, 0, 0.2], [0.7, 0, 1.4], [0.6, 1.2, 0.5], [-1.3, 0, 0.9]].forEach(([a, h, d], i) => box(B, c[i % 3], b, 1.3, 1.2, 1.3, a, h, d)); }
+  function drums(B, x, z) { [[0, 0], [1, 0.1], [0.5, 0.9], [-0.5, 0.9], [1.5, 0.9], [2.1, 0.1]].forEach(([a, d], i) => cyl(B, i % 3 ? '#6b7040' : '#8a7a3a', null, 0.38, 0.95, x + a, G, z + d)); }
+  function rock(B, x, y, z, s, col) { B.add(new T.IcosahedronGeometry(1, 0), col, null, x, y + s * 0.3, z, s * 1.2, s * 0.8, s, 0.3, x, 0.2); }
+  function agave(B, x, y, z, s) { for (let k = 0; k < 6; k++) B.add(new T.ConeGeometry(0.22 * s, 1.5 * s, 4), '#7c8f4a', null, x + Math.cos(k) * 0.3 * s, y + 0.6 * s, z + Math.sin(k) * 0.3 * s, 1, 1, 1, Math.sin(k) * 0.5, 0, Math.cos(k) * 0.5); }
+  function climbers(B, x, z, ry) { const b = at(x, 0.38, z, ry || 0), P = '#6a5a44'; [[-4, -1.5], [-4, 1.5], [4, -1.5], [4, 1.5]].forEach(([a, c]) => box(B, P, b, 0.25, 3.4, 0.25, a, 0, c)); [0, 1, 2].forEach(k => { box(B, P, b, 8.2, 0.14, 0.14, 0, 2.2 + k * 0.4, -1.5); box(B, P, b, 8.2, 0.14, 0.14, 0, 2.2 + k * 0.4, 1.5); }); for (let i = 0; i < 6; i++) box(B, P, b, 0.12, 0.12, 3.0, -3.5 + i * 1.4, 3.3, 0); }
   function hullGeo(L, Bm, depth, up) { const s = new T.Shape(), h = L / 2, w = Bm / 2; s.moveTo(-w, -h); s.lineTo(w, -h); s.lineTo(w, h * 0.45); s.lineTo(w * 0.55, h * 0.86); s.lineTo(0, h); s.lineTo(-w * 0.55, h * 0.86); s.lineTo(-w, h * 0.45); s.lineTo(-w, -h);
     return new T.ExtrudeGeometry(s, { depth: depth + up, bevelEnabled: false }).rotateX(-Math.PI / 2).translate(0, -depth, 0); }   // keel at -depth, deck at +up; bow toward -z (north)
   function frigate(B, x, z) { const b = at(x, 0.3, z, 0);
     B.add(hullGeo(62, 10, 1.8, 2.6), '#8d98a3', b, 0, 0, 0); box(B, '#59636c', b, 9.4, 0.15, 56, 0, 2.6, 2); box(B, '#c8ced3', b, 8, 4.6, 14, 0, 2.7, -4); box(B, 'glass', b, 7.4, 0.9, 0.2, 0, 5.2, -11.1); box(B, '#c8ced3', b, 5, 3, 8, 0, 7.3, -3);
-    box(B, '#8d98a3', b, 3.0, 4.4, 3.0, 0, 2.7, 8); box(B, '#3b3d41', b, 3.4, 0.5, 3.4, 0, 7.1, 8); box(B, '#3b3d41', b, 0.2, 12, 0.2, 0, 10.3, -3); box(B, '#59636c', b, 0.1, 0.1, 4.0, 0, 20.5, -3);
+    box(B, '#8d98a3', b, 3.0, 4.4, 3.0, 0, 2.7, 8); box(B, '#3b3d41', b, 3.4, 0.5, 3.4, 0, 7.1, 8); box(B, '#3b3d41', b, 0.2, 12, 0.2, 0, 10.3, -3); box(B, '#59636c', b, 0.1, 0.1, 4.0, 0, 20.5, -3); B.add(new T.IcosahedronGeometry(1.5, 1), '#e9ecef', b, 0, 15.6, -3); box(B, '#3b3d41', b, 3.2, 0.5, 0.6, 0, 18.5, -3);
     cyl(B, '#59636c', b, 1.8, 1.0, 0, 2.6, -21, 0, 0); box(B, '#3b3d41', b, 0.4, 0.4, 4.0, 0, 3.4, -24); box(B, '#d8d4c4', b, 6, 0.2, 6, 0, 2.7, 22);
     box(B, '#e9e1cc', b, 0.2, 0.9, 5, -5.01, 1.4, -2); box(B, '#e9e1cc', b, 0.2, 0.9, 5, 5.01, 1.4, -2); }
   function patrol(B, x, z, ry) { const b = at(x, 0.3, z, ry || 0);
     B.add(hullGeo(14, 4, 0.7, 1.1), '#a3adb6', b, 0, 0, 0); box(B, '#d6d9dc', b, 3, 1.8, 4.4, 0, 1.1, 0.8); box(B, 'glass', b, 3.1, 0.7, 2.6, 0, 1.6, 1.5); box(B, '#3b3d41', b, 0.1, 4, 0.1, 0, 2.9, 0.5); box(B, '#3b3d41', b, 0.25, 0.25, 1.6, 0, 1.4, -3.4); }
   function sub(B, x, z) { const b = at(x, 0.3, z, 0);
     B.add(new T.SphereGeometry(1, 12, 8), '#2e3842', b, 0, 0.2, 0, 3.0, 2.7, 27); box(B, '#2e3842', b, 2.2, 3.6, 7, 0, 0.5, 5); box(B, '#2e3842', b, 0.2, 2.2, 3, 0, 1.2, -25); box(B, '#2e3842', b, 7, 0.2, 2, 0, 0.5, -24.5); }
-  function crane(B, x, z, ry) { const b = at(x, 1.0, z, ry || 0), c = '#e08a2e';
-    [[-6, -5], [6, -5], [-6, 5], [6, 5]].forEach(([a, d]) => box(B, c, b, 1.0, 13, 1.0, a, 0, d)); box(B, c, b, 14, 1.2, 12, 0, 13, 0); box(B, c, b, 4.2, 3.2, 4.2, 4.5, 14.2, -3); box(B, c, b, 3.0, 1.4, 38, 0, 14.4, -16); box(B, '#3b3d41', b, 0.2, 7, 0.2, 0, 7.4, -30); box(B, '#3b3d41', b, 3, 0.5, 1.5, 0, 6.9, -30); }
+  const BOXC = new T.BoxGeometry(1, 1, 1);
+  function crane(B, x, z, ry) { const b = at(x, 1.0, z, ry || 0), c = '#c9a24a', st = '#5f646b';
+    [-5, 5].forEach(a => box(B, st, b, 0.5, 0.25, 30, a, 0, 0));                                                        // rails
+    [[-5, -4], [5, -4], [-5, 4], [5, 4]].forEach(([a, d]) => { box(B, st, b, 1.2, 0.8, 2.2, a, 0, d); box(B, c, b, 0.9, 10, 0.9, a * 0.8, 0.8, d * 0.8); });
+    [-1, 1].forEach(sd => { B.add(BOXC, c, b, sd * 4, 5.5, 0, 0.4, 0.4, 9.6, Math.atan2(8, 7), 0, 0); B.add(BOXC, c, b, 0, 5.5, sd * 3.2, 9.6, 0.4, 0.4, 0, 0, Math.atan2(7, 8)); });
+    box(B, c, b, 10, 1.0, 9, 0, 10.8, 0); box(B, c, b, 4.4, 3.6, 5.6, 0, 11.8, 1.2); box(B, 'glass', b, 4.5, 1.2, 1.0, 0, 13.4, -1.4); box(B, st, b, 0.6, 3, 0.6, 0, 15.4, 2.6);
+    const a = 0.55, L = 30, sy = 13, sz = -1.6, my = sy + Math.sin(a) * L / 2, mz = sz - Math.cos(a) * L / 2; B.add(BOXC, c, b, 0, my, mz, 1.1, 1.1, L, a, 0, 0);   // angled jib
+    const ty = sy + Math.sin(a) * L, tz = sz - Math.cos(a) * L; box(B, '#3b3d41', b, 0.12, ty - 6, 0.12, 0, 6, tz); box(B, '#3b3d41', b, 1.6, 1.2, 1.6, 0, 4.8, tz); }
+  function tug(B, x, z, ry) { const b = at(x, 0.3, z, ry || 0); B.add(hullGeo(18, 6.4, 1.0, 1.6), '#8a8658', b, 0, 0, 0); box(B, '#2a2c2e', b, 6.8, 0.6, 17, 0, 0.9, 0.4); box(B, '#e9e1cc', b, 4.2, 2.4, 5, 0, 1.6, 1.0); box(B, 'glass', b, 4.3, 0.8, 5.1, 0, 3.2, 1.0); box(B, '#e9e1cc', b, 3, 1.6, 2.6, 0, 4.0, 0.4); box(B, '#3b3d41', b, 1.2, 3, 1.2, 0, 3.2, 4.4); box(B, '#5f646b', b, 0.12, 5, 0.12, 0, 5.6, 0.4); }
+  function fender(B, x, z, ry) { box(B, '#2a2c2e', at(x, 0.1, z, ry || 0), 1.8, 1.1, 0.5, 0, 0, 0); }
+  function bollard(B, x, z, y) { cyl(B, '#3b3d41', null, 0.3, 0.6, x, y == null ? 1.0 : y, z); cyl(B, '#3b3d41', null, 0.42, 0.12, x, (y == null ? 1.0 : y) + 0.6, z); }
+  function firestation(B, x, z, ry) { const b = at(x, G, z, ry || 0), RED = '#b8382e';
+    box(B, '#a8a396', b, 25, 0.4, 17, 0, 0, 0); box(B, '#ddd5c4', b, 24, 7, 16, 0, 0.4, 0); box(B, RED, b, 24.4, 0.8, 16.4, 0, 7.4, 0); box(B, '#8c8e8c', b, 23.4, 0.3, 15.4, 0, 8.0, 0);
+    [-6, 0].forEach(px => { box(B, RED, b, 5.2, 5.4, 0.2, px, 0.4, 8.0); box(B, '#c9c6bd', b, 4.4, 4.8, 0.3, px, 0.4, 8.05); for (let k = 0; k < 4; k++) box(B, '#a8a59c', b, 4.4, 0.08, 0.34, px, 1.4 + k * 1.1, 8.06); });
+    box(B, '#3b2f26', b, 1.4, 2.4, 0.3, 7.5, 0.4, 8.05); box(B, 'glass', b, 3.0, 1.4, 0.2, 7.5, 3.6, 8.05); box(B, '#ddd5c4', b, 5, 4, 5, 6, 8.2, -2); box(B, RED, b, 5.4, 0.6, 5.4, 6, 12.2, -2); box(B, 'glass', b, 5.1, 1.2, 5.1, 6, 10.4, -2); box(B, '#8c8e8c', b, 24, 0.5, 6, 0, 0, 13.5); }
+  function firetruck(B, x, z, ry) { const b = at(x, 0.54, z, ry || 0), RED = '#c23a2e'; box(B, RED, b, 2.6, 2.4, 9, 0, 0.6, 0); box(B, 'glass', b, 2.65, 0.9, 1.2, 0, 2.0, 3.6); box(B, '#e9e4d8', b, 2.7, 0.3, 9.1, 0, 1.5, 0); box(B, '#c9c6bd', b, 1.2, 0.5, 5, 0, 3.0, -1.2); box(B, '#3b6fd0', b, 1.6, 0.25, 0.4, 0, 3.0, 3.8); [-3, -1, 3].forEach(sz => [-1.2, 1.2].forEach(sx => box(B, '#222', b, 0.4, 1.0, 1.0, sx, 0, sz))); }
+  function tanker(B, x, z, ry) { const b = at(x, 0.54, z, ry || 0); box(B, '#6f7a45', b, 2.4, 2.4, 2.4, 0, 0.7, 3.4); box(B, 'glass', b, 2.3, 0.8, 0.2, 0, 2.2, 4.6); box(B, '#3b3d41', b, 1.4, 0.4, 9, 0, 0.6, -1); cyl(B, '#b9bcbc', b, 1.25, 7, 0, 2.2, -4.6, Math.PI / 2, 0); [-4, -2.5, 3].forEach(sz => [-1.1, 1.1].forEach(sx => box(B, '#222', b, 0.4, 1.0, 1.0, sx, 0, sz))); }
+  function forklift(B, x, z, ry, y) { const b = at(x, y == null ? 1.0 : y, z, ry || 0), c = '#d1a63a'; box(B, c, b, 1.3, 1.1, 2.2, 0, 0.3, 0); box(B, '#3b3d41', b, 1.2, 0.1, 1.3, 0, 2.3, -0.1); [[-0.55, -0.6], [0.55, -0.6], [-0.55, 0.5], [0.55, 0.5]].forEach(([a, d]) => box(B, '#3b3d41', b, 0.08, 2.0, 0.08, a, 1.3, d)); box(B, '#5f646b', b, 1.0, 2.6, 0.15, 0, 0.1, 1.2); box(B, '#5f646b', b, 0.2, 0.1, 1.1, -0.3, 0.15, 1.8); box(B, '#5f646b', b, 0.2, 0.1, 1.1, 0.3, 0.15, 1.8); [[-0.65, -0.6], [0.65, -0.6], [-0.65, 0.6], [0.65, 0.6]].forEach(([a, d]) => box(B, '#222', b, 0.25, 0.6, 0.6, a, 0, d)); }
+  function radarTrailer(B, x, z, ry) { const b = at(x, G, z, ry || 0), c = '#6f7a45'; box(B, '#3b3d41', b, 2.2, 0.3, 4, 0, 0.6, 0); box(B, c, b, 2, 1.2, 2.4, 0, 0.9, 0.4); box(B, '#3b3d41', b, 0.15, 0.15, 2, 0, 0.6, 3); [-1, 1].forEach(sd => box(B, '#222', b, 0.3, 0.8, 0.8, sd * 1.15, 0, -0.6)); box(B, c, b, 0.3, 1.6, 0.3, 0, 2.1, 0.4); B.add(new T.CylinderGeometry(1.6, 1.0, 0.4, 10), c, b, 0, 4.0, 0.4, 1, 1, 1, -0.9, 0, 0); }
+  function floodlight(B, x, z) { const b = at(x, G, z, 0), st = '#6f6a60'; [[-0.9, -0.9], [0.9, -0.9], [-0.9, 0.9], [0.9, 0.9]].forEach(([a, d]) => box(B, st, b, 0.2, 18, 0.2, a * (1 - 0) , 0, d)); for (let k = 1; k < 6; k++) box(B, st, b, 1.9, 0.12, 0.12, 0, k * 3, 0.9); box(B, st, b, 3.6, 0.3, 1.2, 0, 18, 0); for (let i = 0; i < 4; i++) box(B, '#fff2c4', b, 0.7, 0.7, 0.3, -1.2 + i * 0.8, 18.5, 0.5); }
+  function jersey(B, x, z, ry, n) { const b = at(x, G, z, ry || 0); for (let i = 0; i < (n || 4); i++) { box(B, '#bdb9ae', b, 0.7, 0.35, 2.9, 0, 0, i * 3.05); box(B, '#bdb9ae', b, 0.36, 0.5, 2.9, 0, 0.35, i * 3.05); } }
   function lighthouse(B, x, z) { const b = at(x, 1.0, z, 0);
     for (let i = 0; i < 4; i++) cyl(B, i % 2 ? '#d6302a' : '#f4efe2', b, 3.2 - i * 0.28, 5.4, 0, i * 5.4, 0);
     box(B, '#3b3d41', b, 7.4, 0.5, 7.4, 0, 21.6, 0); box(B, 'glass', b, 4, 2.4, 4, 0, 22.1, 0); B.add(new T.ConeGeometry(3.0, 2.6, 8), '#d6302a', b, 0, 25.9, 0); box(B, '#ffd27a', b, 1.4, 1.4, 1.4, 0, 22.7, 0); }
@@ -115,7 +147,7 @@
   // fence: 2.6 m posts every 'step' m, two rails, a translucent mesh panel (so the line reads from the air without blocking the view)
   function fence(B, pts, step, skip) { for (let k = 0; k < pts.length - 1; k++) { const [x0, z0] = pts[k], [x1, z1] = pts[k + 1], L = Math.hypot(x1 - x0, z1 - z0), a = Math.atan2(x1 - x0, z1 - z0), n = Math.max(1, Math.round(L / step));
       for (let i = 0; i <= n; i++) { const t = i / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t; if (skip && skip(x, z)) continue; box(B, '#59623f', null, 0.14, 2.7, 0.14, x, G, z); }
-      const run = (a0, b0) => { const x = x0 + (x1 - x0) * (a0 + b0) / 2, z = z0 + (z1 - z0) * (a0 + b0) / 2, l = L * (b0 - a0); box(B, '#6b6f6a', null, 0.08, 0.08, l, x, G + 2.6, z, a); box(B, '#6b6f6a', null, 0.08, 0.08, l, x, G + 1.3, z, a); B.add(BOX, 'wire', null, x, G + 0.1, z, 0.03, 2.4, l, 0, a, 0); };
+      const run = (a0, b0) => { const x = x0 + (x1 - x0) * (a0 + b0) / 2, z = z0 + (z1 - z0) * (a0 + b0) / 2, l = L * (b0 - a0); box(B, '#6b6f6a', null, 0.08, 0.08, l, x, G + 2.6, z, a); box(B, '#6b6f6a', null, 0.08, 0.08, l, x, G + 1.3, z, a); B.add(BOX, 'wire', null, x, G + 0.1, z, 0.03, 2.4, l, 0, a, 0); box(B, '#59606a', null, 0.28, 0.28, l, x, G + 2.7, z, a); };
       if (!skip) run(0, 1); else { let s0 = 0; for (let i = 0; i <= n; i++) { const t = i / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t; if (skip(x, z)) { if (i > s0) run(s0 / n, (i - 1) / n); s0 = i + 1; } } if (s0 < n) run(s0 / n, 1); } } }
 
   function signTex(lines, w, h, bg, fg) { if (typeof document === 'undefined') return null; const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const c = cv.getContext('2d');
@@ -132,14 +164,14 @@
 
   // ---------- the whole zone ----------
   function forces(o = {}) {
-    const fast = !!o.fast, g = new T.Group(), B = Batch(), r = rng(26112), W = () => WALL[(r() * 3) | 0];
+    const fast = !!o.fast; FASTMODE = fast; const g = new T.Group(), B = Batch(), r = rng(26112), W = () => WALL[(r() * 3) | 0];
     // ---- lawn (mown grass with dry khaki patches), one grid at y 0.30 ----
-    { const CELL = fast ? 30 : 20, nx = Math.round((Z.x1 - Z.x0) / CELL), nz = Math.round((Z.z1 - Z.z0) / CELL), pos = [], col = [], idx = [], c1 = new T.Color('#8fb561'), c2 = new T.Color('#a8aa6a'), c3 = new T.Color('#7ea856'), cc = new T.Color();
+    { const CELL = fast ? 30 : 20, nx = Math.round((Z.x1 - Z.x0) / CELL), nz = Math.round((Z.z1 - Z.z0) / CELL), pos = [], col = [], idx = [], c1 = new T.Color('#94a75c'), c2 = new T.Color('#b4a874'), c3 = new T.Color('#7f9150'), cc = new T.Color();
       for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) { const x = Z.x0 + (Z.x1 - Z.x0) * i / nx, z = Z.z0 + (Z.z1 - Z.z0) * j / nz, n = noise(x / 90, z / 90, 5), m = noise(x / 40, z / 40, 9);
         pos.push(x, G, z); cc.copy(c1).lerp(c2, sst((n - 0.45) * 3.2) * 0.85).lerp(c3, sst((m - 0.62) * 4) * 0.5); col.push(cc.r, cc.g, cc.b); }
       for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const a = j * (nx + 1) + i, b2 = a + 1, c = a + nx + 1, d = c + 1; idx.push(a, c, b2, b2, c, d); }
       const G2 = new T.BufferGeometry(); G2.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); G2.setAttribute('color', new T.Float32BufferAttribute(col, 3)); G2.setIndex(idx); G2.computeVertexNormals();
-      g.add(new T.Mesh(G2, new T.MeshLambertMaterial({ vertexColors: true, flatShading: true }))); }
+      { const lm = new T.Mesh(G2, new T.MeshLambertMaterial({ vertexColors: true, flatShading: true })); lm.userData.ground = true; g.add(lm); } }
     // ============ v2 (Dev, 26 Nov): ONE planned compound, picture-dense ============
     // spine road z -420 from the gate west; Cross Avenue x -2200 north-south; navy NW on the shore, army NE + SE, air force SW
     const road = (x0, x1, z0, z1, c, top) => slab(B, c || ROAD, x0, x1, z0, z1, 0.3, top || 0.46), APP = o.approachEnd == null ? -900 : o.approachEnd;
@@ -177,7 +209,7 @@
     slab(B, '#8d8b82', -2516, -2512, -818, -676, 1.0, 1.1); slab(B, '#8d8b82', -2490, -2486, -818, -700, 1.0, 1.1); slab(B, '#8d8b82', -2314, -2310, -818, -700, 1.0, 1.1);   // kerbs along the water
     const wedge = (len, run, rise, x, z, ry) => B.add(wedgeGeo(len, run, rise), '#a9a79e', null, x, 0.3, z, 1, 1, 1, 0, ry, 0);
     wedge(298, 6, 0.7, -2367, -676, -Math.PI / 2); wedge(142, 6, 0.7, -2516, -747, Math.PI);
-    [[-2450, -2438, -762], [-2375, -2363, -786]].forEach(([a, b, zn]) => { slab(B, '#a9a79e', a, b, zn, -700, 0.5, 1.0); if (!fast) for (let z = zn + 2; z < -700; z += 7) [a - 0.4, b + 0.4].forEach(px => slab(B, '#4a3f35', px - 0.3, px + 0.3, z - 0.3, z + 0.3, -1.6, 0.5)); });
+    [[-2450, -2438, -762], [-2375, -2363, -786]].forEach(([a, b, zn]) => { slab(B, '#a9a79e', a, b, zn, -700, -1.0, 1.0); slab(B, '#8d8b82', a, b, zn, zn + 1.2, 1.0, 1.1); if (!fast) for (let z = zn + 4; z < -702; z += 8) { fender(B, a - 0.25, z, Math.PI / 2); fender(B, b + 0.25, z, Math.PI / 2); bollard(B, a + 1.2, z + 2); bollard(B, b - 1.2, z + 2); } });
     slab(B, ROAD, -2480, -2320, -696, -686, 1.0, 1.06); for (let x = -2476; x < -2324; x += 10) slab(B, '#e2c44a', x, x + 5, -691.1, -690.9, 1.06, 1.1);
     slab(B, '#8d8f8a', -2400, -2330, -640, -510, 0.3, 0.5);                                                               // navy yard hard-standing
     // ---- the outer gate (east), as before ----
@@ -194,9 +226,9 @@
     const checkpoint = (x, z, axis) => { if (axis === 'x') { booth(B, x, z - 9, 0); barrier(B, x, z - 6.5, 6, 0); barrier(B, x, z + 6.5, 6, Math.PI); [z - 7, z + 7].forEach(pz => box(B, '#6a5a44', null, 1.1, 4.2, 1.1, x, G, pz)); }
       else { booth(B, x - 9, z, Math.PI / 2); barrier(B, x - 6.5, z, 6, Math.PI / 2); barrier(B, x + 6.5, z, 6, -Math.PI / 2); [x - 7, x + 7].forEach(px => box(B, '#6a5a44', null, 1.1, 4.2, 1.1, px, G, z)); } };
     // ---- ARMY north: HQ + admin row, parade ground, stores, training ground with obstacle course ----
-    bl(-2130, -775, 42, 16, '#cfc5a3', ROOF, { fl: 2, doors: 2, path: 26 }); bl(-2060, -775, 32, 14, W(), ROOF2, { fl: 2, doors: 2, path: 20 }); bl(-2010, -775, 28, 14, '#e6e9ea', ROOF, { fl: 1, doors: 1, path: 20 }); bl(-1960, -775, 30, 14, W(), ROOF2, { fl: 1, doors: 2, path: 20 });
+    bl(-2130, -775, 42, 16, '#d9c398', ROOF, { fl: 2, doors: 2, path: 26 }); bl(-2060, -775, 32, 14, W(), ROOF2, { fl: 2, doors: 2, path: 20 }); bl(-2010, -775, 28, 14, '#e4d8bc', ROOF, { fl: 1, doors: 1, path: 20 }); bl(-1960, -775, 30, 14, W(), ROOF2, { fl: 1, doors: 2, path: 20 });
     flagpole(B, -2160, -752, 20, '#4b5d32'); flagpole(B, -2100, -752, 20, '#4b5d32');
-    bl(-2012, -716, 50, 22, '#8f8a78', '#4a4a46', { fl: 1, flat: true, win: false, doors: 2, path: 6 }); bl(-2012, -672, 50, 22, '#8f8a78', '#4a4a46', { fl: 1, flat: true, win: false, doors: 2, path: 6 });   // equipment warehouses
+    bl(-2012, -716, 50, 22, '#a8987a', '#4a4a46', { fl: 1, flat: true, win: false, doors: 2, path: 6 }); bl(-2012, -672, 50, 22, '#a8987a', '#4a4a46', { fl: 1, flat: true, win: false, doors: 2, path: 6 });   // equipment warehouses
     { const P = '#6a5a44';   // obstacle course on the sand: wall climbs, A-frames, tyre rows, rope towers, crawl nets, firing berm, mock village
       for (let i = 0; i < 5; i++) { const x = -1920 + i * 22; box(B, P, null, 5, 2.6, 0.4, x, 0.38, -770); box(B, P, null, 0.3, 3.4, 0.3, x - 2.5, 0.38, -770); box(B, P, null, 0.3, 3.4, 0.3, x + 2.5, 0.38, -770); }
       for (let i = 0; i < 4; i++) { const x = -1912 + i * 26, b = at(x, 0.38, -748, 0); B.add(prismGeo(5, 3.4, 4), P, b, 0, 0, 0); }
@@ -209,33 +241,44 @@
     // barracks complex: two rows, a mess hall, gym, aid post, chapel between the rows
     [-2155, -2093, -2031, -1969, -1907, -1845, -1783].forEach(x => bl(x, -560, 48, 14, W(), ROOF, { fl: 2, doors: 2, ry: Math.PI, path: 20 }));
     [-2155, -2093, -2031, -1969, -1907, -1845].forEach((x, i) => bl(x, -470, 48, 14, W(), i % 2 ? ROOF2 : ROOF, { fl: 2, doors: 2, path: 14 }));
-    bl(-2150, -518, 36, 18, '#cfc5a3', ROOF2, { fl: 1, doors: 2 }); bl(-2070, -518, 30, 16, W(), ROOF, { fl: 1, doors: 2 }); bl(-1990, -518, 26, 14, '#e6e9ea', ROOF, { fl: 1, doors: 1 }); bl(-1880, -518, 36, 16, W(), ROOF2, { fl: 1, doors: 2 }); bl(-1790, -518, 30, 16, W(), ROOF, { fl: 1, doors: 2 });
+    bl(-2150, -518, 36, 18, '#d9c398', ROOF2, { fl: 1, doors: 2 }); bl(-2070, -518, 30, 16, W(), ROOF, { fl: 1, doors: 2 }); bl(-1990, -518, 26, 14, '#e4d8bc', ROOF, { fl: 1, doors: 1 }); bl(-1880, -518, 36, 16, W(), ROOF2, { fl: 1, doors: 2 }); bl(-1790, -518, 30, 16, W(), ROOF, { fl: 1, doors: 2 });
     flagpole(B, -2118, -533, 12, '#4b5d32');
     // ---- ARMY south-east: motor pool, maintenance garages, supply depots, container yard ----
-    for (let k = 0; k < (fast ? 28 : 75); k++) { const per = 15, row = (k / per) | 0, col = k % per, vx = -1952 + col * (fast ? 11 : 10), vz = -396 + row * (fast ? 20 : 14), kind = [jeep, truck, apc][(k + row) % 3]; if (vx > -1806) continue; kind(B, vx, vz, Math.PI / 2); }
-    [-1930, -1872, -1814].forEach(x => bl(x, -300, 50, 24, '#8f8a78', ROOF2, { fl: 1, doors: 3, win: false, ry: Math.PI, path: 10 })); bl(-1740, -300, 40, 24, '#8f8a78', '#4a4a46', { fl: 1, flat: true, win: false, doors: 2, ry: Math.PI, path: 10 });
+    { const R5 = rng(5150); [[tank, -1952, -1906, 11, 12], [truck, -1896, -1850, 11, 10], [jeep, -1842, -1806, 7, 7.5]].forEach(([kind, xa, xb, px, pz]) => { for (let vz = -396; vz < -342; vz += pz) for (let vx = xa; vx <= xb; vx += px) { if (R5() < (fast ? 0.55 : 0.15)) continue; kind(B, vx + (R5() - 0.5) * 1.2, vz + (R5() - 0.5) * 1.0, Math.PI / 2 + (R5() - 0.5) * 0.16); } }); }
+    [-1930, -1872, -1814].forEach(x => bl(x, -300, 50, 24, '#a8987a', ROOF2, { fl: 1, doors: 3, win: false, ry: Math.PI, path: 10 })); bl(-1740, -300, 40, 24, '#a8987a', '#4a4a46', { fl: 1, flat: true, win: false, doors: 2, ry: Math.PI, path: 10 });
     [-1940, -1880, -1820].forEach(x => bl(x, -240, 50, 22, W(), '#4a4a46', { fl: 1, flat: true, win: false, doors: 2, ry: Math.PI, path: 6 })); bl(-1750, -240, 36, 20, W(), ROOF, { fl: 1, doors: 2, ry: Math.PI, path: 6 });
-    for (let i = 0; i < 12; i++) box(B, ['#c9703a', '#3a6f9a', '#b84a3a', '#5a8a5a'][i % 4], null, 6, 2.6, 2.4, -1800 + (i % 4) * 7, 0.46 + ((i / 4) | 0) * 2.6, -272);
+    for (let i = 0; i < 12; i++) box(B, ['#9a5a3e', '#4f6478', '#7a7a52', '#8a4a3a'][i % 4], null, 6, 2.6, 2.4, -1800 + (i % 4) * 7, 0.46 + ((i / 4) | 0) * 2.6, -272);
     // ---- AIR FORCE: 4 hangars, tower, ops, airmen barracks, aircraft, fuel and radar ----
     [-2480, -2434, -2388, -2342].forEach(x => hangar(B, x, -377, 38, 56, 0)); tower(B, -2290, -388);
-    bl(-2440, -440, 46, 16, W(), ROOF, { fl: 2, doors: 2, ry: Math.PI, path: 4 }); bl(-2380, -440, 36, 14, '#cfc5a3', ROOF2, { fl: 1, doors: 2, ry: Math.PI, path: 4 }); bl(-2325, -438, 30, 14, '#e6e9ea', ROOF, { fl: 1, doors: 1, ry: Math.PI, path: 4 });
+    bl(-2440, -440, 46, 16, W(), ROOF, { fl: 2, doors: 2, ry: Math.PI, path: 4 }); bl(-2380, -440, 36, 14, '#d9c398', ROOF2, { fl: 1, doors: 2, ry: Math.PI, path: 4 }); bl(-2325, -438, 30, 14, '#e4d8bc', ROOF, { fl: 1, doors: 1, ry: Math.PI, path: 4 });
     for (let i = 0; i < (fast ? 4 : 6); i++) jet(B, -2488 + i * 36, -322, 0);
     for (let i = 0; i < (fast ? 2 : 4); i++) jet(B, -2470 + i * 36, -290, Math.PI);
     transport(B, -2330, -300, 0); heli(B, -2250, -298, 0.5); heli(B, -2218, -340, -0.3);
     bl(-2140, -385, 48, 14, W(), ROOF, { fl: 2, doors: 2, ry: Math.PI, path: 14 }); bl(-2075, -385, 48, 14, W(), ROOF2, { fl: 2, doors: 2, ry: Math.PI, path: 14 });
-    bl(-2110, -330, 30, 16, '#c9705a', '#6b3f33', { fl: 1, doors: 1, win: false }); bl(-2060, -330, 30, 16, W(), ROOF, { fl: 1, doors: 2 });
-    for (let i = 0; i < 4; i++) fuelTank(B, -2185 + (i % 2) * 14, -345 + ((i / 2) | 0) * 14, 5); dome(B, -2150, -300); dome(B, -2128, -302); box(B, '#e9e4d8', null, 0.15, 9, 0.15, -2022, G, -205); box(B, '#e6732a', null, 0.1, 0.9, 3.2, -2022, G + 7.4, -203.4);
+    firestation(B, -2110, -330, 0); firetruck(B, -2116, -312, 0); tanker(B, -2265, -282, Math.PI / 2 + 0.2); tanker(B, -2060, -300, 0.1); radarTrailer(B, -2235, -360, 0.6); radarTrailer(B, -1990, -300, -0.4);
+    floodlight(B, -2504, -352); floodlight(B, -2405, -352); floodlight(B, -2300, -352); floodlight(B, -2504, -268); floodlight(B, -1960, -408); floodlight(B, -1800, -408);
+    jersey(B, GATE.x + 12, GATE.z - 14, 0, 3); jersey(B, GATE.x + 12, GATE.z + 6, 0, 3); jersey(B, -2232, -672, 0, 2); jersey(B, -2170, -620, 0, 2); bl(-2060, -330, 30, 16, W(), ROOF, { fl: 1, doors: 2 });
+    for (let i = 0; i < 4; i++) fuelTank(B, -2185 + (i % 2) * 14, -345 + ((i / 2) | 0) * 14, 5); radar(B, -2150, -300); radar(B, -2118, -296); box(B, '#e9e4d8', null, 0.15, 9, 0.15, -2022, G, -205); box(B, '#e6732a', null, 0.1, 0.9, 3.2, -2022, G + 7.4, -203.4);
     // ---- NAVY: harbour office, yard buildings, wharf with containers and cranes, ships ----
     nb(-2400, -688, 22, 14, W(), ROOF, { fl: 2, doors: 1 });
-    bl(-2470, -620, 36, 16, '#cfc5a3', ROOF, { fl: 2, doors: 2, ry: Math.PI, path: 22 }); bl(-2470, -575, 44, 14, W(), ROOF2, { fl: 2, doors: 2, ry: Math.PI, path: 6 }); bl(-2470, -530, 44, 14, W(), ROOF, { fl: 2, doors: 2, ry: Math.PI, path: 6 }); bl(-2470, -485, 30, 14, '#e6e9ea', ROOF2, { fl: 1, doors: 1, ry: Math.PI, path: 6 });
+    bl(-2470, -620, 36, 16, '#d9c398', ROOF, { fl: 2, doors: 2, ry: Math.PI, path: 22 }); bl(-2470, -575, 44, 14, W(), ROOF2, { fl: 2, doors: 2, ry: Math.PI, path: 6 }); bl(-2470, -530, 44, 14, W(), ROOF, { fl: 2, doors: 2, ry: Math.PI, path: 6 }); bl(-2470, -485, 30, 14, '#e4d8bc', ROOF2, { fl: 1, doors: 1, ry: Math.PI, path: 6 });
     [[-2370, 50], [-2300, 50]].forEach(([x, w]) => bl(x, -625, w, 24, '#8d98a3', '#5f6a73', { fl: 1, flat: true, win: false, doors: 2, ry: Math.PI, path: 6 })); bl(-2245, -625, 36, 24, '#8d98a3', '#5f6a73', { fl: 1, flat: true, win: false, doors: 2, ry: Math.PI, path: 6 });
-    hangar(B, -2370, -560, 30, 42, Math.PI); hangar(B, -2325, -560, 30, 42, Math.PI);
-    for (let i = 0; i < 3; i++) fuelTank(B, -2260, -560 + i * 14, 5); dome(B, -2250, -490); bl(-2390, -490, 40, 14, W(), ROOF2, { fl: 1, doors: 2 });
-    for (let i = 0; i < 20; i++) box(B, ['#c9703a', '#3a6f9a', '#b84a3a', '#5a8a5a'][i % 4], null, 6, 2.6, 2.4, -2262 + (i % 2) * 7, 1.0 + (((i / 2) | 0) % 3) * 2.6, -806 + ((i / 6) | 0) * 9 * 0 + (((i / 6) | 0) % 3) * 9);
-    crane(B, -2285, -770, Math.PI / 2); crane(B, -2285, -720, Math.PI / 2); lighthouse(B, -2503, -811);
+    hangar(B, -2370, -560, 30, 42, Math.PI, STEEL); hangar(B, -2325, -560, 30, 42, Math.PI, STEEL);
+    for (let i = 0; i < 3; i++) fuelTank(B, -2260, -560 + i * 14, 5); radar(B, -2250, -490); bl(-2390, -490, 40, 14, W(), ROOF2, { fl: 1, doors: 2 });
+    for (let i = 0; i < 20; i++) box(B, ['#9a5a3e', '#4f6478', '#7a7a52', '#8a4a3a'][i % 4], null, 6, 2.6, 2.4, -2262 + (i % 2) * 7, 1.0 + (((i / 2) | 0) % 3) * 2.6, -806 + ((i / 6) | 0) * 9 * 0 + (((i / 6) | 0) % 3) * 9);
+    crane(B, -2300, -780, Math.PI / 2); crane(B, -2300, -735, Math.PI / 2); tug(B, -2405, -722, 0.2);
+    if (!fast) { for (let z = -814; z < -702; z += 8) { fender(B, -2489.75, z, Math.PI / 2); fender(B, -2310.25, z, Math.PI / 2); bollard(B, -2492, z + 3); bollard(B, -2308, z + 3); } for (let x = -2484; x < -2316; x += 8) { fender(B, x, -699.75, 0); bollard(B, x + 3, -698); } }
+    forklift(B, -2240, -770, 0.4); forklift(B, -2250, -705, -1.2); forklift(B, -2350, -688, 1.6); lighthouse(B, -2503, -811);
     frigate(B, -2472, -771); frigate(B, -2345, -778); sub(B, -2406, -760); [[-2325, -735], [-2325, -755], [-2325, -775]].forEach(([x, z]) => patrol(B, x, z, 0));
     nb(-2260, -690, 30, 14, W(), ROOF, { fl: 1, doors: 1, ry: Math.PI });
-    truck(B, -2440, -684, Math.PI, '#aeb4b8', 1.06); truck(B, -2360, -684, 0, '#aeb4b8', 1.06); jeep(B, -2230, -740, Math.PI / 2, '#6b7550', 1.06);
+    truck(B, -2440, -684, Math.PI, '#aeb4b8', 1.06); truck(B, -2360, -684, 0, '#aeb4b8', 1.06); jeep(B, -2230, -740, Math.PI / 2, '#8a8f6a', 1.06);
+    // ---- props from Dev's desert sheet: sandbag walls at every checkpoint, power poles, crates, drums, climbing frames, rocks ----
+    [[GATE.x - 9, GATE.z - 12, 0], [GATE.x - 9, GATE.z + 12, 0], [-2222, -668, Math.PI / 2], [-2222, -644, Math.PI / 2], [-2180, -612, Math.PI / 2], [-2180, -588, Math.PI / 2], [-2432, -440, 0], [-2408, -440, 0], [-1950, -440, 0], [-1926, -440, 0]].forEach(([x, z, ry]) => sandbags(B, x, z, 7, ry));
+    for (let x = -2400; x < -1720; x += 60) pole(B, x, -430, 0); for (let x = Z.x1 + 40; x < APP; x += 70) pole(B, x, -430, 0);
+    crates(B, -2150, -362, 0.3); crates(B, -2330, -505, 1.2); crates(B, -1770, -352, 0); crates(B, -1990, -690, 0.5); drums(B, -2090, -352); drums(B, -1735, -330); drums(B, -2395, -515); drums(B, -2020, -250);
+    climbers(B, -1860, -735, 0); climbers(B, -1800, -735, 0); climbers(B, -1900, -660, 0);
+    { const R3 = rng(77); for (let i = 0; i < (fast ? 20 : 60); i++) { const x = -3350 + R3() * 2000, z = -790 + R3() * 740, dx = Math.max(Z.x0 - x, x - Z.x1, 0), dz = Math.max(Z.z0 - z, z - Z.z1, 0); if (Math.hypot(dx, dz) < 14 || z < -775 || (x > Z.x1 && Math.abs(z - GATE.z) < 24)) continue; const y = 0.3 + hillH(x, z); if (R3() < 0.55) { rock(B, x, y, z, 1 + R3() * 2.2, R3() < 0.5 ? '#cdb98a' : '#a9a59a'); if (!fast) rock(B, x + 2.5, y, z + 1.5, 0.7 + R3(), '#b8a67a'); } else agave(B, x, y, z, 1 + R3() * 0.8); } }
+    for (let i = 0; i < (fast ? 14 : 36); i++) { const R4 = rng(900 + i), side = R4(), x = side < 0.5 ? Z.x0 - 6 - R4() * 14 : -2480 + R4() * 760, z = side < 0.5 ? -700 + R4() * 480 : Z.z1 + 6 + R4() * 14; rock(B, x, G, z, 0.8 + R4() * 1.6, R4() < 0.5 ? '#cdb98a' : '#a9a59a'); if (R4() < 0.6) agave(B, x + 3, G, z + 2, 1); }
     // ---- lamps ----
     const lampsAlong = (x0, x1, z, step, off, y0) => { for (let x = x0; x <= x1; x += step) { lamp(B, x, z - off, Math.PI, y0); if (!fast) lamp(B, x + step / 2, z + off, 0, y0); } };
     lampsAlong(-2420, -1720, GATE.z, 50, 9); lampsAlong(Z.x1 + 30, APP - 20, GATE.z, 70, 8); lampsAlong(-2180, -1720, -600, 50, 9); lampsAlong(-2500, -2230, -656, 50, 9);
@@ -257,17 +300,19 @@
       for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const a = j * (nx + 1) + i, b2 = a + 1, c = a + nx + 1, d = c + 1; if (Math.max(HH[a], HH[b2], HH[c], HH[d]) < 0.05) continue;
         const cx = X0 + (X1 - X0) * (i + 0.5) / nx, cz = ZA + (ZB - ZA) * (j + 0.5) / nz; if (cx > Z.x0 - 30 && cx < Z.x1 + 30 && cz > Z.z0 - 30 && cz < Z.z1 + 30) continue; idx.push(a, c, b2, b2, c, d); }
       const G3 = new T.BufferGeometry(); G3.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); G3.setAttribute('color', new T.Float32BufferAttribute(col, 3)); G3.setIndex(idx); G3.computeVertexNormals(); tris += idx.length / 3;
-      g.add(new T.Mesh(G3, new T.MeshLambertMaterial({ vertexColors: true, flatShading: true }))); }
+      { const hm = new T.Mesh(G3, new T.MeshLambertMaterial({ vertexColors: true, flatShading: true })); hm.userData.ground = true; g.add(hm); } }
     // ---- trees: groves on the hills and in the gaps round the fence, a few windbreak lines ----
     { const TR = [], NT = fast ? 240 : 560, R2 = rng(808);
       for (let i = 0; i < NT * 6 && TR.length < NT; i++) { const x = -3350 + R2() * 2050, z = -790 + R2() * 740; if (noise(x / 160, z / 160, 21) < 0.5) continue;
         const dx = Math.max(Z.x0 - x, x - Z.x1, 0), dz = Math.max(Z.z0 - z, z - Z.z1, 0); if (Math.hypot(dx, dz) < 18) continue; if (x > Z.x1 && Math.abs(z - GATE.z) < 24) continue; if (z < -770) continue;
         TR.push({ x, y: 0.3 + hillH(x, z), z, r: R2() * 6.28, s: 1.4 + R2() * 1.1, k: R2() < 0.55 ? 'p' : 'r', c: (R2() * 4) | 0 }); }
       const IN = (x, z, s) => TR.push({ x, y: G, z, r: R2() * 6, s: s || 1.2 + R2() * 0.5, k: R2() < 0.4 ? 'p' : 'r', c: (R2() * 4) | 0 });   // landscaping inside the compound (small groves, lines along the fences, never on a road or a pad)
-      for (let z = -640; z < -250; z += fast ? 40 : 20) IN(-2508, z + R2() * 6); for (let z = -800; z < -440; z += fast ? 40 : 22) IN(-1712, z + R2() * 6); for (let z = -420; z < -230; z += fast ? 40 : 20) IN(-1712, z + R2() * 6);
+      const grove = (cx, cz, n, rx, rz) => { for (let i = 0; i < (fast ? Math.ceil(n / 2) : n); i++) IN(cx + (R2() - 0.5) * rx, cz + (R2() - 0.5) * rz, 0.9 + R2() * 0.9); };
+      grove(-2508, -610, 6, 8, 40); grove(-2508, -470, 5, 8, 30); grove(-2508, -280, 4, 8, 20); grove(-1714, -470, 5, 8, 40); grove(-1714, -360, 3, 6, 20); grove(-2240, -470, 6, 30, 20); grove(-2060, -440, 0, 1, 1);
       [[-2380, -472, 7], [-2100, -268, 6], [-2002, -318, 6], [-2330, -462, 5], [-2160, -440, 0], [-1850, -432, 0], [-1760, -450, 5], [-2020, -640, 0], [-1830, -605, 0], [-2180, -535, 0]].forEach(([cx, cz, n]) => { for (let i = 0; i < (fast ? Math.ceil(n / 2) : n); i++) IN(cx + (R2() - 0.5) * 22, cz + (R2() - 0.5) * 14); });
-      for (let x = -2180; x < -1720; x += fast ? 70 : 35) IN(x, -806 + R2() * 4); for (let x = -2150; x < -1730; x += fast ? 80 : 40) { IN(x, -532, 1.1); }
+      grove(-2170, -806, 5, 30, 6); grove(-1990, -806, 4, 26, 6); grove(-1760, -806, 4, 30, 6); grove(-2120, -536, 3, 30, 5); grove(-1850, -536, 3, 30, 5);
       trees(g, TR, fast); g.userData.treeCount = TR.length; }
+    g.traverse(m => { if (!m.isMesh) return; m.receiveShadow = !fast; m.castShadow = !fast && !m.userData.ground && !(m.material && m.material.transparent); });
     g.userData.tris = tris; g.userData.zone = Z; g.userData.gate = GATE; return g; }
 
   root.VinlandForces = { forces, Z, GATE, hillH };
