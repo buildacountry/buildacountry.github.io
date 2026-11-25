@@ -30,7 +30,7 @@
   const cyl = (B, c, base, r, h, x, y, z, rx = 0, rz = 0, sx = 1, sz = 1) => B.add(CYL, c, base, x, y, z, r * sx, h, r * sz, rx, 0, rz);
 
   // ---------- the land ----------
-  const Z = { x0: -2700, x1: -1700, z0: -800, z1: -210 }, GATE = { x: -1700, z: -420 }, SHORE = -820, G = 0.3, FL = 0.7;   // G = lawn, FL = floor of a building on its plinth
+  const Z = { x0: -2520, x1: -1700, z0: -818, z1: -210 }, GATE = { x: -1700, z: -420 }, SHORE = -820, G = 0.3, FL = 0.7;   // G = lawn, FL = floor of a building on its plinth
   const ROAD = '#5d5f63', DIRT = '#b79b6c', SAND = '#cdb88a', CONC = '#9a9c96', WALL = ['#cfc5a3', '#c2b88f', '#b9b894'], ROOF = '#5c6b43', ROOF2 = '#6b5f4a', STEEL = '#7c8791', DARK = '#3b3d41';
   const noise = (x, z, s) => { const f = v => v - Math.floor(v), h = (a, b) => f(Math.sin(a * 127.1 + b * 311.7 + s * 74.7) * 43758.5453), xi = Math.floor(x), zi = Math.floor(z), u = f(x), v = f(z), a = h(xi, zi), b = h(xi + 1, zi), c = h(xi, zi + 1), d = h(xi + 1, zi + 1), uu = u * u * (3 - 2 * u), vv = v * v * (3 - 2 * v); return a + (b - a) * uu + (c - a) * vv + (a - b - c + d) * uu * vv; };
   const sst = k => { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); };
@@ -140,36 +140,47 @@
       for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const a = j * (nx + 1) + i, b2 = a + 1, c = a + nx + 1, d = c + 1; idx.push(a, c, b2, b2, c, d); }
       const G2 = new T.BufferGeometry(); G2.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); G2.setAttribute('color', new T.Float32BufferAttribute(col, 3)); G2.setIndex(idx); G2.computeVertexNormals();
       g.add(new T.Mesh(G2, new T.MeshLambertMaterial({ vertexColors: true, flatShading: true }))); }
-    // ---- roads (asphalt 12 m / 10 m), dirt roads inside the army base, sand yards, concrete aprons ----
+    // ============ v2 (Dev, 26 Nov): ONE planned compound, picture-dense ============
+    // spine road z -420 from the gate west; Cross Avenue x -2200 north-south; navy NW on the shore, army NE + SE, air force SW
     const road = (x0, x1, z0, z1, c, top) => slab(B, c || ROAD, x0, x1, z0, z1, 0.3, top || 0.46), APP = o.approachEnd == null ? -900 : o.approachEnd;
-    road(Z.x1, APP, -426, -414); road(-2195, Z.x1, -426, -414); road(-2200, -2190, -770, -240); road(-2440, -2200, -430, -420); road(-2300, -2200, -745, -735);
     const dash = (x0, x1, z, step) => { for (let x = x0; x < x1; x += step) slab(B, '#f1ead6', x, x + step * 0.5, z - 0.15, z + 0.15, 0.3, 0.52); };
-    dash(-2190, Z.x1 - 6, -420, 12); dash(Z.x1 + 6, APP - 6, -420, 12);
-    for (let z = -765; z < -245; z += 14) slab(B, '#f1ead6', -2195.15, -2194.85, z, z + 7, 0.3, 0.52);
-    // army base (x -2150..-1790, z -640..-300) inside its own fence (x -2160..-1780, z -650..-292)
+    const dashN = (x, z0, z1, step) => { for (let z = z0; z < z1; z += step) slab(B, '#f1ead6', x - 0.15, x + 0.15, z, z + step * 0.5, 0.3, 0.52); };
+    const sandY = (x0, x1, z0, z1) => slab(B, SAND, x0, x1, z0, z1, 0.3, 0.38);
+    road(Z.x1, APP, -426, -414); dash(Z.x1 + 6, APP - 6, -420, 12);                       // the road in from the town
+    road(-2430, Z.x1, -426, -414); dash(-2424, Z.x1 - 6, -420, 12);                        // spine
+    road(-2206, -2194, -812, -276); dashN(-2200, -806, -280, 14);                           // Cross Avenue
+    road(-2512, -2206, -662, -650); dash(-2506, -2210, -656, 10);                           // navy yard road (behind the quay)
+    road(-2425, -2415, -650, -426); dashN(-2420, -648, -428, 12);                           // navy access road
+    road(-2194, -1706, -606, -594); dash(-2188, -1712, -600, 10);                           // army avenue
+    road(-1943, -1933, -594, -426); dashN(-1938, -592, -428, 12);                           // army central road to the spine
+    road(-1981, -1969, -414, -222); dashN(-1975, -412, -224, 12);                           // logistics road
+    road(-1969, -1706, -338, -330);                                                          // motor-pool loop road (north edge of the lot is -335)
+    // ---- air force (SW): runway 480 x 30, taxiway, links, apron, helipad ----
+    slab(B, DARK, -2510, -2030, -245, -215, 0.3, 0.5); for (let x = -2492; x < -2046; x += 24) slab(B, '#f3ead6', x, x + 12, -230.3, -229.7, 0.3, 0.56);
+    for (let k = 0; k < 8; k++) { slab(B, '#f3ead6', -2506, -2498, -243 + k * 3.6, -242 + k * 3.6, 0.3, 0.56); slab(B, '#f3ead6', -2042, -2034, -243 + k * 3.6, -242 + k * 3.6, 0.3, 0.56); }
+    slab(B, '#e2c44a', -2510, -2030, -245.4, -245, 0.3, 0.55); slab(B, '#e2c44a', -2510, -2030, -215, -214.6, 0.3, 0.55);
+    slab(B, '#4a4c50', -2500, -2040, -272, -258, 0.3, 0.5); slab(B, '#e2c44a', -2500, -2040, -265.2, -264.8, 0.3, 0.55);
+    [-2480, -2330, -2190, -2080].forEach(x => slab(B, '#4a4c50', x - 7, x + 7, -258, -245, 0.3, 0.5));
+    slab(B, '#8d8f8a', -2500, -2214, -347, -270, 0.3, 0.54); [-2468, -2420, -2372, -2324].forEach(x => slab(B, '#e2c44a', x - 0.2, x + 0.2, -345, -330, 0.3, 0.58)); for (let x = -2490; x < -2230; x += 40) slab(B, '#f1ead6', x, x + 22, -302.3, -301.7, 0.3, 0.58);
+    cyl(B, '#6f7a85', null, 13, 0.06, -2226, 0.54, -322); slab(B, '#f1ead6', -2232, -2230, -329, -315, 0.54, 0.6); slab(B, '#f1ead6', -2222, -2220, -329, -315, 0.54, 0.6); slab(B, '#f1ead6', -2232, -2220, -323, -321, 0.54, 0.6);
+    // ---- army: north half ----
     const dirt = (x0, x1, z0, z1) => slab(B, DIRT, x0, x1, z0, z1, 0.3, 0.46);
-    dirt(-2079, -1901, -614, -606); dirt(-2079, -2071, -606, -426); dirt(-1909, -1901, -606, -426);                                  // ring road round the parade ground (its south side is the avenue)
-    dirt(-2152, -1788, -646, -638); dirt(-2152, -1788, -302, -294); [[-2152, -2144], [-1796, -1788]].forEach(([x0, x1]) => { dirt(x0, x1, -638, -426); dirt(x0, x1, -414, -302); });   // track just inside the inner fence
-    slab(B, '#5f6163', -2060, -1920, -548, -480, 0.3, 0.46);                                              // parade ground 140 x 68
-    for (let x = -2052; x < -1928; x += 12) slab(B, '#e9e4d8', x, x + 5, -515, -513, 0.3, 0.5); slab(B, '#e9e4d8', -2060, -1920, -549, -548, 0.3, 0.5); slab(B, '#e9e4d8', -2060, -1920, -480, -479, 0.3, 0.5);
-    slab(B, SAND, -1880, -1800, -636, -584, 0.3, 0.38); slab(B, SAND, -2145, -2090, -636, -600, 0.3, 0.38);   // training yards (obstacle course, drill yard)
-    slab(B, ROAD, -1850, -1796, -408, -306, 0.3, 0.46);                                                    // motor pool lot
-    // ---- air force: runway 400 x 30 along x, taxiway 14 m, apron, links ----
-    slab(B, DARK, -2650, -2250, -340, -310, 0.3, 0.5); for (let x = -2640; x < -2262; x += 24) slab(B, '#f3ead6', x, x + 12, -325.3, -324.7, 0.3, 0.56);
-    for (let k = 0; k < 8; k++) { slab(B, '#f3ead6', -2646, -2638, -338 + k * 3.6 - 0.0, -337.0 + k * 3.6, 0.3, 0.56); slab(B, '#f3ead6', -2262, -2254, -338 + k * 3.6, -337.0 + k * 3.6, 0.3, 0.56); }
-    slab(B, '#e2c44a', -2650, -2250, -340.4, -340, 0.3, 0.55); slab(B, '#e2c44a', -2650, -2250, -310, -309.6, 0.3, 0.55);
-    slab(B, '#4a4c50', -2640, -2260, -392, -378, 0.3, 0.5); slab(B, '#e2c44a', -2640, -2260, -385.2, -384.8, 0.3, 0.55);
-    [-2625, -2450, -2275].forEach(x => slab(B, '#4a4c50', x - 7, x + 7, -378, -340, 0.3, 0.5));
-    slab(B, '#8d8f8a', -2620, -2350, -500, -392, 0.3, 0.54); [-2600, -2565, -2530, -2405].forEach(x => slab(B, '#e2c44a', x - 0.2, x + 0.2, -470, -400, 0.3, 0.58));
-    slab(B, '#8d8f8a', -2345, -2315, -455, -425, 0.3, 0.54); cyl(B, '#6f7a85', null, 13, 0.06, -2330, 0.54, -440); slab(B, '#f1ead6', -2336, -2334, -447, -433, 0.54, 0.6); slab(B, '#f1ead6', -2326, -2324, -447, -433, 0.54, 0.6); slab(B, '#f1ead6', -2336, -2324, -441, -439, 0.54, 0.6);   // helipad + H
-    // ---- navy: raised quay platform on the shore, 4 piers into the sea ----
-    slab(B, '#a9a79e', -2650, -2300, -836, -716, -1.0, 1.0); slab(B, '#8d8b82', -2650, -2300, -836, -832, -1.0, 1.1);        // quay wall goes down into the water, platform top 1.0 (0.7 above the lawn)
-    const wedge = (len, run, rise, x, z, ry) => B.add(wedgeGeo(len, run, rise), '#a9a79e', null, x, 0.3, z, 1, 1, 1, 0, ry, 0);                // 6 m ramps up from the lawn on the south, west and east sides
-    wedge(350, 6, 0.7, -2475, -716, -Math.PI / 2); wedge(114, 6, 0.7, -2650, -779, Math.PI); wedge(104, 6, 0.7, -2300, -784, 0);
-    for (let i = 0; i < 4; i++) { const px = -2600 + i * 80; slab(B, '#a9a79e', px - 5, px + 5, -906, -836, 0.5, 1.0); if (!fast) for (let z = -904; z < -836; z += 7) [-4.4, 4.4].forEach(s => slab(B, '#4a3f35', px + s - 0.3, px + s + 0.3, z - 0.3, z + 0.3, -1.6, 0.5)); }
-    slab(B, ROAD, -2640, -2306, -800, -790, 1.0, 1.06); for (let x = -2636; x < -2312; x += 10) slab(B, '#e2c44a', x, x + 5, -795.1, -794.9, 1.06, 1.1);   // road behind the quay edge
-    slab(B, ROAD, -2640, -2300, -748, -738, 1.0, 1.06); slab(B, ROAD, -2300, -2200, -748, -738, 0.3, 0.46);                                       // yard road + the road in from the Cross Avenue
-    // ---- gate (outer fence, east) ----
+    slab(B, '#5f6163', -2188, -2072, -745, -650, 0.3, 0.46); for (let x = -2180; x < -2080; x += 12) slab(B, '#e9e4d8', x, x + 5, -700, -698, 0.3, 0.5); slab(B, '#e9e4d8', -2188, -2072, -746, -745, 0.3, 0.5); slab(B, '#e9e4d8', -2188, -2072, -650, -649, 0.3, 0.5);   // parade ground
+    sandY(-1944, -1722, -786, -622);                                                                                       // training ground
+    dirt(-1944, -1722, -626, -622); dirt(-1944, -1940, -786, -626); dirt(-1726, -1722, -786, -626); dirt(-1944, -1722, -790, -786);   // its perimeter track
+    // ---- army: south-east (motor pool, maintenance, logistics) ----
+    slab(B, '#5f6163', -1962, -1796, -405, -335, 0.3, 0.46); for (let x = -1950; x < -1800; x += 18) slab(B, '#e9e4d8', x, x + 0.4, -402, -338, 0.3, 0.5);
+    slab(B, '#6a6c70', -1962, -1706, -316, -284, 0.3, 0.46); slab(B, '#6a6c70', -1962, -1706, -262, -222, 0.3, 0.46);   // yards in front of the garages and the stores
+    // ---- navy (NW): water basin cut into the shore, concrete quay round it, two piers, a wharf on the east side ----
+    slab(B, '#3f9cc2', -2490, -2310, -840, -700, 0.3, 0.36);                                                              // basin (open to the sea on the north)
+    slab(B, '#a9a79e', -2516, -2490, -818, -676, -1.0, 1.0); slab(B, '#a9a79e', -2490, -2310, -700, -676, -1.0, 1.0); slab(B, '#a9a79e', -2310, -2218, -818, -676, -1.0, 1.0);   // quay (top 1.0)
+    slab(B, '#8d8b82', -2516, -2512, -818, -676, 1.0, 1.1); slab(B, '#8d8b82', -2490, -2486, -818, -700, 1.0, 1.1); slab(B, '#8d8b82', -2314, -2310, -818, -700, 1.0, 1.1);   // kerbs along the water
+    const wedge = (len, run, rise, x, z, ry) => B.add(wedgeGeo(len, run, rise), '#a9a79e', null, x, 0.3, z, 1, 1, 1, 0, ry, 0);
+    wedge(298, 6, 0.7, -2367, -676, -Math.PI / 2); wedge(142, 6, 0.7, -2516, -747, Math.PI);
+    [[-2450, -2438, -762], [-2375, -2363, -786]].forEach(([a, b, zn]) => { slab(B, '#a9a79e', a, b, zn, -700, 0.5, 1.0); if (!fast) for (let z = zn + 2; z < -700; z += 7) [a - 0.4, b + 0.4].forEach(px => slab(B, '#4a3f35', px - 0.3, px + 0.3, z - 0.3, z + 0.3, -1.6, 0.5)); });
+    slab(B, ROAD, -2480, -2320, -696, -686, 1.0, 1.06); for (let x = -2476; x < -2324; x += 10) slab(B, '#e2c44a', x, x + 5, -691.1, -690.9, 1.06, 1.1);
+    slab(B, '#8d8f8a', -2400, -2330, -640, -510, 0.3, 0.5);                                                               // navy yard hard-standing
+    // ---- the outer gate (east), as before ----
     { const gx = GATE.x, gz = GATE.z;
       slab(B, '#8d8f8a', gx - 14, gx + 14, gz - 8, gz + 8, 0.3, 0.5); slab(B, '#a9a79e', gx - 3, gx + 3, gz - 2, gz + 2, 0.3, 0.7);
       booth(B, gx, gz, 0); [[gz - 2, -1], [gz + 2, 1]].forEach(([z, s]) => barrier(B, gx + 0.8, z, 4.2, s > 0 ? 0 : Math.PI));
@@ -177,48 +188,68 @@
       const tex = signTex([['VINLAND FORCES', 0.42, 0.36], ['MEMBERS ONLY', 0.3, 0.74]], 1024, 160, '#1d2f4a', '#f3ead6');
       if (tex) [[0.65, Math.PI / 2], [-0.65, -Math.PI / 2]].forEach(([ox, ry]) => { const pm = new T.Mesh(new T.PlaneGeometry(15, 2.2), new T.MeshBasicMaterial({ map: tex })); pm.position.set(gx + ox, G + 6.1, gz); pm.rotation.y = ry; g.add(pm); });
       flagpole(B, gx + 3, gz - 12, 12, '#4b5d32'); flagpole(B, gx + 3, gz + 12, 12, '#4b5d32'); watchtower(B, gx - 4, gz - 24, 0); watchtower(B, gx - 4, gz + 24, 0); }
-    // ---- army: buildings ----
     const bl = (x, z, w, d, wall, roof, extra) => building(B, Object.assign({ x, z, w, d, wall, roof }, extra), fast);
-    bl(-1990, -592, 40, 16, '#cfc5a3', ROOF, { fl: 2, doors: 2 }); flagpole(B, -1990, -541, 18, '#4b5d32', 0.46);                                        // HQ + flag
-    bl(-2118, -552, 30, 14, W(), ROOF2, { fl: 1, doors: 2 }); bl(-2118, -592, 18, 12, '#e6e9ea', ROOF, { fl: 1 });                                      // mess hall, aid post
-    bl(-1850, -565, 36, 18, W(), ROOF2, { fl: 1, doors: 2 });
-    [-2100, -2030, -1960, -1890].forEach(x => bl(x, -380, 48, 14, W(), ROOF, { fl: 2, doors: 2, ry: Math.PI, path: 26 }));                                         // 4 barracks, doors to the avenue
-    bl(-2100, -332, 24, 14, '#8f8a78', '#4a4a46', { fl: 1, flat: true, win: false, doors: 1 }); bl(-1990, -332, 40, 18, W(), ROOF2, { fl: 1, doors: 2, win: false });   // armoury, depot
-    bl(-1880, -332, 24, 12, '#8f8a78', ROOF2, { fl: 1, doors: 1, win: false });                                                                         // garage by the motor pool
-    for (let k = 0; k < (fast ? 10 : 18); k++) { const col = k % 4, row = (k / 4) | 0; if (row > 3 + (fast ? 0 : 1)) break; const vx = -1843 + col * 0 + (k % 2) * 22 - 0, vz = -396 + ((k / 2) | 0) * 11;
-      [jeep, truck, apc][k % 3](B, vx, vz, Math.PI / 2 * (k % 2 ? 1 : -1)); }
-    // obstacle course props
-    [[-1870, -622], [-1850, -610], [-1832, -625], [-1816, -600]].forEach(([x, z], i) => { box(B, '#6a5a44', null, 4, 1.8 + (i % 2) * 0.8, 0.4, x, 0.38, z); box(B, '#6a5a44', null, 0.3, 3, 0.3, x - 2, 0.38, z); box(B, '#6a5a44', null, 0.3, 3, 0.3, x + 2, 0.38, z); });
-    for (let i = 0; i < 6; i++) box(B, '#33383d', null, 1.4, 0.5, 1.4, -1876 + i * 2, 0.38, -592);
-    flagpole(B, -2118, -625, 12, '#4b5d32');
-    // inner fence round the army base + two gates on the avenue + corner towers
-    fence(B, [[-2160, -650], [-1780, -650], [-1780, -292], [-2160, -292], [-2160, -650]], fast ? 16 : 8, (x, z) => (Math.abs(x + 1780) < 0.5 || Math.abs(x + 2160) < 0.5) && Math.abs(z - GATE.z) < 7);
-    [[-2160, -650], [-1780, -650], [-1780, -292], [-2160, -292]].forEach(([x, z]) => watchtower(B, x, z, 0));
-    [-2160, -1780].forEach(x => { booth(B, x, -434, 0); barrier(B, x, -428, 4.2, 0); barrier(B, x, -412, 4.2, Math.PI); box(B, '#6a5a44', null, 1.2, 4.4, 1.2, x, G, -426.2); box(B, '#6a5a44', null, 1.2, 4.4, 1.2, x, G, -413.8); });
-    // ---- air force: buildings, aircraft ----
-    hangar(B, -2575, -515, 38, 56, 0); hangar(B, -2490, -515, 38, 56, 0); tower(B, -2400, -455);
-    bl(-2570, -582, 40, 14, W(), ROOF, { fl: 2, doors: 2 }); bl(-2480, -575, 30, 14, W(), ROOF2, { fl: 1, doors: 2 }); bl(-2350, -545, 22, 14, '#c9705a', '#6b3f33', { fl: 1, doors: 1, win: false });
-    [-2605, -2570, -2535].forEach(x => jet(B, x, -445, 0.0)); [-2605, -2570].forEach(x => jet(B, x, -420, 0.0)); transport(B, -2450, -430, 0); heli(B, -2330, -440, 0.5); heli(B, -2360, -415, -0.3);
-    for (let i = 0; i < 4; i++) fuelTank(B, -2290 + (i % 2) * 14, -585 + ((i / 2) | 0) * 14, 5); dome(B, -2300, -560); dome(B, -2278, -562); box(B, '#e9e4d8', null, 0.15, 9, 0.15, -2262, G, -300); box(B, '#e6732a', null, 0.1, 0.9, 3.2, -2262, G + 7.4, -298.4);   // windsock
-    // ---- navy: yard, buildings, ships ----
     const nb = (x, z, w, d, wall, roof, extra) => building(B, Object.assign({ x, z, w, d, wall, roof, y0: 1.0 }, extra), fast);
-    nb(-2625, -770, 40, 16, W(), ROOF, { fl: 2, doors: 2, ry: Math.PI }); nb(-2540, -775, 50, 22, '#8d98a3', '#5f6a73', { fl: 1, doors: 2, win: false, ry: Math.PI }); nb(-2470, -775, 50, 22, '#8d98a3', '#5f6a73', { fl: 1, doors: 2, win: false, ry: Math.PI });
-    nb(-2380, -775, 40, 18, W(), ROOF2, { fl: 1, doors: 2, ry: Math.PI }); nb(-2620, -728, 40, 14, W(), ROOF, { fl: 2, doors: 2 });
-    for (let i = 0; i < 8; i++) box(B, ['#c9703a', '#3a6f9a', '#b84a3a', '#5a8a5a'][i % 4], null, 6, 2.6, 2.4, -2340 + (i % 4) * 7, 1.0 + ((i / 4) | 0) * 2.6, -808 - 0);   // stacked containers on the quay
-    crane(B, -2360, -820, 0); lighthouse(B, -2644, -832);
-    frigate(B, -2588.5, -872); frigate(B, -2451.5, -872); sub(B, -2430, -870); [[-2528.5, -870], [-2511.5, -880], [-2511.5, -862]].forEach(([x, z]) => patrol(B, x, z, 0)); patrol(B, -2351, -866, 0);
-    // ---- street lamps (5 m poles, light over the road) and quay bollards ----
-    const lampsAlong = (x0, x1, z, step, off, y0) => { for (let x = x0; x <= x1; x += step) { lamp(B, x, z - off, Math.PI, y0); lamp(B, x + step / 2, z + off, 0, y0); } };
-    lampsAlong(-2170, -1740, GATE.z, 60, 8); lampsAlong(Z.x1 + 30, APP - 20, GATE.z, 70, 8);
-    for (let z = -745; z < -260; z += 70) { lamp(B, -2186, z, -Math.PI / 2); lamp(B, -2204, z + 35, Math.PI / 2); }
-    for (let x = -2620; x < -2320; x += 50) lamp(B, x, -792, 0, 1.06);
-    if (!fast) for (let x = -2646; x < -2300; x += 9) [-1.2].forEach(() => box(B, '#3b3d41', null, 0.45, 0.55, 0.45, x, 1.0, -834.5));
-    [[-2640, -742, 0], [-2560, -742, Math.PI], [-2500, -794, 0.2], [-2420, -742, Math.PI]].forEach(([x, z, ry]) => truck(B, x, z, ry, '#aeb4b8', 1.06));
-    jeep(B, -2600, -742, Math.PI / 2, '#6b7550', 1.06); jeep(B, -2335, -742, -Math.PI / 2, '#6b7550', 1.06);
-    // ---- outer fence (west, south, east; the sea is the north side) + patrol track inside it ----
-    fence(B, [[Z.x0, Z.z0], [Z.x0, Z.z1], [Z.x1, Z.z1], [Z.x1, Z.z0]], fast ? 16 : 10, (x, z) => Math.abs(x - Z.x1) < 0.5 && Math.abs(z - GATE.z) < 9);
-    slab(B, '#c2b28a', Z.x0 + 3, Z.x0 + 8, Z.z0, Z.z1 - 3, 0.3, 0.38); slab(B, '#c2b28a', Z.x0 + 3, Z.x1 - 3, Z.z1 - 8, Z.z1 - 3, 0.3, 0.38); slab(B, '#c2b28a', Z.x1 - 8, Z.x1 - 3, Z.z0, GATE.z - 8, 0.3, 0.38); slab(B, '#c2b28a', Z.x1 - 8, Z.x1 - 3, GATE.z + 8, Z.z1 - 3, 0.3, 0.38);
-    [[Z.x0, Z.z0 + 4], [Z.x0, Z.z1], [Z.x1, Z.z1], [Z.x0, -420], [(Z.x0 + Z.x1) / 2, Z.z1], [Z.x1, -700]].forEach(([x, z]) => watchtower(B, x, z, 0));
+    // checkpoint = booth + two barriers + two gate pillars across a 12 m road ('x': road runs east-west, 'z': north-south)
+    const checkpoint = (x, z, axis) => { if (axis === 'x') { booth(B, x, z - 9, 0); barrier(B, x, z - 6.5, 6, 0); barrier(B, x, z + 6.5, 6, Math.PI); [z - 7, z + 7].forEach(pz => box(B, '#6a5a44', null, 1.1, 4.2, 1.1, x, G, pz)); }
+      else { booth(B, x - 9, z, Math.PI / 2); barrier(B, x - 6.5, z, 6, Math.PI / 2); barrier(B, x + 6.5, z, 6, -Math.PI / 2); [x - 7, x + 7].forEach(px => box(B, '#6a5a44', null, 1.1, 4.2, 1.1, px, G, z)); } };
+    // ---- ARMY north: HQ + admin row, parade ground, stores, training ground with obstacle course ----
+    bl(-2130, -775, 42, 16, '#cfc5a3', ROOF, { fl: 2, doors: 2, path: 26 }); bl(-2060, -775, 32, 14, W(), ROOF2, { fl: 2, doors: 2, path: 20 }); bl(-2010, -775, 28, 14, '#e6e9ea', ROOF, { fl: 1, doors: 1, path: 20 }); bl(-1960, -775, 30, 14, W(), ROOF2, { fl: 1, doors: 2, path: 20 });
+    flagpole(B, -2160, -752, 20, '#4b5d32'); flagpole(B, -2100, -752, 20, '#4b5d32');
+    bl(-2012, -716, 50, 22, '#8f8a78', '#4a4a46', { fl: 1, flat: true, win: false, doors: 2, path: 6 }); bl(-2012, -672, 50, 22, '#8f8a78', '#4a4a46', { fl: 1, flat: true, win: false, doors: 2, path: 6 });   // equipment warehouses
+    { const P = '#6a5a44';   // obstacle course on the sand: wall climbs, A-frames, tyre rows, rope towers, crawl nets, firing berm, mock village
+      for (let i = 0; i < 5; i++) { const x = -1920 + i * 22; box(B, P, null, 5, 2.6, 0.4, x, 0.38, -770); box(B, P, null, 0.3, 3.4, 0.3, x - 2.5, 0.38, -770); box(B, P, null, 0.3, 3.4, 0.3, x + 2.5, 0.38, -770); }
+      for (let i = 0; i < 4; i++) { const x = -1912 + i * 26, b = at(x, 0.38, -748, 0); B.add(prismGeo(5, 3.4, 4), P, b, 0, 0, 0); }
+      for (let k = 0; k < 2; k++) for (let i = 0; i < 12; i++) box(B, '#33383d', null, 1.4, 0.5, 1.4, -1925 + i * 2.2 + k * 1.1, 0.38, -725 - k * 2.2);
+      [[-1860, -700], [-1800, -700]].forEach(([x, z]) => { [[-2, -2], [2, -2], [-2, 2], [2, 2]].forEach(([a, c]) => box(B, P, null, 0.3, 11, 0.3, x + a, 0.38, z + c)); box(B, P, null, 5, 0.3, 5, x, 11.2, z); for (let i = 0; i < 5; i++) box(B, '#e9e1cc', null, 0.1, 6.5, 0.1, x - 1.6 + i * 0.8, 4.7, z + 2.1); });
+      for (let i = 0; i < 3; i++) slab(B, '#5c7d46', -1930 + i * 40, -1900 + i * 40, -690, -676, 0.38, 0.46);
+      for (let i = 0; i < 8; i++) { const x = -1790 + i * 8; box(B, '#e9e1cc', null, 1.0, 1.7, 0.1, x, 0.38, -775); }
+      slab(B, P, -1930, -1730, -783, -779, 0.38, 1.4);
+      [[-1760, -650], [-1744, -640], [-1776, -640]].forEach(([x, z]) => bl(x, z, 9, 9, '#b9b894', '#6b5f4a', { fl: 1, doors: 1, path: 2 })); }
+    // barracks complex: two rows, a mess hall, gym, aid post, chapel between the rows
+    [-2155, -2093, -2031, -1969, -1907, -1845, -1783].forEach(x => bl(x, -560, 48, 14, W(), ROOF, { fl: 2, doors: 2, ry: Math.PI, path: 20 }));
+    [-2155, -2093, -2031, -1969, -1907, -1845].forEach((x, i) => bl(x, -470, 48, 14, W(), i % 2 ? ROOF2 : ROOF, { fl: 2, doors: 2, path: 14 }));
+    bl(-2150, -518, 36, 18, '#cfc5a3', ROOF2, { fl: 1, doors: 2 }); bl(-2070, -518, 30, 16, W(), ROOF, { fl: 1, doors: 2 }); bl(-1990, -518, 26, 14, '#e6e9ea', ROOF, { fl: 1, doors: 1 }); bl(-1880, -518, 36, 16, W(), ROOF2, { fl: 1, doors: 2 }); bl(-1790, -518, 30, 16, W(), ROOF, { fl: 1, doors: 2 });
+    flagpole(B, -2118, -533, 12, '#4b5d32');
+    // ---- ARMY south-east: motor pool, maintenance garages, supply depots, container yard ----
+    for (let k = 0; k < (fast ? 28 : 75); k++) { const per = 15, row = (k / per) | 0, col = k % per, vx = -1952 + col * (fast ? 11 : 10), vz = -396 + row * (fast ? 20 : 14), kind = [jeep, truck, apc][(k + row) % 3]; if (vx > -1806) continue; kind(B, vx, vz, Math.PI / 2); }
+    [-1930, -1872, -1814].forEach(x => bl(x, -300, 50, 24, '#8f8a78', ROOF2, { fl: 1, doors: 3, win: false, ry: Math.PI, path: 10 })); bl(-1740, -300, 40, 24, '#8f8a78', '#4a4a46', { fl: 1, flat: true, win: false, doors: 2, ry: Math.PI, path: 10 });
+    [-1940, -1880, -1820].forEach(x => bl(x, -240, 50, 22, W(), '#4a4a46', { fl: 1, flat: true, win: false, doors: 2, ry: Math.PI, path: 6 })); bl(-1750, -240, 36, 20, W(), ROOF, { fl: 1, doors: 2, ry: Math.PI, path: 6 });
+    for (let i = 0; i < 12; i++) box(B, ['#c9703a', '#3a6f9a', '#b84a3a', '#5a8a5a'][i % 4], null, 6, 2.6, 2.4, -1800 + (i % 4) * 7, 0.46 + ((i / 4) | 0) * 2.6, -272);
+    // ---- AIR FORCE: 4 hangars, tower, ops, airmen barracks, aircraft, fuel and radar ----
+    [-2480, -2434, -2388, -2342].forEach(x => hangar(B, x, -377, 38, 56, 0)); tower(B, -2290, -388);
+    bl(-2440, -440, 46, 16, W(), ROOF, { fl: 2, doors: 2, ry: Math.PI, path: 4 }); bl(-2380, -440, 36, 14, '#cfc5a3', ROOF2, { fl: 1, doors: 2, ry: Math.PI, path: 4 }); bl(-2325, -438, 30, 14, '#e6e9ea', ROOF, { fl: 1, doors: 1, ry: Math.PI, path: 4 });
+    for (let i = 0; i < (fast ? 4 : 6); i++) jet(B, -2488 + i * 36, -322, 0);
+    for (let i = 0; i < (fast ? 2 : 4); i++) jet(B, -2470 + i * 36, -290, Math.PI);
+    transport(B, -2330, -300, 0); heli(B, -2250, -298, 0.5); heli(B, -2218, -340, -0.3);
+    bl(-2140, -385, 48, 14, W(), ROOF, { fl: 2, doors: 2, ry: Math.PI, path: 14 }); bl(-2075, -385, 48, 14, W(), ROOF2, { fl: 2, doors: 2, ry: Math.PI, path: 14 });
+    bl(-2110, -330, 30, 16, '#c9705a', '#6b3f33', { fl: 1, doors: 1, win: false }); bl(-2060, -330, 30, 16, W(), ROOF, { fl: 1, doors: 2 });
+    for (let i = 0; i < 4; i++) fuelTank(B, -2185 + (i % 2) * 14, -345 + ((i / 2) | 0) * 14, 5); dome(B, -2150, -300); dome(B, -2128, -302); box(B, '#e9e4d8', null, 0.15, 9, 0.15, -2022, G, -205); box(B, '#e6732a', null, 0.1, 0.9, 3.2, -2022, G + 7.4, -203.4);
+    // ---- NAVY: harbour office, yard buildings, wharf with containers and cranes, ships ----
+    nb(-2400, -688, 22, 14, W(), ROOF, { fl: 2, doors: 1 });
+    bl(-2470, -620, 36, 16, '#cfc5a3', ROOF, { fl: 2, doors: 2, ry: Math.PI, path: 22 }); bl(-2470, -575, 44, 14, W(), ROOF2, { fl: 2, doors: 2, ry: Math.PI, path: 6 }); bl(-2470, -530, 44, 14, W(), ROOF, { fl: 2, doors: 2, ry: Math.PI, path: 6 }); bl(-2470, -485, 30, 14, '#e6e9ea', ROOF2, { fl: 1, doors: 1, ry: Math.PI, path: 6 });
+    [[-2370, 50], [-2300, 50]].forEach(([x, w]) => bl(x, -625, w, 24, '#8d98a3', '#5f6a73', { fl: 1, flat: true, win: false, doors: 2, ry: Math.PI, path: 6 })); bl(-2245, -625, 36, 24, '#8d98a3', '#5f6a73', { fl: 1, flat: true, win: false, doors: 2, ry: Math.PI, path: 6 });
+    hangar(B, -2370, -560, 30, 42, Math.PI); hangar(B, -2325, -560, 30, 42, Math.PI);
+    for (let i = 0; i < 3; i++) fuelTank(B, -2260, -560 + i * 14, 5); dome(B, -2250, -490); bl(-2390, -490, 40, 14, W(), ROOF2, { fl: 1, doors: 2 });
+    for (let i = 0; i < 20; i++) box(B, ['#c9703a', '#3a6f9a', '#b84a3a', '#5a8a5a'][i % 4], null, 6, 2.6, 2.4, -2262 + (i % 2) * 7, 1.0 + (((i / 2) | 0) % 3) * 2.6, -806 + ((i / 6) | 0) * 9 * 0 + (((i / 6) | 0) % 3) * 9);
+    crane(B, -2285, -770, Math.PI / 2); crane(B, -2285, -720, Math.PI / 2); lighthouse(B, -2503, -811);
+    frigate(B, -2472, -771); frigate(B, -2345, -778); sub(B, -2406, -760); [[-2325, -735], [-2325, -755], [-2325, -775]].forEach(([x, z]) => patrol(B, x, z, 0));
+    nb(-2260, -690, 30, 14, W(), ROOF, { fl: 1, doors: 1, ry: Math.PI });
+    truck(B, -2440, -684, Math.PI, '#aeb4b8', 1.06); truck(B, -2360, -684, 0, '#aeb4b8', 1.06); jeep(B, -2230, -740, Math.PI / 2, '#6b7550', 1.06);
+    // ---- lamps ----
+    const lampsAlong = (x0, x1, z, step, off, y0) => { for (let x = x0; x <= x1; x += step) { lamp(B, x, z - off, Math.PI, y0); if (!fast) lamp(B, x + step / 2, z + off, 0, y0); } };
+    lampsAlong(-2420, -1720, GATE.z, 50, 9); lampsAlong(Z.x1 + 30, APP - 20, GATE.z, 70, 8); lampsAlong(-2180, -1720, -600, 50, 9); lampsAlong(-2500, -2230, -656, 50, 9);
+    for (let z = -800; z < -290; z += (fast ? 90 : 50)) { lamp(B, -2189, z, -Math.PI / 2); lamp(B, -2211, z + 25, Math.PI / 2); }
+    for (let x = -2480; x < -2320; x += 40) lamp(B, x, -692, 0, 1.06);
+    if (!fast) for (let x = -2514; x < -2220; x += 9) if (x < -2490 || x > -2312) box(B, '#3b3d41', null, 0.45, 0.55, 0.45, x, 1.0, -817);
+    // ---- fences: perimeter (the harbour side stays open to the sea), inner fences with guarded gates ----
+    const st = fast ? 16 : 10, ist = fast ? 14 : 8;
+    fence(B, [[Z.x0, -690], [Z.x0, Z.z1], [Z.x1, Z.z1], [Z.x1, Z.z0], [-2200, Z.z0]], st, (x, z) => Math.abs(x - Z.x1) < 0.5 && Math.abs(z - GATE.z) < 9);
+    fence(B, [[-2214, -812], [-2214, -434], [-2514, -434]], ist, (x, z) => (Math.abs(x + 2214) < 0.5 && Math.abs(z + 656) < 7) || (Math.abs(z + 434) < 0.5 && Math.abs(x + 2420) < 7));
+    fence(B, [[-2188, -812], [-2188, -434], [-1706, -434]], ist, (x, z) => (Math.abs(x + 2188) < 0.5 && Math.abs(z + 600) < 7) || (Math.abs(z + 434) < 0.5 && Math.abs(x + 1938) < 7));
+    fence(B, [[-1706, -434], [-1706, -812], [-2188, -812]], ist);
+    checkpoint(-2214, -656, 'x'); checkpoint(-2420, -434, 'z'); checkpoint(-2188, -600, 'x'); checkpoint(-1938, -434, 'z');
+    [[Z.x0, -700], [Z.x0, -420], [Z.x0, Z.z1], [-2100, Z.z1], [Z.x1, Z.z1], [Z.x1, -620], [Z.x1, -800], [-2200, -812], [-2214, -812], [-2514, -434], [-2188, -434], [-1706, -434], [-1706, -812], [-1950, -810]].forEach(([x, z]) => watchtower(B, x, z, 0));
     let tris = B.build(g);
     // ---- hills round the base (flat-shaded, same greens as the country hills) ----
     { const X0 = -3400, X1 = -1250, ZA = -800, ZB = -40, CELL = fast ? 40 : 28, nx = Math.round((X1 - X0) / CELL), nz = Math.round((ZB - ZA) / CELL), pos = [], col = [], idx = [], lo = new T.Color('#86ad5c'), hi = new T.Color('#5e8f45'), top = new T.Color('#9db86a'), dry = new T.Color('#a8a76a'), cc = new T.Color(), HH = [];
@@ -232,7 +263,10 @@
       for (let i = 0; i < NT * 6 && TR.length < NT; i++) { const x = -3350 + R2() * 2050, z = -790 + R2() * 740; if (noise(x / 160, z / 160, 21) < 0.5) continue;
         const dx = Math.max(Z.x0 - x, x - Z.x1, 0), dz = Math.max(Z.z0 - z, z - Z.z1, 0); if (Math.hypot(dx, dz) < 18) continue; if (x > Z.x1 && Math.abs(z - GATE.z) < 24) continue; if (z < -770) continue;
         TR.push({ x, y: 0.3 + hillH(x, z), z, r: R2() * 6.28, s: 1.4 + R2() * 1.1, k: R2() < 0.55 ? 'p' : 'r', c: (R2() * 4) | 0 }); }
-      for (let x = Z.x0 + 20; x < Z.x1 - 20; x += 34) if (R2() < 0.7) TR.push({ x, y: G, z: Z.z1 - 22, r: R2() * 6, s: 1.3, k: 'r', c: (R2() * 4) | 0 });
+      const IN = (x, z, s) => TR.push({ x, y: G, z, r: R2() * 6, s: s || 1.2 + R2() * 0.5, k: R2() < 0.4 ? 'p' : 'r', c: (R2() * 4) | 0 });   // landscaping inside the compound (small groves, lines along the fences, never on a road or a pad)
+      for (let z = -640; z < -250; z += fast ? 40 : 20) IN(-2508, z + R2() * 6); for (let z = -800; z < -440; z += fast ? 40 : 22) IN(-1712, z + R2() * 6); for (let z = -420; z < -230; z += fast ? 40 : 20) IN(-1712, z + R2() * 6);
+      [[-2380, -472, 7], [-2100, -268, 6], [-2002, -318, 6], [-2330, -462, 5], [-2160, -440, 0], [-1850, -432, 0], [-1760, -450, 5], [-2020, -640, 0], [-1830, -605, 0], [-2180, -535, 0]].forEach(([cx, cz, n]) => { for (let i = 0; i < (fast ? Math.ceil(n / 2) : n); i++) IN(cx + (R2() - 0.5) * 22, cz + (R2() - 0.5) * 14); });
+      for (let x = -2180; x < -1720; x += fast ? 70 : 35) IN(x, -806 + R2() * 4); for (let x = -2150; x < -1730; x += fast ? 80 : 40) { IN(x, -532, 1.1); }
       trees(g, TR, fast); g.userData.treeCount = TR.length; }
     g.userData.tris = tris; g.userData.zone = Z; g.userData.gate = GATE; return g; }
 
