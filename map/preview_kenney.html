@@ -6965,7 +6965,7 @@ if (PHONE && !OLDP) { const note = () => { if (BOOT && BOOT.toast) BOOT.toast('B
 if (/[?&](reel|film)\b/.test(location.search)) { const runR = code => eval(code); (function wR() { if (RUN.homes && homes.length) fetch('reel.js?v=1', { cache: 'no-cache' }).then(r => r.text()).then(t => runR(t + '\n//# sourceURL=reel.js')).catch(e => console.error(e)); else setTimeout(wR, 300); })(); }
 // LIFE IN VINLAND (24 Nov): /map/?life (the /play page sends you here) opens the map straight into walking, with the game's screen on top. life.js is downloaded only then.
 // KENNEY PREVIEW (26 Nov): this preview page always loads kenney/kenney.js (Kenney citizens + cars, in the map's toon shading). The live index.html does not.
-{ const runK = code => eval(code); (function wK() { if (RUN.homes && homes.length && walkers.batches) fetch('kenney/kenney.js?v=1').then(r => r.text()).then(t => runK(t + '\n//# sourceURL=kenney.js')).catch(e => console.error(e)); else setTimeout(wK, 300); })(); }
+{ const runK = code => eval(code); (function wK() { if (RUN.homes && homes.length && walkers.batches) fetch('kenney/kenney.js?v=2').then(r => r.text()).then(t => runK(t + '\n//# sourceURL=kenney.js')).catch(e => console.error(e)); else setTimeout(wK, 300); })(); }
 if (/[?&]life\b/.test(location.search)) { const runL = code => eval(code); (function wL() { if (RUN.homes && homes.length) fetch('life.js?v=1', { cache: 'no-cache' }).then(r => r.text()).then(t => runL(t + '\n//# sourceURL=life.js')).catch(e => console.error(e)); else setTimeout(wL, 300); })(); }
 if (window.__vinHook) window.__vinHook(code => eval(code));   // only the build tools set this (tools/export_plan.py)
 

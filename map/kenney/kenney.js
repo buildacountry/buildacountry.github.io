@@ -4,7 +4,8 @@
 if (window.KEN) return; window.KEN = {};
 
 await new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'kenney/glb.js'; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
-const T = THREE, N_NEAR = PHONE ? 14 : 30, N_STATIC = PHONE ? 10 : 24, SCALE = 3.1;
+const T = THREE, N_NEAR = PHONE ? 6 : 14, N_STATIC = PHONE ? 3 : 10, R_IN = 55, R_OUT = 80, SCALE = 3.1;
+KEN.ms = 0; KEN.built = 0; const tic = () => performance.now();
 const HEADS = ['male-a', 'male-b', 'male-d', 'male-e', 'male-f', 'female-a', 'female-b', 'female-c', 'female-d', 'female-e', 'female-f'];
 const BODIES = ['male-a', 'male-b', 'male-d', 'male-e', 'male-f', 'female-b', 'female-c', 'female-d', 'female-f'];
 const SKINK = [19, 18, 16, 17], CLOTH = [8, 9, 10, 11, 12, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30, 31], HAIRK = [27, 17, 22, 21, 24, 10, 28];
@@ -36,7 +37,9 @@ for (const n in lib) {
   const fskin = wmode(hs.tris, t => t.nz > 0.6 && t.y > 0.38 && t.y < 0.6, [], SKINK) ?? wmode(hs.tris, () => true, [], SKINK);
   info[n] = { bs, hs, bskin, top, bottom: bot === top ? null : bot, fskin, hair: wmode(hs.tris, t => t.y > topY - 0.1, [fskin]) };
 }
+const geoCache = new Map();
 function partGeo(s, map, height) {
+  const ck = s.mesh.uuid + JSON.stringify(map) + height; if (geoCache.has(ck)) return geoCache.get(ck);
   const g = s.mesh.geometry.clone(), uv = new Float32Array(s.uv0);
   for (let i = 0; i < s.n; i++) { const to = map[s.keys[i]]; if (to == null) continue; const fr = s.keys[i]; uv[i * 2] += ((to % 8) - (fr % 8)) / 8; uv[i * 2 + 1] += (Math.floor(to / 8) - Math.floor(fr / 8)) / 4; }
   g.setAttribute('uv', new T.BufferAttribute(uv, 2));
@@ -45,7 +48,7 @@ function partGeo(s, map, height) {
     for (let i = 0; i < s.n; i++) { const bn = s.bone[i], y = P[i * 3 + 1];
       if (bn.startsWith('arm') && Math.abs(P[i * 3]) > 0.0999) { const sx = Math.sign(P[i * 3]) * 0.0999; P[i * 3] = sx + (P[i * 3] - sx) * ta; }
       P[i * 3 + 1] = bn.startsWith('leg') || bn === 'root' ? y * ls : bn === 'torso' ? HIP * ls + (y - HIP) * ts : bn.startsWith('arm') ? y + dA : y + dH; } }
-  return g;
+  geoCache.set(ck, g); return g;
 }
 const clipCache = {};
 function clipsFor(height) {
@@ -65,13 +68,13 @@ function makeCitizen(look) {
   const bmap = {}; if (B.bskin != null) bmap[B.bskin] = skin; if (look.top != null && B.top != null) bmap[B.top] = look.top; if (look.bottom != null && B.bottom != null) bmap[B.bottom] = look.bottom;
   const hmap = {}; if (H.fskin != null) hmap[H.fskin] = skin; if (look.hair != null && H.hair != null) hmap[H.hair] = look.hair;
   for (const [s, map] of [[B.bs, bmap], [H.hs, hmap]]) {
-    const m = new T.SkinnedMesh(partGeo(s, map, look.height), toon); m.castShadow = !FAST; m.frustumCulled = false; root.add(m);
+    const m = new T.SkinnedMesh(partGeo(s, map, look.height), toon); m.castShadow = false; m.frustumCulled = false; root.add(m);
     const sk = new T.Skeleton(s.mesh.skeleton.bones.map(b => bones[b.name])); sk.calculateInverses(); m.bind(sk, m.matrixWorld);
   }
   root.scale.setScalar(SCALE * SIZE[look.height]);
   const mixer = new T.AnimationMixer(root), clips = clipsFor(look.height), acts = {}; for (const k in clips) acts[k] = mixer.clipAction(clips[k]);
   const c = { root, mixer, acts, cur: null, play(n, f = 0.25) { if (c.cur === n) return; acts[n].reset().fadeIn(f).play(); if (c.cur) acts[c.cur].fadeOut(f); c.cur = n; } };
-  c.play('idle', 0); scene.add(root); return c;
+  c.play('idle', 0); scene.add(root); KEN.built++; return c;
 }
 const pick = (a, h, sh) => a[(h >>> sh) % a.length];
 function lookOf(user) { const h = hashStr(user) >>> 0; return { height: pick(['regular', 'tall', 'small', 'regular'], h, 1), head: pick(HEADS, h, 3), body: pick(BODIES, h, 7), skin: pick(SKINK, h, 11), hair: (h >>> 13) % 3 ? null : pick(HAIRK, h, 15), top: (h >>> 17) % 2 ? null : pick(CLOTH, h, 19), bottom: (h >>> 23) % 2 ? null : pick(CLOTH, h, 25) }; }
@@ -79,23 +82,26 @@ KEN.makeCitizen = makeCitizen; KEN.lookOf = lookOf;
 
 // ---- walkers near the camera become Kenney citizens; their old instanced body is hidden ----
 const pool = [], ZERO = new T.Matrix4().makeScale(0, 0, 0), M4 = new T.Matrix4(), PV = new T.Vector3(), QV = new T.Quaternion(), SV = new T.Vector3(), EU = new T.Euler();
-let assigned = new Map(), lastPick = 0;
-function hideIdx(i) { const { body, legL, legR } = walkers.batches; [...body, ...legL, ...legR].forEach(b => { b.im.setMatrixAt(i, ZERO); b.im.instanceMatrix.needsUpdate = true; }); }
-function nearest(cx, cz, n) { return walkers.map((w, i) => { walkers.batches.body[0].im.getMatrixAt(i, M4); PV.setFromMatrixPosition(M4); return [i, (PV.x - cx) ** 2 + (PV.z - cz) ** 2]; }).filter(x => x[1] < 140 * 140).sort((a, b) => a[1] - b[1]).slice(0, n).map(x => x[0]); }
+let assigned = new Map(), lastPick = 0; const byUser = new Map();
+function hideIdx(i) { const { body, legL, legR } = walkers.batches; [...body, ...legL, ...legR].forEach(b => b.im.setMatrixAt(i, ZERO)); }
+function posOf(i) { walkers.batches.body[0].im.getMatrixAt(i, M4); return PV.setFromMatrixPosition(M4); }
+function citizenFor(u) { let c = byUser.get(u); if (!c) { c = makeCitizen(lookOf(u)); c.user = u; byUser.set(u, c); } c.root.visible = true; return c; }
 const origUpdate = updatePeople;
 updatePeople = function (dt, now) {
   origUpdate(dt, now);
-  if (!walkers.batches) return;
+  if (!walkers.batches) return; const t0 = tic();
   const tg = WALK.on ? { x: WALK.x, z: WALK.z } : controls.target;
-  if (now - lastPick > 400) { lastPick = now; const want = new Set(nearest(tg.x, tg.z, N_NEAR)), next = new Map();
-    for (const [i, c] of assigned) if (want.has(i)) next.set(i, c); else { c.root.visible = false; pool.push(c); }
-    for (const i of want) if (!next.has(i)) { const u = walkers[i].h.user; let c = pool.findIndex(p => p.user === u); c = c >= 0 ? pool.splice(c, 1)[0] : (() => { const k = makeCitizen(lookOf(u)); k.user = u; return k; })(); c.root.visible = true; next.set(i, c); }
-    assigned = next; while (pool.length > 20) { const c = pool.shift(); scene.remove(c.root); } }
+  if (now - lastPick > 700) { lastPick = now;
+    for (const [i, c] of assigned) { const p = posOf(i); if ((p.x - tg.x) ** 2 + (p.z - tg.z) ** 2 > R_OUT * R_OUT) { c.root.visible = false; assigned.delete(i); } }   // drop only when well away
+    if (assigned.size < N_NEAR) { const cand = []; walkers.forEach((w, i) => { if (assigned.has(i)) return; const p = posOf(i), d = (p.x - tg.x) ** 2 + (p.z - tg.z) ** 2; if (d < R_IN * R_IN) cand.push([i, d]); });
+      cand.sort((a, b) => a[1] - b[1]).slice(0, Math.min(2, N_NEAR - assigned.size)).forEach(([i]) => assigned.set(i, citizenFor(walkers[i].h.user))); } }   // at most 2 new people per check: no stutter
   for (const [i, c] of assigned) {
-    walkers.batches.body[0].im.getMatrixAt(i, M4); M4.decompose(PV, QV, SV);
+    const p = posOf(i); M4.decompose(PV, QV, SV);
     if (SV.x > 0.01) { EU.setFromQuaternion(QV, 'YXZ'); c.root.position.set(PV.x, 0.14, PV.z); c.root.rotation.y = EU.y; }
     hideIdx(i); c.play('walk'); c.mixer.update(Math.min(dt, 0.1) * Math.min(1.6, walkers[i].speed));
   }
+  if (assigned.size) { const { body, legL, legR } = walkers.batches; [...body, ...legL, ...legR].forEach(b => b.im.instanceMatrix.needsUpdate = true); }
+  KEN.ms += tic() - t0;
 };
 
 // ---- people who stand still (shop owners, staff, the police line): the ones near the camera become Kenney citizens ----
@@ -105,15 +111,17 @@ for (const o of peopleObjs) { if (wset.has(o.im) || !o.im.count) continue; o.im.
 const statics = [];
 groups.forEach((g, gi) => { for (let i = 0; i < g.parts[0].count; i++) { const m = new T.Matrix4(); g.parts[0].getMatrixAt(i, m); const p = new T.Vector3(), q = new T.Quaternion(), sc = new T.Vector3(); m.decompose(p, q, sc); const e = new T.Euler().setFromQuaternion(q, 'YXZ');
   const cop = standers.find(s => Math.abs(s.x - p.x) < 0.2 && Math.abs(s.z - p.z) < 0.2); statics.push({ g, i, m, x: p.x, z: p.z, ry: e.y, user: cop ? cop.h.user : 'static' + gi + '-' + i, cop: !!cop }); } });
-let sAssigned = new Map(), sLast = 0; const sPool = [];
+let sAssigned = new Map(), sLast = 0; const sBuilt = new Map();
 function staticsFrame(dt, now) {
-  const tg = WALK.on ? { x: WALK.x, z: WALK.z } : controls.target;
-  if (now - sLast > 500) { sLast = now; const want = new Set(statics.map((s, k) => [k, (s.x - tg.x) ** 2 + (s.z - tg.z) ** 2]).filter(x => x[1] < 130 * 130).sort((a, b) => a[1] - b[1]).slice(0, N_STATIC).map(x => x[0])), next = new Map();
-    for (const [k, c] of sAssigned) if (want.has(k)) next.set(k, c); else { c.root.visible = false; sPool.push(c); const s = statics[k]; s.g.parts.forEach(im => { im.setMatrixAt(s.i, s.m); im.instanceMatrix.needsUpdate = true; }); }
-    for (const k of want) if (!next.has(k)) { const s = statics[k]; let lk = lookOf(s.user); if (s.cop) Object.assign(lk, { head: 'male-c', body: 'male-c', top: null, bottom: null, hair: null });
-      const c = makeCitizen(lk); c.root.position.set(s.x, 0.14, s.z); c.root.rotation.y = s.ry; s.g.parts.forEach(im => { im.setMatrixAt(s.i, ZERO); im.instanceMatrix.needsUpdate = true; }); next.set(k, c); }
-    sAssigned = next; while (sPool.length) { const c = sPool.shift(); scene.remove(c.root); } }
+  const t0 = tic(), tg = WALK.on ? { x: WALK.x, z: WALK.z } : controls.target;
+  if (now - sLast > 900) { sLast = now;
+    for (const [k, c] of sAssigned) { const s = statics[k]; if ((s.x - tg.x) ** 2 + (s.z - tg.z) ** 2 > R_OUT * R_OUT) { c.root.visible = false; s.g.parts.forEach(im => { im.setMatrixAt(s.i, s.m); im.instanceMatrix.needsUpdate = true; }); sAssigned.delete(k); } }
+    if (sAssigned.size < N_STATIC) { const cand = statics.map((s, k) => [k, (s.x - tg.x) ** 2 + (s.z - tg.z) ** 2]).filter(x => !sAssigned.has(x[0]) && x[1] < R_IN * R_IN).sort((a, b) => a[1] - b[1]).slice(0, Math.min(2, N_STATIC - sAssigned.size));
+      for (const [k] of cand) { const s = statics[k]; let c = sBuilt.get(k);
+        if (!c) { const lk = lookOf(s.user); if (s.cop) Object.assign(lk, { head: 'male-c', body: 'male-c', top: null, bottom: null, hair: null }); c = makeCitizen(lk); c.root.position.set(s.x, 0.14, s.z); c.root.rotation.y = s.ry; sBuilt.set(k, c); }
+        c.root.visible = true; s.g.parts.forEach(im => { im.setMatrixAt(s.i, ZERO); im.instanceMatrix.needsUpdate = true; }); sAssigned.set(k, c); } } }
   for (const c of sAssigned.values()) c.mixer.update(Math.min(dt, 0.1));
+  KEN.ms += tic() - t0;
 }
 const prevUP = updatePeople; updatePeople = function (dt, now) { prevUP(dt, now); staticsFrame(dt, now); };
 
@@ -133,8 +141,8 @@ for (const model in byModel) { const ims = carInst(model, byModel[model].length)
 for (const kind in CARMAP) { const list = LIFE.mats && LIFE.mats[kind]; if (!list || !list.length || !LIFE.inst[kind]) continue; LIFE.inst[kind].visible = false;
   const ims = carInst(CARMAP[kind], list.length); list.forEach((m, j) => { M4.multiplyMatrices(m, SCM); ims.forEach(im => im.setMatrixAt(j, M4)); }); ims.forEach(im => im.instanceMatrix.needsUpdate = true); }
 const prevTraffic = updateTraffic;
-updateTraffic = function (dt) { prevTraffic(dt);
-  for (const { c, ims, j } of moving) { c.meshes[0].getMatrixAt(c.i, M4); if (M4.elements[0] === 0 && M4.elements[5] === 0) continue; const mm = M4.clone().multiply(SCM); ims.forEach(im => { im.setMatrixAt(j, mm); im.instanceMatrix.needsUpdate = true; }); c.meshes.forEach(m => { m.setMatrixAt(c.i, ZERO); m.instanceMatrix.needsUpdate = true; }); } };
+updateTraffic = function (dt) { prevTraffic(dt); const t0 = tic();
+  for (const { c, ims, j } of moving) { c.meshes[0].getMatrixAt(c.i, M4); if (M4.elements[0] === 0 && M4.elements[5] === 0) continue; const mm = M4.clone().multiply(SCM); ims.forEach(im => { im.setMatrixAt(j, mm); im.instanceMatrix.needsUpdate = true; }); c.meshes.forEach(m => { m.setMatrixAt(c.i, ZERO); m.instanceMatrix.needsUpdate = true; }); } KEN.ms += tic() - t0; };
 
 // ---- you, in walk mode ----
 let me = null; const myLook = (() => { try { return JSON.parse(localStorage.getItem('vinland-look')); } catch (e) { return null; } })();
