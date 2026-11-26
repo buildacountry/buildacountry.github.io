@@ -55,6 +55,7 @@ const skip = new Set();   // things that move: walkers, cars, buses, trains, the
 try { const wb = walkers.batches || {}; Object.values(wb).forEach(list => (list || []).forEach(x => skip.add(x.im || x))); } catch (e) {}
 try { LIFE.cars.forEach(c => (c.meshes || []).forEach(m => { skip.add(m); if (m.parent) skip.add(m.parent); })); ['carHatch', 'carSedan', 'carSUV', 'carTaxi', 'carVan', 'carPickup', 'carSports', 'scooter', 'autoRickshaw'].forEach(k => LIFE.inst && LIFE.inst[k] && skip.add(LIFE.inst[k])); } catch (e) {}
 try { TRANSIT.list.forEach(l => l.cars.forEach(c => skip.add(c.m))); } catch (e) {}
+try { peopleObjs.forEach(x => skip.add(x.im || x)); } catch (e) {}   // shop owners, staff, police: Kenney citizens take their places (section 6d)
 const shapes = [], shapeOf = new Map(), textures = [], texOf = new Map();
 const pS = [], pB = [], pC = [], pM = [];   // each place: shape, bucket, colour, and where it stands (12 numbers); packed into typed arrays below
 const chimTops = [];   // the real top of every chimney, found in the copied shapes (the small highest part of a home's stone-coloured piece)
@@ -309,16 +310,37 @@ function stream(px, pz, all) { const w = wanted(px, pz), need = new Set(w.map(a 
     for (const t of list) { const r = t[9] >> 16 & 255, g = t[9] >> 8 & 255, b = t[9] & 255, P = [];
       for (let j = 0; j < 9; j += 3) { const lx = t[j] * s, ly = t[j + 1] * s, lz = t[j + 2] * s; P.push(x + lx * c + lz * sn, ly, z - lx * sn + lz * c); }
       put(B_MAIN, P[0], P[1], P[2], P[3], P[4], P[5], P[6], P[7], P[8], r, g, b, r, g, b, r, g, b, null); } };
-  const NATURE_STEP = PH ? 3.4 : 2.8;
-  CZ.nature = (k, ox, oz, put) => { let sd = (k * 2654435761) >>> 0 || 1; const rnd = () => (sd = (sd * 1664525 + 1013904223) >>> 0) / 4294967296;
-    for (let x = ox + 1; x < ox + TILE; x += NATURE_STEP) for (let z = oz + 1; z < oz + TILE; z += NATURE_STEP) {
-      const jx = x + rnd() * NATURE_STEP * 0.8, jz = z + rnd() * NATURE_STEP * 0.8, roll = rnd(), rot = rnd() * 6.283, s = 0.75 + rnd() * 0.55;
-      if (Math.abs(jx) > 7800 || jz < COAST.shore + 12) continue;
-      if (roll < 0.035) { if (okTree(jx, jz)) emit(put, shapesN[rnd() < 0.45 ? 'pine' : rnd() < 0.85 ? 'roundTree' : 'fruitTree'][0], jx, jz, rot, s); continue; }
-      if (roll > 0.6) continue;   // most of the grass stays plain grass
-      if (!okSmall(jx, jz)) continue;
-      const kind = roll < 0.06 ? 'patch' : roll < 0.28 ? 'tuft' : roll < 0.42 ? 'flowers' : roll < 0.52 ? 'bush' : 'rock';
-      const set = shapesN[kind]; emit(put, set[Math.floor(rnd() * set.length)], jx, jz, rot, kind === 'patch' ? 1 : s); } };
+  // Where nature belongs (Dev, 27 Nov: random scatter on lawns looked post-apocalyptic):
+  //  - parks and open countryside (no plot within 22 m): groves = a few trees together, bushes at their feet, wildflowers beside them
+  //  - lawns in town: kept clean, with now and then one neat round flower bed
+  const parkRects = (MD.flat || []).filter(f => f[0] === 'g').map(f => [f[1], f[2], f[1] + f[3], f[2] + f[4]]), parksAt = hash(32, parkRects, 0);
+  const inPark = (x, z) => inBox(parksAt(x, z), x, z, -1);
+  const wild = (x, z) => !inBox(plotsAt(x, z), x, z, 15) && !inBox(homesAt(x, z), x, z, 15);
+  CZ.groves = new Map();   // grove centres per square: where butterflies and fireflies gather
+  const CELL = 15;
+  CZ.nature = (k, ox, oz, put) => { let sd = (k * 2654435761) >>> 0 || 1; const rnd = () => (sd = (sd * 1664525 + 1013904223) >>> 0) / 4294967296; const groves = [];
+    const tryPut = (kind, x, z, s, rot, tree) => { if (tree ? !okTree(x, z) : !okSmall(x, z)) return false; const set = shapesN[kind]; emit(put, set[Math.floor(rnd() * set.length)], x, z, rot == null ? rnd() * 6.283 : rot, s); return true; };
+    for (let x = ox; x < ox + TILE; x += CELL) for (let z = oz; z < oz + TILE; z += CELL) {
+      const cx = x + 2 + rnd() * (CELL - 4), cz = z + 2 + rnd() * (CELL - 4), roll = rnd();
+      if (Math.abs(cx) > 7800 || cz < COAST.shore + 14 || !greenAt(cx, cz)) continue;
+      const park = inPark(cx, cz), open = !park && wild(cx, cz);
+      if (park || open) {
+        if (roll > (park ? 0.78 : 0.5)) continue;
+        let trees = 0; const nT = 1 + Math.floor(rnd() * 3);
+        for (let t = 0; t < nT; t++) { const a = rnd() * 6.283, r = t ? 3 + rnd() * 3 : 0, tx = cx + Math.cos(a) * r, tz = cz + Math.sin(a) * r, kind = rnd() < (open ? 0.5 : 0.3) ? 'pine' : rnd() < 0.85 ? 'roundTree' : 'fruitTree';
+          if (tryPut(kind, tx, tz, 0.8 + rnd() * 0.45, null, true)) { trees++; for (let b = 0; b < 2; b++) { const ba = rnd() * 6.283, br = 1.8 + rnd() * 1.2; tryPut('bush', tx + Math.cos(ba) * br, tz + Math.sin(ba) * br, 0.7 + rnd() * 0.4); } } }
+        if (!trees && !park) continue;
+        const fa = rnd() * 6.283, fx = cx + Math.cos(fa) * 4.5, fz = cz + Math.sin(fa) * 4.5;   // wildflowers beside the grove
+        for (let f = 0; f < 6; f++) { const a = rnd() * 6.283, r = Math.sqrt(rnd()) * 2.4; tryPut('flowers', fx + Math.cos(a) * r, fz + Math.sin(a) * r, 0.9); }
+        for (let g = 0; g < 4; g++) { const a = rnd() * 6.283, r = 1 + rnd() * 3; tryPut('tuft', cx + Math.cos(a) * r, cz + Math.sin(a) * r, 0.9 + rnd() * 0.3); }
+        if (rnd() < 0.25) tryPut('rock', cx + 2.2, cz - 1.4, 0.8 + rnd() * 0.4);
+        groves.push([cx, cz, park ? 1 : 0]);
+      } else if (roll < 0.06) {   // a lawn in town: one neat round flower bed, nothing else
+        if (!okSmall(cx, cz) || !okSmall(cx + 1.6, cz) || !okSmall(cx - 1.6, cz)) continue;
+        tryPut('bush', cx, cz, 0.6, 0);
+        for (let f = 0; f < 10; f++) { const a = f / 10 * 6.283; tryPut('flowers', cx + Math.cos(a) * 1.3, cz + Math.sin(a) * 1.3, 0.75, a); }
+      } }
+    CZ.groves.set(k, groves); };
 }
 
 // ---------- 5. day and night (the style guide's table) ----------
@@ -349,19 +371,26 @@ tick(); setInterval(tick, 5000);
 // ---------- 6. you: a Kenney citizen, walking with the map's own rule ----------
 lt.textContent = 'waking you up';
 if (!window.loadGLB) await new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'kenney/glb.js'; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
-const lib = {}; await Promise.all(['anim', 'female-b'].map(async n => { lib[n] = await loadGLB(`kenney/chars/${n}.gltf.json`); }));
+const DONORS = ['female-a', 'female-b', 'female-d', 'male-a', 'male-b', 'male-e'];
+const lib = {}; await Promise.all(['anim', ...DONORS].map(async n => { lib[n] = await loadGLB(`kenney/chars/${n}.gltf.json`); }));
 let ctex; lib.anim.scene.traverse(o => { if (o.isSkinnedMesh && !ctex) ctex = o.material.map; }); if (ctex) ctex.encoding = T.sRGBEncoding;
 const cmat = PH ? new T.MeshLambertMaterial({ map: ctex, skinning: true }) : new T.MeshStandardMaterial({ map: ctex, skinning: true, roughness: 0.86, metalness: 0 });
-const LOOK = { arm: 0.8, head: 0.78 };   // Dev chose option 3 (27 Nov)
-const me = (() => { const base = lib.anim, r = base.scene.clone(true), bones = {}, old = []; r.traverse(o => { if (o.isBone) bones[o.name] = o; if (o.isSkinnedMesh) old.push(o); }); old.forEach(o => o.parent.remove(o)); r.updateMatrixWorld(true);
-  lib['female-b'].scene.traverse(o => { if (!o.isSkinnedMesh) return; const m = new T.SkinnedMesh(o.geometry, cmat); m.frustumCulled = false; m.castShadow = !PH; r.add(m); const sk = new T.Skeleton(o.skeleton.bones.map(b => bones[b.name])); sk.calculateInverses(); m.bind(sk, m.matrixWorld); });
-  if (PH) { const s = new T.Mesh(new T.CircleGeometry(0.3, 14), new T.MeshBasicMaterial({ color: 0x1a2030, transparent: true, opacity: 0.22, depthWrite: false })); s.rotation.x = -Math.PI / 2; s.position.y = 0.02; r.add(s); }
-  // size (Dev, 27 Nov, option 3): person-sized next to our homes, small arms, smaller head. Measured on the real skinned shape.
-  r.updateMatrixWorld(true); let y0 = 1e9, y1 = -1e9; const vv = new T.Vector3(); r.traverse(o => { if (!o.isSkinnedMesh) return; const p = o.geometry.attributes.position; for (let i = 0; i < p.count; i += 3) { vv.fromBufferAttribute(p, i); o.boneTransform(i, vv); vv.applyMatrix4(o.matrixWorld); y0 = Math.min(y0, vv.y); y1 = Math.max(y1, vv.y); } });
-  r.scale.setScalar(2.15 / Math.max(0.1, y1 - y0) * (1 + (1 - LOOK.head) * 0.35)); S3.add(r); const mixer = new T.AnimationMixer(r), acts = {}; for (const c of base.animations) if (['idle', 'walk', 'sprint'].includes(c.name)) acts[c.name] = mixer.clipAction(c);
+const LOOK = { arm: 0.8, head: 0.78 };   // Dev chose option 3 (27 Nov): person-sized next to our homes, small arms, smaller head
+const CLIPS = ['idle', 'walk', 'sprint', 'sit', 'emote-yes', 'interact-right', 'pick-up'], sizeOfDonor = {};
+const blobG = new T.CircleGeometry(0.3, 14), blobM = new T.MeshBasicMaterial({ color: 0x1a2030, transparent: true, opacity: 0.22, depthWrite: false });
+function makeCitizen(donor, shadow) { const base = lib.anim, r = base.scene.clone(true), bones = {}, old = []; r.traverse(o => { if (o.isBone) bones[o.name] = o; if (o.isSkinnedMesh) old.push(o); }); old.forEach(o => o.parent.remove(o)); r.updateMatrixWorld(true);
+  lib[donor].scene.traverse(o => { if (!o.isSkinnedMesh) return; const m = new T.SkinnedMesh(o.geometry, cmat); m.frustumCulled = false; m.castShadow = shadow && !PH; r.add(m); const sk = new T.Skeleton(o.skeleton.bones.map(b => bones[b.name])); sk.calculateInverses(); m.bind(sk, m.matrixWorld); });
+  if (PH || !shadow) { const b = new T.Mesh(blobG, blobM); b.rotation.x = -Math.PI / 2; b.position.y = 0.02; r.add(b); }
+  if (!sizeOfDonor[donor]) { r.updateMatrixWorld(true); let y0 = 1e9, y1 = -1e9; const vv = new T.Vector3(); r.traverse(o => { if (!o.isSkinnedMesh) return; const p = o.geometry.attributes.position; for (let i = 0; i < p.count; i += 3) { vv.fromBufferAttribute(p, i); o.boneTransform(i, vv); vv.applyMatrix4(o.matrixWorld); y0 = Math.min(y0, vv.y); y1 = Math.max(y1, vv.y); } }); sizeOfDonor[donor] = Math.max(0.1, y1 - y0); }
+  r.scale.setScalar(2.15 / sizeOfDonor[donor] * (1 + (1 - LOOK.head) * 0.35)); S3.add(r);
+  const mixer = new T.AnimationMixer(r), acts = {}; for (const cl of base.animations) if (CLIPS.includes(cl.name)) acts[cl.name] = mixer.clipAction(cl);
   const sized = {}; r.traverse(o => { if (o.isBone && (o.name === 'arm-left' || o.name === 'arm-right' || o.name === 'head')) sized[o.name] = { b: o, rest: o.scale.clone(), k: o.name === 'head' ? LOOK.head : LOOK.arm }; });
   const step = dt => { for (const n in sized) sized[n].b.scale.copy(sized[n].rest); mixer.update(dt); for (const n in sized) sized[n].b.scale.multiplyScalar(sized[n].k); };   // reset, animate, then shrink once (no stacking)
-  const c = { root: r, mixer, step, cur: null, play(n) { if (c.cur === n || !acts[n]) return; acts[n].reset().fadeIn(0.2).play(); if (c.cur) acts[c.cur].fadeOut(0.2); c.cur = n; } }; c.play('idle'); return c; })();
+  const c = { root: r, mixer, step, cur: null, busy: 0,
+    play(n) { if (c.cur === n || !acts[n]) return; acts[n].reset().setLoop(T.LoopRepeat).fadeIn(0.2).play(); if (c.cur && acts[c.cur]) acts[c.cur].fadeOut(0.2); c.cur = n; },
+    once(n) { const a = acts[n]; if (!a) return; if (c.cur && acts[c.cur]) acts[c.cur].fadeOut(0.15); a.reset().setLoop(T.LoopOnce, 1); a.clampWhenFinished = true; a.fadeIn(0.15).play(); c.cur = n; c.busy = a.getClip().duration; } };
+  c.play('idle'); return c; }
+const me = makeCitizen('female-b', true);
 let px = 0, pz = 30, yaw = Math.PI, pitch = 0.72; me.root.rotation.y = Math.PI;
 { const want = (QS.get('visit') || '').replace(/^@/, '').toLowerCase(), h = want && homes.find(x => (x.user || '').toLowerCase() === want); if (h) { px = h.x; pz = h.z + 9; } const f = nearestFree(px, pz); px = f[0]; pz = f[1]; }
 const keys = {}; addEventListener('keydown', e => keys[e.key.toLowerCase()] = true); addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
@@ -408,6 +437,141 @@ function drawSmoke(dt) { if (RM) return; smokeT += dt;
     smoke.setMatrixAt(n++, M4.compose(SV.set(c[0] + Math.sin(life * 3 + ci) * 0.5 + life * 0.8, c[1] + life * 3.2, c[2] + life * 0.5), SQ.identity(), SS.set(s, s, s))); } });
   smoke.count = n; smoke.instanceMatrix.needsUpdate = true; smoke.material.opacity = 0.5 - night * 0.25; }
 
+// ---------- 6d. people: real citizens near you (Kenney), in the map's own places ----------
+// Shop owners at their shop door, staff beside them, police in front of HQ, people on the map's own benches, walkers on pavements.
+// A small pool is reused as you move, so a phone only ever animates a dozen people.
+const hashS = t => { let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+const donorOf = u => DONORS[hashS(u || 'x') % DONORS.length];
+const UPV3 = new T.Vector3(0, 1, 0), spots = [];
+try { shops.forEach(s => { if (!s.owner) return; const o = new T.Vector3(1.9, 0, 3.6).applyAxisAngle(UPV3, s.ry || 0); spots.push({ x: s.x + o.x, z: s.z + o.z, ry: (s.ry || 0) + 0.25, user: s.owner.user, role: s.job || 'Shop owner', pose: 'idle' });
+  (s.staff || []).forEach((w, j) => { const q = new T.Vector3(j ? 3.2 : -1.9, 0, j ? 4.2 : 3.6).applyAxisAngle(UPV3, s.ry || 0); spots.push({ x: s.x + q.x, z: s.z + q.z, ry: (s.ry || 0) - 0.3, user: w.user, role: 'works here', pose: 'idle' }); }); }); } catch (e) {}
+try { (standers || []).forEach(st => spots.push({ x: st.x, z: st.z, ry: 0, user: st.h.user, role: 'Police', pose: 'idle' })); } catch (e) {}
+const activeUsers = homes.filter(h => h.status === 'active' && h.user).map(h => h.user);
+const pickUser = () => activeUsers[Math.floor(Math.random() * activeUsers.length)] || 'citizen';
+try { const bp = new T.Vector3(), bq = new T.Quaternion(), bs = new T.Vector3(); (LIFE.mats && LIFE.mats.bench || []).forEach((m, i) => { m.decompose(bp, bq, bs); const ry = new T.Euler().setFromQuaternion(bq, 'YXZ').y;
+  if (i % 3 === 0) spots.push({ x: bp.x, z: bp.z, ry, user: activeUsers[hashS('bench' + i) % Math.max(1, activeUsers.length)], role: '', pose: 'sit', y: 0.22 }); }); } catch (e) {}
+const spotGrid = new Map(); spots.forEach(sp => { const k = Math.floor(sp.x / 50) * 100003 + Math.floor(sp.z / 50); (spotGrid.get(k) || spotGrid.set(k, []).get(k)).push(sp); });
+const freeBy = {}; DONORS.forEach(d => freeBy[d] = []);
+const take = d => freeBy[d].pop() || makeCitizen(d, false), give = (d, c) => { c.root.visible = false; freeBy[d].push(c); };
+const STATIC_N = PH ? 6 : 12, WALK_N = PH ? 6 : 10, RD = ROADS.map(([w, d, x, z]) => ({ w, d, x, z, ax: w >= d, L: Math.max(w, d), W: Math.min(w, d) })).filter(r => r.L > 20 && r.W >= 4);
+const placed = new Map(), walkersK = [];
+function refreshPeople() { const gx = Math.floor(px / 50), gz = Math.floor(pz / 50), near = [];
+  for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) (spotGrid.get((gx + i) * 100003 + gz + j) || []).forEach(sp => { const d = Math.hypot(sp.x - px, sp.z - pz); if (d < 75) near.push([d, sp]); });
+  near.sort((a, b) => a[0] - b[0]); const want = new Set(near.slice(0, STATIC_N).map(a => a[1]));
+  for (const [sp, c] of placed) if (!want.has(sp)) { give(donorOf(sp.user), c); placed.delete(sp); }
+  for (const sp of want) if (!placed.has(sp)) { if (sp.pose !== 'sit' && !sp.fixed) { const f = nearestFree(sp.x, sp.z); sp.x = f[0]; sp.z = f[1]; sp.fixed = true; } const c = take(donorOf(sp.user)); c.root.position.set(sp.x, sp.y || 0.12, sp.z); c.root.rotation.y = sp.ry; c.root.visible = true; c.play(sp.pose); c.spot = sp; placed.set(sp, c); }
+  // walkers: each on a pavement near you, real names
+  while (walkersK.length < WALK_N) walkersK.push({ c: null });
+  for (const w of walkersK) { const far = !w.c || Math.hypot(w.c.root.position.x - px, w.c.root.position.z - pz) > 95;
+    if (!far) continue; const rs = RD.filter(r => Math.abs(r.x - px) < 70 + r.w / 2 && Math.abs(r.z - pz) < 70 + r.d / 2); if (!rs.length) continue;
+    if (w.c) give(w.d, w.c); w.user = pickUser(); w.d = donorOf(w.user); w.c = take(w.d); w.c.root.visible = true; w.r = rs[Math.floor(Math.random() * rs.length)]; w.s = Math.random() - 0.5; w.side = Math.random() < 0.5 ? 1 : -1; w.dir = Math.random() < 0.5 ? 1 : -1; w.v = 1.1 + Math.random() * 0.5; w.pause = 0; } }
+function stepPeople(dt) {
+  for (const w of walkersK) { if (!w.c) continue; const r = w.r, c = w.c;
+    if (w.pause > 0) { w.pause -= dt; c.play('idle'); } else { const ns = w.s + w.dir * w.v * dt / r.L, off = w.side * (r.W / 2 + 0.9), along = ns * r.L, nx = r.ax ? r.x + along : r.x + off, nz = r.ax ? r.z + off : r.z + along;
+      if (Math.abs(ns) > 0.48 || !freeAt(nx, nz)) { w.dir *= -1; w.pause = 1 + Math.random() * 3; } else w.s = ns; c.play('walk'); }
+    const off = w.side * (r.W / 2 + 0.9), along = w.s * r.L; c.root.position.set(r.ax ? r.x + along : r.x + off, 0.12, r.ax ? r.z + off : r.z + along); c.root.rotation.y = r.ax ? (w.dir > 0 ? Math.PI / 2 : -Math.PI / 2) : (w.dir > 0 ? 0 : Math.PI);
+    c.step(dt); }
+  for (const c of placed.values()) { if (c.busy > 0) { c.busy -= dt; if (c.busy <= 0) c.play(c.spot.pose); } else if (c.spot.pose === 'idle' && Math.random() < dt * 0.04) c.once('emote-yes'); c.step(dt); } }
+// names over people close to you
+const ppl = document.createElement('style'); ppl.textContent = '#czTags div.npc { background: rgba(255,250,240,.85); font-size: 11px; font-weight: 600; } #czTags div.npc i { font-style: normal; opacity: .65; margin-left: 4px; }'; document.head.appendChild(ppl);
+const npcPool = []; for (let i = 0; i < 8; i++) { const d = document.createElement('div'); d.className = 'npc'; d.hidden = true; tagsEl.appendChild(d); npcPool.push(d); }
+function drawPeopleTags() { const list = [];
+  for (const [sp, c] of placed) list.push([Math.hypot(sp.x - px, sp.z - pz), c.root.position, '@' + sp.user, sp.role]);
+  for (const w of walkersK) if (w.c) list.push([Math.hypot(w.c.root.position.x - px, w.c.root.position.z - pz), w.c.root.position, '@' + w.user, '']);
+  list.sort((a, b) => a[0] - b[0]); let k = 0;
+  for (const [d, p, name, role] of list) { if (k >= npcPool.length || d > 26) break; PV.set(p.x, p.y + 2.6, p.z).project(CAM); if (PV.z > 1 || Math.abs(PV.x) > 1.05 || Math.abs(PV.y) > 1.05) continue;
+    const el = npcPool[k++], key = name + '|' + role; if (el.dataset.k !== key) { el.dataset.k = key; el.textContent = name; if (role) { const i = document.createElement('i'); i.textContent = role; el.appendChild(i); } }
+    el.hidden = false; el.style.transform = `translate(${((PV.x + 1) / 2 * innerWidth).toFixed(0)}px,${((1 - PV.y) / 2 * innerHeight).toFixed(0)}px) translate(-50%,-100%)`; }
+  for (; k < npcPool.length; k++) if (!npcPool[k].hidden) npcPool[k].hidden = true; }
+let peopleT = 0, lifeT = 0;
+
+// ---------- 6e. driving (Dev, 27 Nov): your own car on the real roads, with the map's own road rule ----------
+const driveCss = document.createElement('style'); driveCss.textContent = `#czDrive { position: absolute; right: calc(24px + env(safe-area-inset-right)); bottom: 104px; height: 46px; padding: 0 16px; border: 0; border-radius: 999px; background: #fff; color: #1c2238; font: 800 15px Poppins, system-ui, sans-serif; box-shadow: 0 3px 0 rgba(0,0,0,.2); z-index: 3; cursor: pointer; }
+#czDrive:active { transform: translateY(2px); } #czToast { position: absolute; left: 50%; top: calc(60px + env(safe-area-inset-top)); transform: translateX(-50%); background: rgba(20,26,44,.8); color: #fff; border-radius: 12px; padding: 6px 14px; font: 600 14px Poppins, system-ui, sans-serif; z-index: 4; opacity: 0; transition: opacity .3s; pointer-events: none; text-align: center; }
+#czToast.on { opacity: 1; }`; document.head.appendChild(driveCss);
+const driveBtn = document.createElement('button'); driveBtn.id = 'czDrive'; driveBtn.textContent = '🚗 Drive'; root.appendChild(driveBtn);
+const toastEl = document.createElement('div'); toastEl.id = 'czToast'; root.appendChild(toastEl); let toastT = 0;
+const toast = t => { toastEl.textContent = t; toastEl.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('on'), 2600); };
+const carLib = await loadGLB('kenney/cars/sedan.gltf.json').catch(() => null);
+let car = null; const CAR = { x: 0, z: 0, a: 0, v: 0, W: 2, L: 4.4 }; let driving = false;
+function makeCar() { if (car || !carLib) return car; car = carLib.scene.clone(true);
+  car.traverse(o => { if (!o.isMesh) return; const m0 = o.material; if (m0 && m0.map) m0.map.encoding = T.sRGBEncoding; o.material = PH ? new T.MeshLambertMaterial({ map: m0 && m0.map, color: m0 && m0.color }) : new T.MeshStandardMaterial({ map: m0 && m0.map, color: m0 && m0.color, roughness: 0.6, metalness: 0.05 }); o.castShadow = !PH; });
+  const b = new T.Box3().setFromObject(car), sz = b.getSize(new T.Vector3()), long = Math.max(sz.x, sz.z), k = 4.4 / long; car.scale.setScalar(k);
+  CAR.W = Math.min(sz.x, sz.z) * k; CAR.L = 4.4; car.userData.faceX = sz.x > sz.z;   // Kenney cars point along +z; if not, turn them
+  if (PH) { const sh = new T.Mesh(new T.PlaneGeometry(CAR.W * 1.05 / k, 4.6 / k), blobM); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.03 / k; car.add(sh); }
+  S3.add(car); return car; }
+const fits = (x, z, a) => { const hw = CAR.W / 2 - 0.22, hl = CAR.L / 2 - 0.3, s = Math.sin(a), c = Math.cos(a);
+  return onRoad(x + s * hl + c * hw, z + c * hl - s * hw) && onRoad(x + s * hl - c * hw, z + c * hl + s * hw) && onRoad(x - s * hl + c * hw, z - c * hl - s * hw) && onRoad(x - s * hl - c * hw, z - c * hl + s * hw); };
+function enterCar() { try { driveRoads(); } catch (e) {} if (!DRV.grid || !makeCar()) { toast('Driving is not ready here yet'); return; }
+  if (!DRV.car) DRV.car = { userData: { W: CAR.W, L: CAR.L } };   // the map's nearestRoadSpot reads the car size from here
+  const parked = car.visible && Math.hypot(CAR.x - px, CAR.z - pz) < 7 && car.userData.placed;
+  if (!parked) { const sp = nearestRoadSpot(px, pz); if (!sp || Math.hypot(sp[0] - px, sp[1] - pz) > 28) { toast('Walk to a road first'); return; } CAR.x = sp[0]; CAR.z = sp[1]; CAR.a = sp[2]; }
+  CAR.v = 0; car.userData.placed = true; car.visible = true; driving = true; me.root.visible = false; driveBtn.textContent = '🚶 Get out'; $('czRun').hidden = true; toast('Up on the stick to drive, sideways to steer'); }
+function leaveCar() { driving = false; CAR.v = 0; const s = Math.sin(CAR.a), c = Math.cos(CAR.a), f = nearestFree(CAR.x + c * 2.6, CAR.z - s * 2.6); px = f[0]; pz = f[1]; me.root.visible = true; driveBtn.textContent = '🚗 Drive'; $('czRun').hidden = false; }
+driveBtn.onclick = () => driving ? leaveCar() : enterCar();
+function stepCar(dt, ix, iz) { const thr = -iz, steer = ix, MAX = 17, REV = -6;
+  CAR.v += (thr > 0.1 ? thr * 9 : thr < -0.1 ? (CAR.v > 0.3 ? thr * 16 : thr * 5) : -Math.sign(CAR.v) * Math.min(Math.abs(CAR.v), 4 * dt) / dt) * dt;
+  CAR.v = Math.max(REV, Math.min(MAX, CAR.v));
+  if (Math.abs(CAR.v) > 0.2) CAR.a -= steer * 1.6 * dt * Math.min(1, Math.abs(CAR.v) / 6) * Math.sign(CAR.v);
+  const nx = CAR.x + Math.sin(CAR.a) * CAR.v * dt, nz = CAR.z + Math.cos(CAR.a) * CAR.v * dt;
+  if (fits(nx, nz, CAR.a)) { CAR.x = nx; CAR.z = nz; } else if (fits(nx, CAR.z, CAR.a)) { CAR.x = nx; CAR.v *= 0.7; } else if (fits(CAR.x, nz, CAR.a)) { CAR.z = nz; CAR.v *= 0.7; } else CAR.v = -CAR.v * 0.2;
+  car.position.set(CAR.x, 0.02, CAR.z); car.rotation.y = CAR.a + (car.userData.faceX ? Math.PI / 2 : 0);
+  px = CAR.x; pz = CAR.z; let d = CAR.a - yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); yaw += d * Math.min(1, dt * 2.5); }
+
+// ---------- 6f. flags, butterflies and fireflies (Dev, 27 Nov: "flags and butterflies, in parks and natural dense areas more") ----------
+// Bunting on poles around the plaza and along every park's edge, swaying in the wind (one mesh, moved by the GPU).
+const ACCENT = [0xff6b57, 0x4b9bff, 0x3fca85, 0xb07cf0, 0xffd24a, 0xe85d9a, 0x2e9c8a];
+const MDp = window.VIN_MAPDATA || {}, buntGroups = []; let buntP, buntC, buntS, buntD;
+const newBuntGroup = () => { buntP = []; buntC = []; buntS = []; buntD = []; buntGroups.push({ P: buntP, C: buntC, S: buntS, D: buntD }); };
+const btri = (a, b, c, col, sa, sb, sc, d) => { buntP.push(...a, ...b, ...c); for (let j = 0; j < 3; j++) buntC.push(col >> 16 & 255, col >> 8 & 255, col & 255); buntS.push(sa, sb, sc); for (let j = 0; j < 3; j++) buntD.push(...d); };
+function pole(x, z, h) { const w = 0.07, col = 0x7a5233; [[1, 0], [0, 1], [-1, 0], [0, -1]].forEach(([dx, dz], i) => { const [ex, ez] = [[0, 1], [-1, 0], [0, -1], [1, 0]][i]; const a = [x + dx * w + ex * w, 0, z + dz * w + ez * w], b = [x + dx * w - ex * w, 0, z + dz * w - ez * w];
+  btri(a, b, [b[0], h, b[2]], col, 0, 0, 0, [0, 0, 0]); btri(a, [b[0], h, b[2]], [a[0], h, a[2]], col, 0, 0, 0, [0, 0, 0]); }); }
+function bunting(x0, z0, x1, z1, h, seed) { const L = Math.hypot(x1 - x0, z1 - z0); if (L < 4) return; const ux = (x1 - x0) / L, uz = (z1 - z0) / L, d = [-uz, 0, ux], n = Math.max(3, Math.floor(L / 0.9)), sag = Math.min(1.1, L * 0.045);
+  const at = t => [x0 + (x1 - x0) * t, h - sag * 4 * t * (1 - t), z0 + (z1 - z0) * t];
+  for (let i = 0; i < n; i++) { const t0 = i / n, t1 = (i + 1) / n, A = at(t0), B = at(t1);   // the string
+    btri(A, B, [B[0], B[1] - 0.04, B[2]], 0xfbf6ec, 0, 0, 0.1, d); btri(A, [B[0], B[1] - 0.04, B[2]], [A[0], A[1] - 0.04, A[2]], 0xfbf6ec, 0, 0.1, 0.1, d);
+    if (i % 1 === 0) { const m0 = at(t0 + 0.12 / n), m1 = at(t1 - 0.12 / n), tip = at((t0 + t1) / 2); tip[1] -= 0.5;   // a little flag hanging under it
+      const col = ACCENT[(i + seed) % ACCENT.length]; btri(m0, m1, tip, col, 0, 0, 1, d); btri(m1, m0, tip, col, 0, 0, 1, d); } } }
+function lineOfBunting(x0, z0, x1, z1, seed) { const L = Math.hypot(x1 - x0, z1 - z0), segs = Math.max(1, Math.round(L / 22)), H = 3.6;
+  for (let i = 0; i <= segs; i++) { const t = i / segs, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t; if (freeAt(x, z)) pole(x, z, H + 0.15); }
+  for (let i = 0; i < segs; i++) { const a = i / segs, b = (i + 1) / segs; bunting(x0 + (x1 - x0) * a, z0 + (z1 - z0) * a, x0 + (x1 - x0) * b, z0 + (z1 - z0) * b, H, seed + i); } }
+{ const pl = (MDp.places || []).find(p => /Citizens' Plaza/.test(p[0])); if (pl) { newBuntGroup(); const [, x, z, w, d] = pl, i = 1.2, X0 = x + i, X1 = x + w - i, Z0 = z + i, Z1 = z + d - i;
+    lineOfBunting(X0, Z0, X1, Z0, 0); lineOfBunting(X1, Z0, X1, Z1, 2); lineOfBunting(X1, Z1, X0, Z1, 4); lineOfBunting(X0, Z1, X0, Z0, 6); } }
+(MDp.flat || []).filter(f => f[0] === 'g' && f[3] > 14 && f[4] > 14).forEach(([, x, z, w, d], k) => { newBuntGroup(); const i = 1.5; lineOfBunting(x + i, z + i, x + w - i, z + i, k); lineOfBunting(x + i, z + d - i, x + w - i, z + d - i, k + 3);
+  if (w * d < 9000) { lineOfBunting(x + i, z + i, x + i, z + d - i, k + 1); lineOfBunting(x + w - i, z + i, x + w - i, z + d - i, k + 5); } });
+const buntU = { uT: { value: 0 } };
+const buntMeshes = [];
+const buntMat = PH ? new T.MeshLambertMaterial({ vertexColors: true, side: T.DoubleSide }) : new T.MeshStandardMaterial({ vertexColors: true, side: T.DoubleSide, roughness: 0.9, flatShading: true });
+buntMat.onBeforeCompile = sh => { sh.uniforms.uT = buntU.uT; sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float sway;\nattribute vec3 sdir;\nuniform float uT;')
+  .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += sdir * sin(uT * 2.6 + position.x * 0.35 + position.z * 0.35) * 0.22 * sway;')
+  .replace('#include <color_vertex>', '#include <color_vertex>\n#ifdef USE_COLOR\nvColor.rgb = pow(color.rgb, vec3(2.2));\n#endif'); };
+buntGroups.forEach(gr => { if (!gr.P.length) return; const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(gr.P, 3)); g.setAttribute('color', new T.BufferAttribute(new Uint8Array(gr.C), 3, true)); g.setAttribute('sway', new T.Float32BufferAttribute(gr.S, 1)); g.setAttribute('sdir', new T.Float32BufferAttribute(gr.D, 3)); g.computeVertexNormals(); g.computeBoundingSphere();
+  const m = new T.Mesh(g, buntMat); m.castShadow = !PH; m.matrixAutoUpdate = false; S3.add(m); buntMeshes.push(m); });   // one mesh per park: only the ones near you are drawn
+CZ.bunting = buntGroups.reduce((a, g) => a + g.P.length / 9, 0);
+// butterflies by day and fireflies at night, around the groves and in the parks near you
+const BN = PH ? 14 : 26, wingG = new T.BufferGeometry();
+wingG.setAttribute('position', new T.Float32BufferAttribute([0, 0, 0, -0.5, 0.03, 0.3, -0.48, 0.03, -0.32, 0, 0, 0, 0.48, 0.03, -0.32, 0.5, 0.03, 0.3], 3)); wingG.computeVertexNormals();
+const flies = new T.InstancedMesh(wingG, new T.MeshBasicMaterial({ side: T.DoubleSide }), BN); flies.instanceColor = new T.InstancedBufferAttribute(new Float32Array(BN * 3).fill(1), 3); flies.frustumCulled = false; S3.add(flies);
+for (let i = 0; i < BN; i++) flies.setColorAt(i, lin('#' + ([0xffd24a, 0xffffff, 0xff9a4d, 0x7fb8ff, 0xff7fa8][i % 5]).toString(16).padStart(6, '0')));
+const FF = PH ? 24 : 44, ffG = new T.BufferGeometry(); ffG.setAttribute('position', new T.BufferAttribute(new Float32Array(FF * 3), 3));
+const fireflies = new T.Points(ffG, new T.PointsMaterial({ map: GT, color: lin('#d9ff8a'), size: 1.3, sizeAttenuation: true, transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, fog: false })); fireflies.frustumCulled = false; S3.add(fireflies);
+const anchors = []; let anchorT = 0;
+const parkRects = (MDp.flat || []).filter(f => f[0] === 'g');
+function refreshAnchors() { anchors.length = 0; const cx = Math.floor(px / TILE), cz = Math.floor(pz / TILE);
+  for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) (CZ.groves && CZ.groves.get(kOf(cx + i, cz + j)) || []).forEach(g => { if (Math.hypot(g[0] - px, g[1] - pz) < 80) anchors.push([g[0], g[1]]); });
+  parkRects.forEach(([, x, z, w, d]) => { for (let k = 0; k < 4; k++) { const ax = x + w * (0.2 + 0.6 * ((k * 0.37) % 1)), az = z + d * (0.2 + 0.6 * ((k * 0.61) % 1)); if (Math.hypot(ax - px, az - pz) < 80) anchors.push([ax, az]); } });
+  anchors.sort((a, b) => Math.hypot(a[0] - px, a[1] - pz) - Math.hypot(b[0] - px, b[1] - pz)); anchors.length = Math.min(anchors.length, 14); }
+const FQ = new T.Quaternion(), FE = new T.Euler(), FS = new T.Vector3(), FV = new T.Vector3();
+function stepLife(dt, t) { buntU.uT.value = t;
+  if (anchorT <= dt) buntMeshes.forEach(m => { const c = m.geometry.boundingSphere.center; m.visible = Math.hypot(c.x - px, c.z - pz) - m.geometry.boundingSphere.radius < VIEW; });
+  anchorT -= dt; if (anchorT <= 0) { anchorT = 2; refreshAnchors(); }
+  const day = night < 0.5, n = anchors.length;
+  flies.visible = day && n > 0; fireflies.material.opacity = n ? Math.max(0, night - 0.4) / 0.6 : 0;
+  if (flies.visible) { for (let i = 0; i < BN; i++) { const a = anchors[i % n], ph = i * 1.7, r = 1.6 + (i % 4) * 0.6, s = t * (0.5 + (i % 3) * 0.15) + ph;
+      const x = a[0] + Math.cos(s) * r + Math.sin(s * 2.3) * 0.6, z = a[1] + Math.sin(s * 1.3) * r, y = 0.8 + (i % 3) * 0.45 + Math.sin(s * 3.1) * 0.35, flap = 0.25 + Math.abs(Math.cos(t * 16 + ph)) * 0.75;
+      flies.setMatrixAt(i, M4.compose(FV.set(x, y, z), FQ.setFromEuler(FE.set(0, -s + Math.PI / 2, 0)), FS.set(flap, 1, 1))); } flies.instanceMatrix.needsUpdate = true; }
+  if (fireflies.material.opacity > 0) { const P = ffG.attributes.position.array; for (let i = 0; i < FF; i++) { const a = anchors[i % n], s = t * 0.3 + i * 2.1; P[i * 3] = a[0] + Math.cos(s + i) * (2 + (i % 5)); P[i * 3 + 1] = 0.6 + (i % 4) * 0.5 + Math.sin(t * 1.7 + i) * 0.4; P[i * 3 + 2] = a[1] + Math.sin(s * 1.2 + i) * (2 + (i % 4)); } ffG.attributes.position.needsUpdate = true; } }
+
 // ---------- 7. first squares, then the loop ----------
 lt.textContent = 'building the streets around you';
 await wait(20); stream(px, pz, true); streamNature(px, pz, true);
@@ -416,20 +580,22 @@ document.addEventListener('visibilitychange', () => { hidden = document.hidden; 
 function frame() { if (hidden) return; requestAnimationFrame(frame);
   const dt = Math.min(clock.getDelta(), 0.05);
   const ix = joy.x + ((keys.d || keys.arrowright) ? 1 : 0) - ((keys.a || keys.arrowleft) ? 1 : 0), iz = joy.y + ((keys.s || keys.arrowdown) ? 1 : 0) - ((keys.w || keys.arrowup) ? 1 : 0), mag = Math.min(1, Math.hypot(ix, iz));
-  if (mag > 0.1) { const run = running || keys.shift, a = Math.atan2(ix, iz) + yaw + Math.PI, s = (run ? 9 : 4.6) * mag, nx = px + Math.sin(a) * s * dt, nz = pz + Math.cos(a) * s * dt;
+  if (driving) stepCar(dt, ix, iz);
+  else if (mag > 0.1) { const run = running || keys.shift, a = Math.atan2(ix, iz) + yaw + Math.PI, s = (run ? 9 : 4.6) * mag, nx = px + Math.sin(a) * s * dt, nz = pz + Math.cos(a) * s * dt;
     if (freeAt(nx, nz)) { px = nx; pz = nz; } else if (freeAt(nx, pz)) px = nx; else if (freeAt(px, nz)) pz = nz;
     let d = a - me.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); me.root.rotation.y += d * Math.min(1, dt * 12); me.play(run ? 'sprint' : 'walk'); } else me.play('idle');
-  me.root.position.set(px, 0.12, pz); me.step(dt);
+  if (!driving) { me.root.position.set(px, 0.12, pz); me.step(dt); }
   stream(px, pz, false); streamNature(px, pz, false);
-  const dist = innerWidth > innerHeight ? 24 : 30, cp = Math.cos(pitch);
+  const dist = (innerWidth > innerHeight ? 24 : 30) * (driving ? 1.25 : 1), cp = Math.cos(pitch);
   camPos.set(px - Math.sin(yaw) * dist * cp, 1.5 + Math.sin(pitch) * dist, pz - Math.cos(yaw) * dist * cp);
   if (first) { CAM.position.copy(camPos); first = false; } else CAM.position.lerp(camPos, Math.min(1, dt * 5));
   camLook.set(px, 1.6, pz); CAM.lookAt(camLook);
   sky.position.set(px, 0, pz); stars.position.copy(sky.position); disc.position.set(px + SUND.x * 520, SUND.y * 520, pz + SUND.z * 520);
   sun.position.set(px + SUND.x * 170, SUND.y * 170, pz + SUND.z * 170); sun.target.position.set(px, 0, pz); sun.target.updateMatrixWorld();
-  drawSmoke(dt);
+  peopleT -= dt; if (peopleT <= 0) { peopleT = 1; refreshPeople(); } stepPeople(dt);
+  drawSmoke(dt); lifeT += dt; if (!RM) stepLife(dt, lifeT); else buntU.uT.value = 0;
   R3.render(S3, CAM);
-  drawTags();
+  drawTags(); drawPeopleTags();
   frames++; fpsT += dt; if (fpsT > 1) { $('czFps').textContent = Math.round(frames / fpsT) + ' fps · ' + R3.info.render.calls + ' draws · ' + Math.round(R3.info.render.triangles / 1000) + 'k tris · ' + [...tiles.values()].filter(Boolean).length + ' squares'; frames = 0; fpsT = 0; } }
 $('czLoad').style.opacity = 0; setTimeout(() => $('czLoad').remove(), 450);
 CZ.phase = 'running';
@@ -441,5 +607,5 @@ CZ.inspect = (x, z) => { const k = tkey(x, z), list = tilePlaces.get(k) || [], p
   const topShapes = {}; for (const i of list) { const id = PL.s[i]; topShapes[id] = (topShapes[id] || 0) + shapes[id].n / 3; }
   const top = Object.entries(topShapes).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id, t]) => id + ':' + Math.round(t) + 't/' + shapes[id].n / 3 + 'per r' + shapes[id].r.toFixed(1));
   return JSON.stringify({ placeTris: Math.round(pl), pieceTris: Math.round(pc), places: list.length, bySize, piecesByBucket: byB, top }); };
-CZ.api = { go: (x, z, y) => { px = x; pz = z; if (y != null) yaw = y; first = true; stream(px, pz, true); streamNature(px, pz, true); }, setTime: h => { fixedHour = h; tick(); }, renderer: R3, tiles, scene: S3 };
+CZ.api = { drive: () => enterCar(), out: () => leaveCar(), car: () => [CAR.x, CAR.z, CAR.a, CAR.v], keys, go: (x, z, y) => { px = x; pz = z; if (y != null) yaw = y; first = true; stream(px, pz, true); streamNature(px, pz, true); }, setTime: h => { fixedHour = h; tick(); }, renderer: R3, tiles, scene: S3 };
 })().catch(e => { console.error('cozy', e); const l = document.getElementById('czLt'); if (l) l.textContent = 'Could not build: ' + e.message; });
