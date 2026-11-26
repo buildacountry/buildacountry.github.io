@@ -352,11 +352,16 @@ if (!window.loadGLB) await new Promise((ok, no) => { const s = document.createEl
 const lib = {}; await Promise.all(['anim', 'female-b'].map(async n => { lib[n] = await loadGLB(`kenney/chars/${n}.gltf.json`); }));
 let ctex; lib.anim.scene.traverse(o => { if (o.isSkinnedMesh && !ctex) ctex = o.material.map; }); if (ctex) ctex.encoding = T.sRGBEncoding;
 const cmat = PH ? new T.MeshLambertMaterial({ map: ctex, skinning: true }) : new T.MeshStandardMaterial({ map: ctex, skinning: true, roughness: 0.86, metalness: 0 });
+const LOOK = { arm: 0.8, head: 0.78 };   // Dev chose option 3 (27 Nov)
 const me = (() => { const base = lib.anim, r = base.scene.clone(true), bones = {}, old = []; r.traverse(o => { if (o.isBone) bones[o.name] = o; if (o.isSkinnedMesh) old.push(o); }); old.forEach(o => o.parent.remove(o)); r.updateMatrixWorld(true);
   lib['female-b'].scene.traverse(o => { if (!o.isSkinnedMesh) return; const m = new T.SkinnedMesh(o.geometry, cmat); m.frustumCulled = false; m.castShadow = !PH; r.add(m); const sk = new T.Skeleton(o.skeleton.bones.map(b => bones[b.name])); sk.calculateInverses(); m.bind(sk, m.matrixWorld); });
   if (PH) { const s = new T.Mesh(new T.CircleGeometry(0.3, 14), new T.MeshBasicMaterial({ color: 0x1a2030, transparent: true, opacity: 0.22, depthWrite: false })); s.rotation.x = -Math.PI / 2; s.position.y = 0.02; r.add(s); }
-  r.scale.setScalar(2.4); S3.add(r); const mixer = new T.AnimationMixer(r), acts = {}; for (const c of base.animations) if (['idle', 'walk', 'sprint'].includes(c.name)) acts[c.name] = mixer.clipAction(c);
-  const c = { root: r, mixer, cur: null, play(n) { if (c.cur === n || !acts[n]) return; acts[n].reset().fadeIn(0.2).play(); if (c.cur) acts[c.cur].fadeOut(0.2); c.cur = n; } }; c.play('idle'); return c; })();
+  // size (Dev, 27 Nov, option 3): person-sized next to our homes, small arms, smaller head. Measured on the real skinned shape.
+  r.updateMatrixWorld(true); let y0 = 1e9, y1 = -1e9; const vv = new T.Vector3(); r.traverse(o => { if (!o.isSkinnedMesh) return; const p = o.geometry.attributes.position; for (let i = 0; i < p.count; i += 3) { vv.fromBufferAttribute(p, i); o.boneTransform(i, vv); vv.applyMatrix4(o.matrixWorld); y0 = Math.min(y0, vv.y); y1 = Math.max(y1, vv.y); } });
+  r.scale.setScalar(2.15 / Math.max(0.1, y1 - y0) * (1 + (1 - LOOK.head) * 0.35)); S3.add(r); const mixer = new T.AnimationMixer(r), acts = {}; for (const c of base.animations) if (['idle', 'walk', 'sprint'].includes(c.name)) acts[c.name] = mixer.clipAction(c);
+  const sized = {}; r.traverse(o => { if (o.isBone && (o.name === 'arm-left' || o.name === 'arm-right' || o.name === 'head')) sized[o.name] = { b: o, rest: o.scale.clone(), k: o.name === 'head' ? LOOK.head : LOOK.arm }; });
+  const step = dt => { for (const n in sized) sized[n].b.scale.copy(sized[n].rest); mixer.update(dt); for (const n in sized) sized[n].b.scale.multiplyScalar(sized[n].k); };   // reset, animate, then shrink once (no stacking)
+  const c = { root: r, mixer, step, cur: null, play(n) { if (c.cur === n || !acts[n]) return; acts[n].reset().fadeIn(0.2).play(); if (c.cur) acts[c.cur].fadeOut(0.2); c.cur = n; } }; c.play('idle'); return c; })();
 let px = 0, pz = 30, yaw = Math.PI, pitch = 0.72; me.root.rotation.y = Math.PI;
 { const want = (QS.get('visit') || '').replace(/^@/, '').toLowerCase(), h = want && homes.find(x => (x.user || '').toLowerCase() === want); if (h) { px = h.x; pz = h.z + 9; } const f = nearestFree(px, pz); px = f[0]; pz = f[1]; }
 const keys = {}; addEventListener('keydown', e => keys[e.key.toLowerCase()] = true); addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
@@ -414,7 +419,7 @@ function frame() { if (hidden) return; requestAnimationFrame(frame);
   if (mag > 0.1) { const run = running || keys.shift, a = Math.atan2(ix, iz) + yaw + Math.PI, s = (run ? 9 : 4.6) * mag, nx = px + Math.sin(a) * s * dt, nz = pz + Math.cos(a) * s * dt;
     if (freeAt(nx, nz)) { px = nx; pz = nz; } else if (freeAt(nx, pz)) px = nx; else if (freeAt(px, nz)) pz = nz;
     let d = a - me.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); me.root.rotation.y += d * Math.min(1, dt * 12); me.play(run ? 'sprint' : 'walk'); } else me.play('idle');
-  me.root.position.set(px, 0.12, pz); me.mixer.update(dt);
+  me.root.position.set(px, 0.12, pz); me.step(dt);
   stream(px, pz, false); streamNature(px, pz, false);
   const dist = innerWidth > innerHeight ? 24 : 30, cp = Math.cos(pitch);
   camPos.set(px - Math.sin(yaw) * dist * cp, 1.5 + Math.sin(pitch) * dist, pz - Math.cos(yaw) * dist * cp);
