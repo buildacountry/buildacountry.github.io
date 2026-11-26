@@ -5,7 +5,7 @@
 (() => {
 if (window.VLIFE) return;
 // (Dev, 24 Nov) laptops and PCs only for now: on phones the whole map lags. Phones get a short note instead (?phone forces the game, for tests).
-if (PHONE && !/[?&]phone\b/.test(location.search)) { window.VLIFE = { phone: true };
+if (PHONE && !/[?&]phone\b/.test(location.search) && !window.VGAME) { window.VLIFE = { phone: true };
   const d = document.createElement('div'); d.style.cssText = 'position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:#8fbf62;padding:24px;text-align:center;font:600 16px/1.5 Poppins,system-ui,sans-serif;color:#14233f';
   d.innerHTML = '<div style="max-width:340px;background:#fff8ef;border-radius:18px;padding:22px 20px;box-shadow:0 6px 24px rgba(0,0,0,.18)"><div style="font-size:40px">💻</div><div style="font:800 22px/1.25 Poppins,system-ui,sans-serif;margin:6px 0 8px">Life in Vinland is on laptop and PC for now</div><div>Open this same link on a laptop or computer to walk Vinland, visit your home and meet other citizens. A phone version is coming.</div><a href="./" style="display:inline-block;margin-top:16px;background:#c8553d;color:#fff;border-radius:999px;padding:10px 18px;text-decoration:none">See the map</a></div>';
   document.body.appendChild(d); return; }

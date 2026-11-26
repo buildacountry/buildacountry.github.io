@@ -53,7 +53,7 @@ function partGeo(s, map, height) {
 const clipCache = {};
 function clipsFor(height) {
   if (clipCache[height]) return clipCache[height]; const [ls, ts] = HEIGHTS[height], out = {};
-  for (const c of base.animations) { if (!['idle', 'walk', 'sprint', 'emote-yes'].includes(c.name)) continue; const cl = c.clone();
+  for (const c of base.animations) { if (!['idle', 'walk', 'sprint', 'emote-yes', 'sit', 'pick-up', 'interact-right'].includes(c.name)) continue; const cl = c.clone();
     for (const tr of cl.tracks) { const [node, prop] = tr.name.split('.'); if (prop !== 'position') continue; const f = node.startsWith('leg') || node === 'torso' ? ls : node.startsWith('arm') || node === 'head' ? ts : 1; if (f !== 1) for (let i = 1; i < tr.values.length; i += 3) tr.values[i] *= f; }
     out[c.name] = cl; }
   return (clipCache[height] = out);
@@ -125,6 +125,7 @@ function staticsFrame(dt, now) {
 }
 const prevUP = updatePeople; updatePeople = function (dt, now) { prevUP(dt, now); staticsFrame(dt, now); };
 
+if (!window.VGAME) {   // the game (?game) has no cars at all (Dev, 26 Nov)
 // ---- cars: the moving and parked cars become Kenney cars, in the map's toon shading ----
 const CARMAP = { carHatch: 'hatchback-sports', carSedan: 'sedan', carSUV: 'suv', carTaxi: 'taxi', carVan: 'van', carPickup: 'truck', carSports: 'sedan-sports' }, CAR_SCALE = 1.7;
 const carLib = {}; await Promise.all([...new Set(Object.values(CARMAP))].map(async n => { carLib[n] = await loadGLB(`kenney/cars/${n}.gltf.json`); }));
@@ -144,6 +145,7 @@ const prevTraffic = updateTraffic;
 updateTraffic = function (dt) { prevTraffic(dt); const t0 = tic();
   for (const { c, ims, j } of moving) { c.meshes[0].getMatrixAt(c.i, M4); if (M4.elements[0] === 0 && M4.elements[5] === 0) continue; const mm = M4.clone().multiply(SCM); ims.forEach(im => { im.setMatrixAt(j, mm); im.instanceMatrix.needsUpdate = true; }); c.meshes.forEach(m => { m.setMatrixAt(c.i, ZERO); m.instanceMatrix.needsUpdate = true; }); } KEN.ms += tic() - t0; };
 
+}
 // ---- you, in walk mode ----
 let me = null; const myLook = (() => { try { return JSON.parse(localStorage.getItem('vinland-look')); } catch (e) { return null; } })();
 const prevTick = PLAYHOOK.tick;
@@ -159,5 +161,5 @@ PLAYHOOK.tick = (dt, now) => { if (prevTick) prevTick(dt, now);
 };
 const prevStop = PLAYHOOK.onStop; PLAYHOOK.onStop = () => { if (prevStop) prevStop(); if (me) me.root.visible = false; };
 console.log('kenney citizens on');
-{ const b = document.createElement('div'); b.textContent = 'Preview: Kenney citizens + cars'; b.style.cssText = 'position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:60;background:#1f8a8a;color:#fff;font:700 13px/1 Poppins,system-ui,sans-serif;padding:7px 12px;border-radius:999px;pointer-events:none'; document.body.appendChild(b); }
+if (!window.VGAME) { const b = document.createElement('div'); b.textContent = 'Preview: Kenney citizens + cars'; b.style.cssText = 'position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:60;background:#1f8a8a;color:#fff;font:700 13px/1 Poppins,system-ui,sans-serif;padding:7px 12px;border-radius:999px;pointer-events:none'; document.body.appendChild(b); }
 })().catch(e => console.error('kenney', e));
