@@ -398,7 +398,7 @@ const ST = window.VIN_STATIC, $ = s => document.querySelector(s);
 const LS = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 let qs; try { qs = new URLSearchParams(location.search); } catch (e) { qs = { get: () => null }; }
-const PHONE = matchMedia('(hover: none) and (pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches;   // 13 Nov: touch-only devices. Laptops/PCs never get phone cuts
+const PHONE = (matchMedia('(hover: none) and (pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches) || (/[?&]game\b/.test(location.search) && matchMedia('(pointer: coarse)').matches);   // 13 Nov: touch-only devices. Laptops/PCs never get phone cuts. 26 Nov: in the game (?game) a phone with a stylus (Samsung S Pen reports a 'fine' pointer) is still a phone
 const WEAK = PHONE && ((navigator.deviceMemory && navigator.deviceMemory <= 3) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4));
 const hasGL = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl') || c.getContext('experimental-webgl')); } catch (e) { return false; } })();
 // Which view opens: the person's own choice wins; else laptop = 3D; phone = what the speed check found last time, or a first guess from the phone's memory / cores.
@@ -696,7 +696,7 @@ window.VIN3D = () => {
 if (!window.THREE) { throw new Error('no 3D engine'); }
 const BOOT = window.VIN_BOOT || null, OLDP = /[?&]old=1/.test(location.search);   // ?old=1 = the old slow settings, to compare speed on a real phone
 const wrap = document.getElementById('scene');
-const PHONE = matchMedia('(hover: none) and (pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches;   // 13 Nov: touch-only devices. Laptops/PCs never get phone cuts
+const PHONE = (matchMedia('(hover: none) and (pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches) || (/[?&]game\b/.test(location.search) && matchMedia('(pointer: coarse)').matches);   // 13 Nov: touch-only devices. Laptops/PCs never get phone cuts. 26 Nov: in the game (?game) a phone with a stylus (Samsung S Pen reports a 'fine' pointer) is still a phone
 const ROADS_ON_PHONES = true;   // set by measurement (tools/map_smooth.py + draw calls): see HANDOFF step 4C
 const FAST = PHONE && !OLDP;   // phones (12 Nov): no antialias, pixel ratio max 1.25, no real shadows (a soft fake shadow under each home instead), name tags 10x a second
 const renderer = new THREE.WebGLRenderer({ antialias: !FAST, powerPreference: 'high-performance' });

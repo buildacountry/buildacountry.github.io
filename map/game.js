@@ -20,7 +20,17 @@ if (LIFE.on) { LIFE.cars.forEach(c => { if (c.meshes[0] && c.meshes[0].parent) c
 // ---------- 1b. phones: small pieces (fence posts, flowers, bins: thousands of them) are kept only near you; homes and big
 //      buildings keep life.js's full distance. Measured 26 Nov: 1.3M -> far fewer triangles in the plaza view.
 if (window.VLIFE && VLIFE.lite && VLIFE.inst) {
-  const FAR = 260, ring = e => { const g = e.o.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); const r = g.boundingSphere ? g.boundingSphere.radius : 10; return r < 2.5 ? 95 : r < 8 ? 160 : FAR * 0.9; };
+  // the game sees a street, not the whole country: a nearer horizon with the haze brought in, so the edge never shows
+  const GFAR = 170; camera.far = GFAR + 40; camera.updateProjectionMatrix(); if (scene.fog) { scene.fog.near = 55; scene.fog.far = GFAR; }
+  const mlist = [], mine = new Set(); scene.updateMatrixWorld(true);
+  scene.traverse(o => { if (!(o.isMesh || o.isLineSegments || o.isPoints) || o.isInstancedMesh || o.isSkinnedMesh || !o.geometry) return; const g = o.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); const bs = g.boundingSphere; if (!bs || !isFinite(bs.radius)) return;
+    const c = bs.center.clone().applyMatrix4(o.matrixWorld), r = bs.radius * o.matrixWorld.getMaxScaleOnAxis(); if (r > 150) return; const e = { o, x: c.x, z: c.z, r };
+    if (!o.visible && Math.hypot(c.x - WALK.x, c.z - WALK.z) - r > 250) mine.add(o);   // hidden by life.js for being far: ours to manage now. Anything the map hid for its own reasons stays as it is.
+    mlist.push(e); });
+  VLIFE.cull = () => { const px = WALK.x, pz = WALK.z; mlist.forEach(e => { const far = Math.hypot(e.x - px, e.z - pz) - e.r > GFAR;
+    if (far && e.o.visible) { e.o.visible = false; mine.add(e.o); } else if (!far && mine.has(e.o)) { e.o.visible = true; mine.delete(e.o); } }); };
+  VLIFE.cull();
+  const FAR = GFAR, ring = e => { const g = e.o.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); const r = g.boundingSphere ? g.boundingSphere.radius : 10; return r < 2.5 ? 95 : r < 8 ? 160 : FAR * 0.9; };
   VLIFE.inst.forEach(e => { e.R2 = ring(e) ** 2; });
   VLIFE.cullI = () => { const px = WALK.x, pz = WALK.z;
     VLIFE.inst.forEach(e => { if (e.dyn) return; const a = e.o.instanceMatrix.array; let k = 0;
@@ -45,6 +55,7 @@ const css = document.createElement('style'); css.textContent = `
 #gAct { position: fixed; right: calc(154px + env(safe-area-inset-right, 0px)); bottom: calc(28px + env(safe-area-inset-bottom, 0px)); min-width: 104px; height: 54px; padding: 0 18px; border: 0; border-radius: 999px; background: #e8473c; color: #fff; font: 800 1rem Poppins, system-ui, sans-serif; box-shadow: 0 4px 0 #a33a28; z-index: 9; cursor: pointer; }
 #gAct:active { transform: translateY(3px); box-shadow: 0 1px 0 #a33a28; }
 @media (hover: hover) { #gAct { right: calc(130px + env(safe-area-inset-right, 0px)); } #gAct::after { content: ' (E)'; font-weight: 600; font-size: .8rem; opacity: .8; } }
+@media (pointer: coarse) { body.life #walkHud .wemo { bottom: calc(96px + env(safe-area-inset-bottom, 0px)) !important; } }   /* emoji + jump sit just above RUN, clear of the clock and coins */
 #gHelped { font: 800 1.2rem/1.3 Poppins, system-ui, sans-serif; color: #ffb3b3; }
 #gRotate { position: fixed; inset: 0; z-index: 70; display: none; place-items: center; background: #8fbf62; text-align: center; font: 800 22px/1.3 Poppins, system-ui, sans-serif; color: #14233f; padding: 24px; }
 #gRotate small { display: block; font-weight: 600; font-size: 15px; opacity: .8; margin-top: 6px; }
