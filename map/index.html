@@ -403,7 +403,7 @@ const WEAK = PHONE && ((navigator.deviceMemory && navigator.deviceMemory <= 3) |
 const hasGL = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl') || c.getContext('experimental-webgl')); } catch (e) { return false; } })();
 // Which view opens: the person's own choice wins; else laptop = 3D; phone = what the speed check found last time, or a first guess from the phone's memory / cores.
 const EDITING = /[?&]edit\b/.test(location.search) && !PHONE; window.VIN_EDIT = EDITING;   // the Vinland Builder: /map/?edit, laptop only
-function pickMode() { if (EDITING || (/[?&]life\b/.test(location.search) && (!PHONE || /[?&](game|phone)\b/.test(location.search)))) return '3d';   // ?life = Life in Vinland (the game) always opens in 3D
+function pickMode() { if (EDITING || (/[?&]life\b/.test(location.search) && (!PHONE || /[?&](game|phone)\b/.test(location.search))) || /[?&]cozy\b/.test(location.search)) return '3d';   // ?life = Life in Vinland (the game) always opens in 3D
   const v = qs.get('view'); if (v === '2d' || v === '3d') return v; if (!hasGL || !ST) return hasGL ? '3d' : '2d';
   if (PHONE) return '2d';   // 13 Nov (step 4): phones always open in Maps mode (instant, never lags). 3D is one tap away, for a look-around.
   const c = LS.get('vin_map_mode'); return c === '2d' ? '2d' : '3d'; }
@@ -6963,6 +6963,8 @@ if (PHONE && !OLDP) { const note = () => { if (BOOT && BOOT.toast) BOOT.toast('B
 // REEL STUDIO (22 Nov): /map/?reel=<name> plays an animated reel scene for Dev to screen-record; /map/?film adds smooth camera sliders. reel.js is downloaded only then. Visitors never load it.
 if (/[?&](reel|film)\b/.test(location.search)) { const runR = code => eval(code); (function wR() { if (RUN.homes && homes.length) fetch('reel.js?v=1', { cache: 'no-cache' }).then(r => r.text()).then(t => runR(t + '\n//# sourceURL=reel.js')).catch(e => console.error(e)); else setTimeout(wR, 300); })(); }
 // LIFE IN VINLAND (24 Nov): /map/?life (the /play page sends you here) opens the map straight into walking, with the game's screen on top. life.js is downloaded only then.
+if (/[?&]cozy\b/.test(location.search)) { const runC = code => eval(code);   // ?cozy (27 Nov): the whole country redrawn in the cozy low-poly style, on its own screen (cozy.js). The normal map is unchanged.
+  (function wC() { if (RUN.homes && homes.length) fetch('cozy.js?v=1', { cache: 'no-cache' }).then(r => r.text()).then(t => runC(t + '\n//# sourceURL=cozy.js')).catch(e => console.error(e)); else setTimeout(wC, 300); })(); }
 if (/[?&]life\b/.test(location.search)) { const runL = code => eval(code); window.VGAME = /[?&]game\b/.test(location.search);   // ?life&game (26 Nov) = the game layer on top: Kenney citizens (kenney/kenney.js) + game.js. Plain ?life is unchanged.
   const getRun = f => fetch(f, { cache: 'no-cache' }).then(r => r.text()).then(t => runL(t + '\n//# sourceURL=' + f.split('?')[0]));
   (function wL() { if (RUN.homes && homes.length && (!window.VGAME || walkers.batches)) getRun('life.js?v=1').then(() => { if (window.VGAME && !window.VLIFE.phone) return getRun('kenney/kenney.js?v=3').then(() => getRun('game.js?v=1')); }).catch(e => console.error(e)); else setTimeout(wL, 300); })(); }
