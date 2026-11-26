@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#9fd3ea">
+<title>Vinland · world preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
+<style>
+/* VINLAND WORLD PREVIEW (26 Nov): the whole real layout (every home, road, park) in the cozy look-test style,
+   built to stay smooth on phones: a handful of draw calls, no real-time shadows, simple far houses, landscape play. */
+:root{--chip:rgba(255,253,247,.93);--ink:#2b2a33;--teal:#1f8a8a;--red:#d9553f}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#bfe6f0;font:16px/1.35 "Baloo 2",system-ui,sans-serif;color:var(--ink);touch-action:none;user-select:none;-webkit-user-select:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+.chip{position:fixed;background:var(--chip);color:var(--ink);border-radius:999px;padding:6px 14px;font-weight:800;box-shadow:0 3px 0 rgba(0,0,0,.12);z-index:3;border:0;font-family:inherit;font-size:15px}
+#brand{top:calc(10px + env(safe-area-inset-top));left:calc(10px + env(safe-area-inset-left))}
+#brand small{font-weight:600;opacity:.6}
+#fps{top:calc(10px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);font-size:12px;font-weight:600;padding:3px 10px}
+#home{top:calc(10px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right));cursor:pointer;min-height:40px}
+#stick{position:fixed;left:calc(26px + env(safe-area-inset-left));bottom:24px;width:124px;height:124px;border-radius:50%;background:rgba(255,253,247,.3);border:3px solid rgba(255,253,247,.85);z-index:3;touch-action:none}
+#knob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:var(--chip)}
+#run{position:fixed;right:calc(28px + env(safe-area-inset-right));bottom:36px;width:76px;height:76px;border-radius:50%;border:0;background:var(--red);color:#fff;font:inherit;font-weight:800;font-size:16px;box-shadow:0 4px 0 #a33a28;z-index:3}
+#run[aria-pressed=true]{background:#1f8a8a;box-shadow:0 4px 0 #136060}
+.tag{position:fixed;left:0;top:0;transform:translate(-50%,-100%);background:var(--chip);border-radius:999px;padding:2px 10px;font-size:13px;font-weight:800;white-space:nowrap;pointer-events:none;z-index:2;will-change:transform}
+.tag.place{background:#1f8a8a;color:#fff}
+.tag.mine{background:var(--red);color:#fff}
+#panel{position:fixed;inset:0;display:none;place-items:center;z-index:6;background:rgba(20,30,50,.35)}
+#panel.on{display:grid}
+#panel form{background:#fffdf7;border-radius:20px;padding:18px;width:min(92vw,360px);box-shadow:0 8px 30px rgba(0,0,0,.2)}
+#panel h3{margin:0 0 8px;font-size:20px}
+#panel input{width:100%;font:inherit;font-size:17px;padding:10px 12px;border-radius:12px;border:2px solid #e6dccb;background:#fff}
+#panel .row{display:flex;gap:8px;margin-top:10px}
+#panel button{flex:1;min-height:44px;border:0;border-radius:12px;font:inherit;font-weight:800;font-size:16px;cursor:pointer}
+#panel .go{background:var(--red);color:#fff}
+#panel p{margin:8px 0 0;font-size:14px;min-height:1.4em}
+#load{position:fixed;inset:0;z-index:9;display:grid;place-items:center;background:linear-gradient(#9fd3ea,#e9f6f2);font-weight:800;font-size:22px;text-align:center;transition:opacity .4s}
+#load small{display:block;font-weight:600;font-size:14px;opacity:.7}
+#rotate{position:fixed;inset:0;z-index:8;display:none;place-items:center;background:#9fd3ea;text-align:center;font-weight:800;font-size:22px;padding:24px}
+#rotate small{display:block;font-weight:600;font-size:15px;opacity:.75;margin-top:6px}
+#rotate .ph{width:70px;height:110px;border:6px solid #2b2a33;border-radius:14px;margin:0 auto 18px;animation:turn 2.4s ease-in-out infinite}
+@keyframes turn{0%,20%{transform:rotate(0)}50%,80%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+@media (orientation:portrait) and (hover:none) and (pointer:coarse){#rotate{display:grid}}
+@media (prefers-reduced-motion:reduce){#rotate .ph{animation:none}#load{transition:none}}
+</style>
+</head>
+<body>
+<div id="load"><div>Building Vinland…<small id="lt">Laying roads and homes</small></div></div>
+<div id="rotate"><div><div class="ph"></div>Turn your phone sideways<small>Vinland plays in landscape</small></div></div>
+<div class="chip" id="brand">Vinland <small>world preview</small></div>
+<div class="chip" id="fps">… fps</div>
+<button class="chip" id="home">Go to my home</button>
+<div id="stick"><div id="knob"></div></div>
+<button id="run" aria-pressed="false">Run</button>
+<div id="tags"></div>
+<div id="panel"><form><h3>Find your home</h3><input id="who" placeholder="your Instagram name" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="row"><button type="button" id="cancel">Close</button><button class="go">Take me there</button></div><p id="msg"></p></form></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="../vinland-static.js"></script>
+<script src="../map/mapdata.js"></script>
+<script src="../map/kenney/glb.js"></script>
+<script>
+{
+const T = THREE, S = window.VIN_STATIC, MD = window.VIN_MAPDATA;
+const PHONE = matchMedia('(hover: none) and (pointer: coarse)').matches;
+const renderer = new T.WebGLRenderer({ antialias: !PHONE, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, PHONE ? 1.25 : 1.5));
+renderer.setSize(innerWidth, innerHeight);
+document.body.prepend(renderer.domElement);
+const scene = new T.Scene();
+const camera = new T.PerspectiveCamera(55, innerWidth / innerHeight, 0.5, 700);
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
+scene.fog = new T.Fog(0xcfeaf3, 160, 520);
+scene.background = new T.Color(0xbfe6f0);
+scene.add(new T.HemisphereLight(0xe2f3ff, 0x6f8f4a, 0.8));
+const sun = new T.DirectionalLight(0xfff1d6, 0.75); sun.position.set(40, 80, 30); scene.add(sun);
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+// ---------- geometry helpers: everything is merged so the world is a few draw calls ----------
+const col = new T.Color();
+function part(geo, x, y, z, c, ry = 0) { const g = geo.index ? geo.toNonIndexed() : geo.clone(); if (ry) g.rotateY(ry); g.translate(x, y, z); g.deleteAttribute('uv'); col.set(c); const n = g.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) a.set([col.r, col.g, col.b], i * 3); g.setAttribute('color', new T.BufferAttribute(a, 3)); return g; }
+function merge(list) { let n = 0; list.forEach(g => n += g.attributes.position.count); const P = new Float32Array(n * 3), N = new Float32Array(n * 3), C = new Float32Array(n * 3); let o = 0;
+  list.forEach(g => { P.set(g.attributes.position.array, o * 3); g.computeVertexNormals(); N.set(g.attributes.normal.array, o * 3); C.set(g.attributes.color.array, o * 3); o += g.attributes.position.count; });
+  const m = new T.BufferGeometry(); m.setAttribute('position', new T.BufferAttribute(P, 3)); m.setAttribute('normal', new T.BufferAttribute(N, 3)); m.setAttribute('color', new T.BufferAttribute(C, 3)); return m; }
+const BOX = (w, h, d) => new T.BoxGeometry(w, h, d);
+function roofGeo(w, h, d) { const s = new T.Shape(); s.moveTo(-w / 2, 0); s.lineTo(w / 2, 0); s.lineTo(0, h); s.lineTo(-w / 2, 0); const g = new T.ExtrudeGeometry(s, { depth: d, bevelEnabled: false }); g.translate(0, 0, -d / 2); return g; }
+const VC = new T.MeshLambertMaterial({ vertexColors: true });           // fixed colours baked into the geometry
+const IC = new T.MeshLambertMaterial({ color: 0xffffff });              // colour per instance (walls, roofs)
+
+// ---------- ground, beach, sea ----------
+const SHORE = S.coast ? S.coast.shore : -820, BEACH = S.coast ? S.coast.beach0 : -772;
+const ground = new T.Mesh(new T.PlaneGeometry(2600, 1400 - BEACH), new T.MeshLambertMaterial({ color: 0x74a347 })); ground.rotation.x = -Math.PI / 2; ground.position.set(80, 0, (BEACH + 1400) / 2); scene.add(ground);
+const sand = new T.Mesh(new T.PlaneGeometry(2600, BEACH - SHORE + 8), new T.MeshLambertMaterial({ color: 0xead09a })); sand.rotation.x = -Math.PI / 2; sand.position.set(80, 0.02, (BEACH + SHORE) / 2); scene.add(sand);
+const sea = new T.Mesh(new T.PlaneGeometry(2600, 900), new T.MeshLambertMaterial({ color: 0x2fa3ab })); sea.rotation.x = -Math.PI / 2; sea.position.set(80, -0.3, SHORE - 446); scene.add(sea);
+
+// ---------- roads: asphalt, kerbs (cut at junctions), centre dashes: ONE mesh ----------
+const R = MD.roads.map(([w, d, x, z]) => ({ w, d, x, z, ax: w >= d }));
+const inOther = (px, pz, me, grow = 0.2) => R.some(r => r !== me && Math.abs(px - r.x) < r.w / 2 + grow && Math.abs(pz - r.z) < r.d / 2 + grow);
+{ const parts = [];
+  for (const r of R) {
+    parts.push(part(BOX(r.w, 0.08, r.d), r.x, 0.04, r.z, 0x6e6c78));
+    const L = r.ax ? r.w : r.d, W = r.ax ? r.d : r.w, step = 2;
+    for (let s = -L / 2; s < L / 2; s += step) { const len = Math.min(step, L / 2 - s), c = s + len / 2;
+      for (const sd of [-1, 1]) { const o = sd * (W / 2 + 0.45), [px, pz] = r.ax ? [r.x + c, r.z + o] : [r.x + o, r.z + c]; if (inOther(px, pz, r, 0.9)) continue; parts.push(part(r.ax ? BOX(len, 0.22, 0.9) : BOX(0.9, 0.22, len), px, 0.11, pz, 0xeeeae2)); }
+      if (W >= 5 && Math.round(s / step) % 3 === 0) { const [px, pz] = r.ax ? [r.x + c, r.z] : [r.x, r.z + c]; if (!inOther(px, pz, r, 0.5)) parts.push(part(r.ax ? BOX(1.3, 0.1, 0.16) : BOX(0.16, 0.1, 1.3), px, 0.07, pz, 0xf3e8c8)); } }
+  }
+  scene.add(new T.Mesh(merge(parts), VC)); }
+// parks, plazas, water from the map: ONE mesh
+{ const parts = []; for (const [k, x, z, w, d, h, c] of MD.flat) parts.push(part(BOX(w, 0.06, d), x + w / 2, 0.03 + (k === 'w' ? 0.01 : 0.02), z + d / 2, k === 'w' ? 0x5ec3cf : k === 'g' ? 0x9ccf6a : 0xe9d7b0)); scene.add(new T.Mesh(merge(parts), VC)); }
+
+// ---------- homes ----------
+const lines = S.plots.trim().split('\n').map(l => l.split(','));
+const homes = [], flats = {};
+lines.forEach((p, i) => { const x = +p[0], z = +p[1]; if (p[2] === 'R') { const k = p[3] + '|' + p[4]; (flats[k] = flats[k] || { x, z, n: 0, nums: [] }).n++; flats[k].nums.push(i + 1); return; } homes.push({ num: i + 1, x, z }); });
+// each home faces its nearest road
+for (const h of homes) { let best = 1e9, fx = 0, fz = 1; for (const r of R) { const cx = Math.max(r.x - r.w / 2, Math.min(h.x, r.x + r.w / 2)), cz = Math.max(r.z - r.d / 2, Math.min(h.z, r.z + r.d / 2)), d = (cx - h.x) ** 2 + (cz - h.z) ** 2; if (d < best) { best = d; fx = cx - h.x; fz = cz - h.z; } }
+  if (Math.abs(fx) > Math.abs(fz)) { fz = 0; } else fx = 0; h.ang = Math.atan2(fx, fz); h.two = rnd() > 0.38; h.wall = [0xfff1d6, 0xfbe3c4, 0xf7d9b5, 0xfff6e6, 0xf3e0c8, 0xe9eef2, 0xf6e3e8][Math.floor(rnd() * 7)]; h.roof = [0xe0623f, 0xd9553f, 0xe8744a, 0xc94f3a, 0x4f7fb8, 0x5b8f4e][rnd() > 0.82 ? 4 + Math.floor(rnd() * 2) : Math.floor(rnd() * 4)]; }
+const HS = 0.82; // homes are drawn a bit smaller than the 12 m plot spacing
+function houseFixed(two) { const p = [], H = two ? 6.2 : 3.6;
+  p.push(part(BOX(11, 0.2, 11), 0, 0.1, 0, 0xe3d1a8)); for (const sx of [-5.2, 5.2]) p.push(part(BOX(0.6, 0.8, 10.4), sx, 0.6, 0, 0x5f9e4a));
+  p.push(part(BOX(7, 0.5, 6), 0, 0.45, -1.4, 0xd9cbb0)); p.push(part(BOX(1.4, 2.2, 0.2), 0, 1.8, 1.55, 0x8a5a3b)); p.push(part(BOX(0.9, 2, 0.9), 2, 0.7 + H + 1.6, -2.4, 0xb9b2a6));
+  for (const wy of two ? [2.4, 5.2] : [2.5]) for (const wx of [-2.1, 2.1]) { p.push(part(BOX(1.55, 1.45, 0.08), wx, wy, 1.5, 0xffffff)); p.push(part(BOX(1.3, 1.2, 0.15), wx, wy, 1.53, 0x9fd3e6)); }
+  if (two) { p.push(part(BOX(6.8, 0.3, 5.8), 0, 3.7, -1.4, 0xffffff)); p.push(part(BOX(3, 0.25, 1.2), 0, 3.8, 2.1, 0xffffff)); p.push(part(BOX(3, 0.7, 0.08), 0, 4.2, 2.66, 0xffffff)); }
+  p.push(part(BOX(0.22, 1, 0.22), 3.6, 0.5, 4.8, 0xffffff)); p.push(part(BOX(0.7, 0.5, 0.45), 3.6, 1.15, 4.8, 0x4f7fb8));
+  return merge(p); }
+const WALL = two => { const H = two ? 6.2 : 3.6, g = BOX(6.6, H, 5.6); g.translate(0, 0.7 + H / 2, -1.4); return g; };
+const ROOF = (two, w = 7.8) => { const H = two ? 6.2 : 3.6, g = roofGeo(w, 2.8, 6.6); g.translate(0, 0.7 + H, -1.4); return g; };
+const NEAR_MAX = PHONE ? 220 : 420, NEAR_R = PHONE ? 95 : 130;
+const withColor = (im, n) => { im.instanceColor = new T.InstancedBufferAttribute(new Float32Array(n * 3).fill(1), 3); return im; };   // made up front: r128 sizes it by the CURRENT count otherwise
+const near = [0, 1].map(two => { const n = homes.length, mk = (g, m) => { const im = new T.InstancedMesh(g, m, n); if (m === IC) withColor(im, n); im.count = 0; scene.add(im); return im; };
+  return { fixed: mk(houseFixed(two), VC), wall: mk(WALL(two), IC), roof: mk(ROOF(two), IC) }; });
+const far = [0, 1].map(two => { const n = homes.length, mk = g => { const im = withColor(new T.InstancedMesh(g, IC, n), n); im.count = 0; scene.add(im); return im; }; return { wall: mk(WALL(two)), roof: mk(ROOF(two)) }; });
+const M4 = new T.Matrix4(), Q = new T.Quaternion(), V3 = new T.Vector3(), SC = new T.Vector3(HS, HS, HS), UP = new T.Vector3(0, 1, 0);
+homes.forEach(h => { Q.setFromAxisAngle(UP, h.ang); h.m = new T.Matrix4().compose(V3.set(h.x, 0, h.z), Q, SC); h.cw = new T.Color(h.wall); h.cr = new T.Color(h.roof); });
+// flats: one block per building
+const blocks = Object.values(flats).map(b => ({ x: b.x, z: b.z, floors: Math.min(8, Math.max(3, Math.ceil(b.n / (b.n > 6 ? 2 : 1)))), nums: b.nums, c: new T.Color([0xf3e0c8, 0xe9eef2, 0xf7d9b5, 0xfbe3c4][Math.floor(rnd() * 4)]) }));
+{ const g = BOX(13, 1, 13); g.translate(0, 0.5, 0); const im = new T.InstancedMesh(g, IC, blocks.length);
+  const band = BOX(13.3, 0.35, 13.3); band.translate(0, 0, 0); const bands = []; blocks.forEach(b => { for (let f = 1; f <= b.floors; f++) bands.push([b.x, f * 3.1, b.z]); });
+  const imb = new T.InstancedMesh(band, IC, bands.length), win = BOX(13.1, 1.2, 13.1), imw = new T.InstancedMesh(win, IC, bands.length), roofB = BOX(14, 0.6, 14), imr = new T.InstancedMesh(roofB, IC, blocks.length);
+  blocks.forEach((b, i) => { im.setMatrixAt(i, M4.compose(V3.set(b.x, 0, b.z), Q.identity(), new T.Vector3(1, b.floors * 3.1 + 0.4, 1))); im.setColorAt(i, b.c); imr.setMatrixAt(i, M4.compose(V3.set(b.x, b.floors * 3.1 + 0.7, b.z), Q, SC.set(1, 1, 1))); imr.setColorAt(i, new T.Color(0xc94f3a)); });
+  bands.forEach(([x, y, z], i) => { imb.setMatrixAt(i, M4.compose(V3.set(x, y, z), Q.identity(), SC.set(1, 1, 1))); imb.setColorAt(i, new T.Color(0xffffff)); imw.setMatrixAt(i, M4.compose(V3.set(x, y - 1.5, z), Q, SC)); imw.setColorAt(i, new T.Color(0x9fd3e6)); });
+  SC.set(HS, HS, HS); [im, imb, imw, imr].forEach(m => scene.add(m)); }
+// a fast grid to find homes near a point
+const GRID = 48, grid = new Map(); const gk = (x, z) => Math.floor(x / GRID) + ',' + Math.floor(z / GRID);
+homes.forEach((h, i) => { const k = gk(h.x, h.z); (grid.get(k) || grid.set(k, []).get(k)).push(i); });
+function around(x, z, r) { const out = [], c = Math.ceil(r / GRID), gx = Math.floor(x / GRID), gz = Math.floor(z / GRID); for (let i = -c; i <= c; i++) for (let j = -c; j <= c; j++) { const l = grid.get((gx + i) + ',' + (gz + j)); if (l) for (const k of l) out.push(k); } return out; }
+const ZERO = new T.Matrix4().makeScale(0, 0, 0); let nearSet = new Set();
+function refreshHomes(px, pz) {
+  const cand = around(px, pz, NEAR_R).map(i => [i, (homes[i].x - px) ** 2 + (homes[i].z - pz) ** 2]).filter(a => a[1] < NEAR_R * NEAR_R).sort((a, b) => a[1] - b[1]).slice(0, NEAR_MAX);
+  nearSet = new Set(cand.map(a => a[0])); const cnt = [0, 0];
+  for (const [i] of cand) { const h = homes[i], t = h.two ? 1 : 0, k = cnt[t]++, n = near[t]; n.fixed.setMatrixAt(k, h.m); n.wall.setMatrixAt(k, h.m); n.wall.setColorAt(k, h.cw); n.roof.setMatrixAt(k, h.m); n.roof.setColorAt(k, h.cr); }
+  near.forEach((n, t) => { for (const im of [n.fixed, n.wall, n.roof]) { im.count = cnt[t]; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; } });
+  const fc = [0, 0]; homes.forEach((h, i) => { if (nearSet.has(i)) return; const t = h.two ? 1 : 0, k = fc[t]++; far[t].wall.setMatrixAt(k, h.m); far[t].wall.setColorAt(k, h.cw); far[t].roof.setMatrixAt(k, h.m); far[t].roof.setColorAt(k, h.cr); });
+  far.forEach((f, t) => { for (const im of [f.wall, f.roof]) { im.count = fc[t]; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; } });
+}
+
+// ---------- trees: round green, pink blossom, pines: instanced ----------
+{ const spots = [];
+  for (const [k, x, z, w, d] of MD.flat) if (k === 'g') for (let i = 0; i < Math.min(40, w * d / 90); i++) spots.push([x + rnd() * w, z + rnd() * d]);
+  homes.forEach(h => { if (rnd() > 0.35) return; const o = new T.Vector3(-3.6, 0, 3.4).multiplyScalar(HS).applyAxisAngle(UP, h.ang); spots.push([h.x + o.x, h.z + o.z, 1]); });
+  for (let i = 0; i < 1400; i++) { const x = -900 + rnd() * 2100, z = BEACH + 20 + rnd() * (1180 - BEACH); if (inOther(x, z, null, 6) || around(x, z, 12).some(k => Math.abs(homes[k].x - x) < 8 && Math.abs(homes[k].z - z) < 8)) continue; spots.push([x, z]); }
+  const trunk = BOX(0.5, 2.2, 0.5); trunk.translate(0, 1.1, 0); const leaf = new T.IcosahedronGeometry(1.8, 0); leaf.translate(0, 3.4, 0); const pine = new T.ConeGeometry(1.7, 4.2, 6); pine.translate(0, 3.6, 0);
+  const kinds = { green: [], pink: [], pine: [] }; spots.forEach(s => kinds[s[2] ? (rnd() > 0.5 ? 'pink' : 'green') : rnd() > 0.6 ? 'pine' : rnd() > 0.7 ? 'pink' : 'green'].push(s));
+  const put = (geo, color, list, scaleY = 1) => { const im = new T.InstancedMesh(geo, new T.MeshLambertMaterial({ color, flatShading: true }), list.length); list.forEach(([x, z], i) => { const s = 0.8 + rnd() * 0.5; im.setMatrixAt(i, M4.compose(V3.set(x, 0, z), Q.setFromAxisAngle(UP, rnd() * 6), SC.set(s, s * scaleY, s))); }); SC.set(HS, HS, HS); scene.add(im); };
+  put(trunk, 0x8a5a3b, [...kinds.green, ...kinds.pink, ...kinds.pine]); put(leaf, 0x6cb85a, kinds.green); put(leaf, 0xf4a6c0, kinds.pink); put(pine, 0x4f9a5a, kinds.pine); }
+
+// ---------- citizens (names from the live sheet), labels ----------
+const people = new Map(); // number -> username
+fetch(S.sheet).then(r => r.text()).then(t => { const rows = t.trim().split('\n').map(l => l.split(',')); const head = rows.shift().map(s => s.trim().toLowerCase()); const ni = head.indexOf('number'), ui = head.indexOf('username');
+  rows.forEach((r, i) => { const u = (r[ui] || '').trim(); if (!u) return; const n = parseInt(r[ni]) || i + 1; if (!(S.never || []).includes(u)) people.set(n, u); }); }).catch(() => {});
+const tagsEl = document.getElementById('tags'), tagPool = [];
+for (let i = 0; i < 14; i++) { const d = document.createElement('div'); d.className = 'tag'; d.hidden = true; tagsEl.appendChild(d); tagPool.push(d); }
+const places = MD.places.filter(p => p[0]).map(p => ({ name: p[0], x: p[1] + (p[3] || 0) / 2, z: p[2] + (p[4] || 0) / 2 })).concat((S.layoutPlaces || []).map(p => ({ name: p[0], x: p[1], z: p[2] })));
+let myNum = 0;
+
+// ---------- you + a few neighbours (Kenney characters) and cars ----------
+const lib = {}; let me = null; const npcs = [], cars = [];
+const SCALE = 3.4;
+async function loadPeople() {
+  const names = ['anim', 'male-a', 'male-b', 'male-d', 'male-f', 'female-b', 'female-c', 'female-d', 'female-f', 'male-c'];
+  await Promise.all(names.map(async n => { lib[n] = await loadGLB(`../map/kenney/chars/${n}.gltf.json`); }));
+  const base = lib.anim; let tex; base.scene.traverse(o => { if (o.isSkinnedMesh && !tex) tex = o.material.map; });
+  const mat = new T.MeshLambertMaterial({ map: tex, skinning: true });
+  function citizen(donor) { const root = base.scene.clone(true), bones = {}; const old = []; root.traverse(o => { if (o.isBone) bones[o.name] = o; if (o.isSkinnedMesh) old.push(o); }); old.forEach(o => o.parent.remove(o)); root.updateMatrixWorld(true);
+    lib[donor].scene.traverse(o => { if (!o.isSkinnedMesh) return; const m = new T.SkinnedMesh(o.geometry, mat); m.frustumCulled = false; root.add(m); const sk = new T.Skeleton(o.skeleton.bones.map(b => bones[b.name])); sk.calculateInverses(); m.bind(sk, m.matrixWorld); });
+    root.scale.setScalar(SCALE); scene.add(root); const shade = new T.Mesh(new T.CircleGeometry(0.28, 12), new T.MeshBasicMaterial({ color: 0, transparent: true, opacity: 0.18, depthWrite: false })); shade.rotation.x = -Math.PI / 2; shade.position.y = 0.04; root.add(shade);
+    const mixer = new T.AnimationMixer(root), acts = {}; for (const c of base.animations) if (['idle', 'walk', 'sprint'].includes(c.name)) acts[c.name] = mixer.clipAction(c);
+    const c = { root, mixer, acts, cur: null, play(n) { if (c.cur === n) return; acts[n].reset().fadeIn(0.2).play(); if (c.cur) acts[c.cur].fadeOut(0.2); c.cur = n; } }; c.play('idle'); return c; }
+  me = citizen('female-b'); me.root.position.set(0, 0, 66);
+  const donors = ['male-a', 'male-b', 'male-d', 'male-f', 'female-c', 'female-d', 'female-f'];
+  for (let i = 0; i < (PHONE ? 6 : 10); i++) { const c = citizen(donors[i % donors.length]); c.road = null; npcs.push(c); }
+  // cars
+  const carNames = ['sedan', 'taxi', 'van', 'suv', 'hatchback-sports'];
+  const carLib = {}; await Promise.all(carNames.map(async n => { carLib[n] = await loadGLB(`../map/kenney/cars/${n}.gltf.json`); }));
+  const longR = R.filter(r => (r.ax ? r.w : r.d) > 120 && (r.ax ? r.d : r.w) >= 5);
+  for (let i = 0; i < (PHONE ? 8 : 14); i++) { const o = carLib[carNames[i % carNames.length]].scene.clone(true); o.scale.setScalar(1.7); o.traverse(m => { if (m.isMesh) m.material = new T.MeshLambertMaterial({ map: m.material.map }); }); scene.add(o); cars.push({ o, r: longR[Math.floor(rnd() * longR.length)], s: rnd(), dir: rnd() > 0.5 ? 1 : -1, v: 8 + rnd() * 4 }); }
+}
+
+// ---------- input ----------
+const keys = {}; addEventListener('keydown', e => keys[e.key.toLowerCase()] = true); addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+const stick = document.getElementById('stick'), knob = document.getElementById('knob'), joy = { x: 0, y: 0, id: null };
+stick.addEventListener('pointerdown', e => { joy.id = e.pointerId; stick.setPointerCapture(e.pointerId); mj(e); });
+stick.addEventListener('pointermove', e => { if (e.pointerId === joy.id) mj(e); });
+const ej = e => { if (e.pointerId !== joy.id) return; joy.id = null; joy.x = joy.y = 0; knob.style.transform = ''; }; stick.addEventListener('pointerup', ej); stick.addEventListener('pointercancel', ej);
+function mj(e) { const r = stick.getBoundingClientRect(); let dx = e.clientX - r.left - r.width / 2, dy = e.clientY - r.top - r.height / 2; const d = Math.hypot(dx, dy), m = r.width / 2 - 12; if (d > m) { dx *= m / d; dy *= m / d; } joy.x = dx / m; joy.y = dy / m; knob.style.transform = `translate(${dx}px,${dy}px)`; }
+let yaw = Math.PI, pitch = 0.5, look = null;
+renderer.domElement.addEventListener('pointerdown', e => { look = { id: e.pointerId, x: e.clientX, y: e.clientY }; });
+addEventListener('pointermove', e => { if (!look || e.pointerId !== look.id) return; yaw -= (e.clientX - look.x) * 0.006; pitch = Math.min(1.1, Math.max(0.2, pitch + (e.clientY - look.y) * 0.004)); look.x = e.clientX; look.y = e.clientY; });
+addEventListener('pointerup', e => { if (look && e.pointerId === look.id) look = null; });
+const runBtn = document.getElementById('run'); let running = false; runBtn.addEventListener('click', () => { running = !running; runBtn.setAttribute('aria-pressed', running); });
+// landscape: on phones, try fullscreen + landscape lock on the first tap (works on Android; iPhone shows the turn-sideways screen)
+addEventListener('pointerdown', () => { if (!PHONE || document.fullscreenElement) return; const el = document.documentElement; (el.requestFullscreen ? el.requestFullscreen() : Promise.reject()).then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape')).catch(() => {}); }, { once: true });
+// go to my home
+const panel = document.getElementById('panel'), who = document.getElementById('who'), msg = document.getElementById('msg');
+document.getElementById('home').addEventListener('click', () => { panel.classList.add('on'); who.focus(); });
+document.getElementById('cancel').addEventListener('click', () => panel.classList.remove('on'));
+panel.querySelector('form').addEventListener('submit', e => { e.preventDefault(); const q = who.value.trim().replace(/^@/, '').toLowerCase(); if (!q) return;
+  let num = 0; for (const [n, u] of people) if (u.toLowerCase() === q) { num = n; break; }
+  if (!num) { msg.textContent = people.size ? 'No home found for @' + q + '. Check the spelling.' : 'Still loading the citizen list. Try again in a moment.'; return; }
+  const l = lines[num - 1]; if (!l) { msg.textContent = 'That home is not on this preview yet.'; return; }
+  myNum = num; const x = +l[0], z = +l[1], h = homes.find(h => h.num === num), back = h ? new T.Vector3(0, 0, 9).applyAxisAngle(UP, h.ang) : new T.Vector3(0, 0, 9);
+  me.root.position.set(x + back.x, 0, z + back.z); yaw = (h ? h.ang : 0); refreshHomes(x, z); lastRefresh = { x, z }; panel.classList.remove('on'); msg.textContent = ''; });
+
+// ---------- collisions: home bodies and flat blocks ----------
+function blocked(x, z) {
+  for (const i of around(x, z, 14)) { const h = homes[i], dx = x - h.x, dz = z - h.z, c = Math.cos(-h.ang), s = Math.sin(-h.ang), lx = dx * c + dz * s, lz = -dx * s + dz * c; if (Math.abs(lx) < 3.3 * HS + 0.3 && Math.abs(lz + 1.4 * HS) < 2.9 * HS + 0.3) return true; }
+  for (const b of blocks) if (Math.abs(x - b.x) < 7 && Math.abs(z - b.z) < 7) return true;
+  return z < SHORE + 4;
+}
+
+// ---------- loop ----------
+const clock = new T.Clock(), camPos = new T.Vector3(), camLook = new T.Vector3(), V = new T.Vector3();
+let lastRefresh = { x: 1e9, z: 1e9 }, frames = 0, fpsT = 0; const fpsEl = document.getElementById('fps');
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+  if (me) {
+    const p = me.root.position, ix = joy.x + ((keys.d || keys.arrowright) ? 1 : 0) - ((keys.a || keys.arrowleft) ? 1 : 0), iz = joy.y + ((keys.s || keys.arrowdown) ? 1 : 0) - ((keys.w || keys.arrowup) ? 1 : 0), mag = Math.min(1, Math.hypot(ix, iz));
+    if (mag > 0.1) { const run = running || keys.shift, a = Math.atan2(ix, iz) + yaw, sp = (run ? 10 : 5.5) * mag; const nx = p.x + Math.sin(a) * sp * dt, nz = p.z + Math.cos(a) * sp * dt; if (!blocked(nx, p.z)) p.x = nx; if (!blocked(p.x, nz)) p.z = nz;
+      let d = a - me.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); me.root.rotation.y += d * Math.min(1, dt * 12); me.play(run ? 'sprint' : 'walk'); } else me.play('idle');
+    me.mixer.update(dt);
+    if ((p.x - lastRefresh.x) ** 2 + (p.z - lastRefresh.z) ** 2 > 20 * 20) { refreshHomes(p.x, p.z); lastRefresh = { x: p.x, z: p.z }; }
+    // neighbours walk the pavements of roads near you
+    for (const c of npcs) { const q = c.root.position;
+      if (!c.road || (q.x - p.x) ** 2 + (q.z - p.z) ** 2 > 110 * 110) { const rs = R.filter(r => Math.abs(r.x - p.x) < 90 + r.w / 2 && Math.abs(r.z - p.z) < 90 + r.d / 2); c.road = rs[Math.floor(rnd() * rs.length)] || R[0]; c.s = rnd() - 0.5; c.side = rnd() > 0.5 ? 1 : -1; c.dir = rnd() > 0.5 ? 1 : -1; }
+      const r = c.road, L = r.ax ? r.w : r.d, W = r.ax ? r.d : r.w; c.s += c.dir * 1.4 * dt / L; if (Math.abs(c.s) > 0.48) c.dir *= -1;
+      const o = c.side * (W / 2 + 0.45), along = c.s * L; q.set(r.ax ? r.x + along : r.x + o, 0.22, r.ax ? r.z + o : r.z + along); c.root.rotation.y = r.ax ? (c.dir > 0 ? Math.PI / 2 : -Math.PI / 2) : (c.dir > 0 ? 0 : Math.PI); c.play('walk'); c.mixer.update(dt); }
+    for (const c of cars) { const r = c.r, L = r.ax ? r.w : r.d; c.s += c.dir * c.v * dt / L; if (c.s > 0.5) c.s -= 1; if (c.s < -0.5) c.s += 1; const lane = c.dir * -1.25, along = c.s * L;
+      c.o.position.set(r.ax ? r.x + along : r.x + lane, 0.08, r.ax ? r.z + lane : r.z + along); c.o.rotation.y = r.ax ? (c.dir > 0 ? Math.PI / 2 : -Math.PI / 2) : (c.dir > 0 ? 0 : Math.PI); }
+    // camera: behind and above, like the look test
+    const dist = innerWidth > innerHeight ? 15 : 19, cp = Math.cos(pitch);
+    camPos.set(p.x - Math.sin(yaw) * dist * cp, 2 + Math.sin(pitch) * dist, p.z - Math.cos(yaw) * dist * cp); camera.position.lerp(camPos, Math.min(1, dt * 6)); camLook.set(p.x, 2.6, p.z); camera.lookAt(camLook);
+    // labels: nearest homes with a citizen, places
+    const list = []; for (const i of around(p.x, p.z, 60)) { const h = homes[i], u = people.get(h.num); if (!u) continue; const d = (h.x - p.x) ** 2 + (h.z - p.z) ** 2; if (d < 55 * 55) list.push([d, h.x, (h.two ? 10.5 : 8) * HS, h.z, '@' + u, h.num === myNum ? 'mine' : '']); }
+    for (const pl of places) { const d = (pl.x - p.x) ** 2 + (pl.z - p.z) ** 2; if (d < 160 * 160) list.push([d / 4, pl.x, 12, pl.z, pl.name, 'place']); }
+    list.sort((a, b) => a[0] - b[0]); let k = 0;
+    for (const [, x, y, z, text, cls] of list) { if (k >= tagPool.length) break; V.set(x, y, z).project(camera); if (V.z > 1 || Math.abs(V.x) > 1.05 || Math.abs(V.y) > 1.05) continue; const el = tagPool[k++]; if (el.textContent !== text) el.textContent = text; el.className = 'tag ' + cls; el.hidden = false; el.style.transform = `translate(${((V.x + 1) / 2 * innerWidth).toFixed(0)}px,${((1 - V.y) / 2 * innerHeight).toFixed(0)}px) translate(-50%,-100%)`; }
+    for (; k < tagPool.length; k++) tagPool[k].hidden = true;
+  }
+  renderer.render(scene, camera);
+  frames++; fpsT += dt; if (fpsT > 1) { fpsEl.textContent = Math.round(frames / fpsT) + ' fps · ' + renderer.info.render.calls + ' draws'; frames = 0; fpsT = 0; }
+  requestAnimationFrame(frame);
+}
+refreshHomes(0, 66); lastRefresh = { x: 0, z: 66 };
+camera.position.set(0, 12, 82); camera.lookAt(0, 0, 66);
+loadPeople().then(() => { document.getElementById('load').style.opacity = 0; setTimeout(() => document.getElementById('load').remove(), 450); }).catch(e => { document.getElementById('lt').textContent = 'Could not load the citizens: ' + e.message; });
+frame();
+window.__w = { homes, blocks, me: () => me, refreshHomes };
+}
+</script>
+</body>
+</html>
