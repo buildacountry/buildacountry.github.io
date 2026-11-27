@@ -111,10 +111,10 @@ for (const o of keep) {
     continue;
   }
   if (!g.boundingSphere) g.computeBoundingSphere(); const rad = g.boundingSphere.radius * o.matrixWorld.getMaxScaleOnAxis();
-  const bc = CEN.copy(g.boundingSphere.center).applyMatrix4(o.matrixWorld), mw = o.matrixWorld.elements, baked = Math.hypot(bc.x - mw[12], bc.z - mw[14]) > 20;   // a baked group: shapes far from the mesh's own centre (test link: they go to the squares they cover, not all to the plaza's square)
+  const bc = CEN.copy(g.boundingSphere.center).applyMatrix4(o.matrixWorld), mw = o.matrixWorld.elements, baked = Math.hypot(bc.x - mw[12], bc.z - mw[14]) > 20;   // a baked group: shapes far from the mesh's own centre go to the squares they cover, not all to the plaza's square (Dev OK 27 Nov)
   for (const gr of groups) { const m = mats[gr.materialIndex] || mats[0]; if (!m || m.visible === false) continue; const cnt = Math.min(gr.count, total - gr.start); if (cnt < 3) continue;
     let rgb = m.color ? hex(m.color) : 0xffffff; rgb = REMAP[rgb] || rgb; const b = bucketOf(rgb, m);
-    if (rad > 30 || FARV && baked) worldPieces(g, gr.start, cnt, o.matrixWorld, rgb, b, !!m.map);
+    if (rad > 30 || baked) worldPieces(g, gr.start, cnt, o.matrixWorld, rgb, b, !!m.map);
     else addPlace(shapeId(g, gr.materialIndex, gr.start, cnt, !!m.map), b, rgb, o.matrixWorld.elements); }
 }
 // places grouped by square
