@@ -177,82 +177,126 @@
       list.forEach((t, i) => { O.position.set(t.x, t.y == null ? 0.3 : t.y, t.z); O.rotation.set(0, t.r || 0, 0); O.scale.set(t.sx || t.s, t.sy || t.s, t.sz || t.s); O.updateMatrix(); im.setMatrixAt(i, O.matrix); });
       im.castShadow = !!shadow && !fast; im.receiveShadow = false; im.userData.inst = true; g.add(im); }); return list.length; }
 
-  // ---- copied from Dev's reference picture (28 Nov): two grey runways with grass islands between, hangars on the east half with the tower in
-  //      front of hangar 3, radar + comms corner north-east, the big fighter apron south-west with helipads, gate south-west, fenced support yard south-east ----
-  const ASPH = '#6c6f73', PAVE = '#c4c7c9', PAVE2 = '#b3b7ba', WHITE = '#f4f3ee', YEL = '#e3b93a', LAWN = '#8fae55';
-  const KJ = 2.6, KC = 3.0, KHE = 2.6, KH = 6.0, KTW = 4.6, KT = 1.6;
-  const RW1 = [-240, 250, -28, 2], RW2 = [-255, 230, -98, -72], NAP = [-40, 262, -200, -118], SAP = [-262, 92, 15, 128], SEC = [112, 262, 28, 132];
-  const FX0 = -275, FX1 = 275, FZ0 = -245, FZ1 = 140, GATE2 = [-120, 140];
+  // ---- Dev's fix list (28 Nov, 2:42 AM): bigger aircraft/trees/props, 4-hangar row with the tower between 3 and 4, radar corner behind them,
+  //      support zone (admin, warehouse, utility blocks, buses, inner road), apron bays with stall lines, two dark runways, chevrons, curved taxi lines,
+  //      access road along the front (south) fence into the gate ----
+  const ASPH = '#53565a', PAVE = '#c4c7c9', PAVE2 = '#b3b7ba', WHITE = '#f4f3ee', YEL = '#e8bd3a', LAWN = '#8fae55', BLAST = '#8d9093';
+  const KJ = 3.9, KC = 4.6, KHE = 3.6, KH = 7.5, KTW = 5.6, KT = 2.4, KW = 2.8;
+  const FX0 = -280, FX1 = 280, FZ0 = -300, FZ1 = 150, GATE2 = [-120, 150];
+  const RW1 = [-240, 250, -30, 0], RW2 = [-250, 236, -100, -72], NAP = [-45, 262, -172, -118], SAP = [-264, 70, 14, 132], SUP = [96, 270, 22, 142];
   const inFence = (x, z, m) => x > FX0 - m && x < FX1 + m && z > FZ0 - m && z < FZ1 + m;
 
   function forces(o = {}) {
     const fast = !!o.fast; FASTMODE = fast; const g = new T.Group(), B = Batch(), R2 = rng(909);
     const L = (x0, x1, z0, z1, c, y1) => slab(B, c, C.x + x0, C.x + x1, C.z + z0, C.z + z1, 0.3, y1), M = (x0, x1, z0, z1, c, y) => L(x0, x1, z0, z1, c || WHITE, y || 0.53);
-    // ---- road from the old forces strip west along the coast, round the woods, into the south-west gate ----
-    const curve = new T.CatmullRomCurve3([[-900, -420], [-1700, -430], [-2600, -440], [-3500, -420], [-4100, -300], [-4700, -80], [-5250, 200], [-5700, 420], [-6100, 470], [-6380, 400], [C.x + GATE2[0], C.z + 200], [C.x + GATE2[0], C.z + GATE2[1] + 1]].map(([x, z]) => new T.Vector3(x, 0, z)), false, 'catmullrom', 0.4);
-    const RP = curve.getSpacedPoints(fast ? 140 : 260).map(v => [v.x, v.z]);
-    const nearRoad = (x, z, d) => RP.some(([a, b]) => Math.abs(a - x) < d && Math.hypot(a - x, b - z) < d);
-    for (let i = 0; i < RP.length - 1; i++) { const [x0, z0] = RP[i], [x1, z1] = RP[i + 1], Ln = Math.hypot(x1 - x0, z1 - z0), a = Math.atan2(x1 - x0, z1 - z0);
-      box(B, '#5f6266', null, 9, 0.16, Ln + 0.6, (x0 + x1) / 2, 0.3, (z0 + z1) / 2, a); if (i % 2 === 0) box(B, WHITE, null, 0.3, 0.2, Ln * 0.5, (x0 + x1) / 2, 0.3, (z0 + z1) / 2, a); B.add(CYL8, '#5f6266', null, x1, 0.3, z1, 4.5, 0.16, 4.5); }
+    const seg = (x0, z0, x1, z1, c, w) => { const Ln = Math.hypot(x1 - x0, z1 - z0); if (Ln < 0.01) return; box(B, c || YEL, null, w || 0.45, 0.28, Ln + 0.15, C.x + (x0 + x1) / 2, 0.32, C.z + (z0 + z1) / 2, Math.atan2(x1 - x0, z1 - z0)); };
+    const ring = (B, c, x, y, z, r, w, n) => { for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, Ln = 2 * Math.PI * r / n + 0.05; B.add(BOX, c, null, x + Math.sin(a) * r, y - 0.26, z + Math.cos(a) * r, w, 0.28, Ln, 0, a + Math.PI / 2, 0); } };
+    // a continuous yellow guide line through points, every corner rounded (radius r)
+    const yline = (P, r) => { let [cx, cz] = P[0]; for (let i = 1; i < P.length - 1; i++) { const [ax, az] = P[i - 1], [px, pz] = P[i], [bx, bz] = P[i + 1], la = Math.hypot(ax - px, az - pz), lb = Math.hypot(bx - px, bz - pz), ka = Math.min(r / la, 0.5), kb = Math.min(r / lb, 0.5);
+        const sx = px + (ax - px) * ka, sz = pz + (az - pz) * ka, ex = px + (bx - px) * kb, ez = pz + (bz - pz) * kb; seg(cx, cz, sx, sz); let qx = sx, qz = sz;
+        for (let k = 1; k <= 6; k++) { const t = k / 6, u = 1 - t, nx = u * u * sx + 2 * u * t * px + t * t * ex, nz = u * u * sz + 2 * u * t * pz + t * t * ez; seg(qx, qz, nx, nz); qx = nx; qz = nz; } cx = ex; cz = ez; }
+      const [lx, lz] = P[P.length - 1]; seg(cx, cz, lx, lz); };
+    // ---- the long road from the old forces strip, then along the front (south) fence into the gate ----
+    const curve = new T.CatmullRomCurve3([[-900, -420], [-1700, -430], [-2600, -440], [-3500, -420], [-4100, -300], [-4700, -80], [-5250, 200], [-5650, 380], [-5900, 410], [C.x + FX1 + 20, C.z + FZ1 + 40], [C.x + 120, C.z + FZ1 + 40], [C.x + GATE2[0] + 50, C.z + FZ1 + 40], [C.x + GATE2[0] + 6, C.z + FZ1 + 26], [C.x + GATE2[0], C.z + FZ1 + 1]].map(([x, z]) => new T.Vector3(x, 0, z)), false, 'catmullrom', 0.35);
+    const RP = curve.getSpacedPoints(fast ? 150 : 280).map(v => [v.x, v.z]);
+    // west spur: the road also runs on along the front fence to the south-west corner, like the picture
+    const SPUR = [[C.x + GATE2[0] - 4, C.z + FZ1 + 40], [C.x + FX0 - 60, C.z + FZ1 + 40], [C.x + FX0 - 140, C.z + FZ1 + 90]];
+    const drawRoad = pts => { for (let i = 0; i < pts.length - 1; i++) { const [x0, z0] = pts[i], [x1, z1] = pts[i + 1], Ln = Math.hypot(x1 - x0, z1 - z0), a = Math.atan2(x1 - x0, z1 - z0);
+      box(B, '#4f5256', null, 10, 0.16, Ln + 0.6, (x0 + x1) / 2, 0.3, (z0 + z1) / 2, a); if (i % 2 === 0) box(B, WHITE, null, 0.3, 0.2, Math.min(Ln * 0.5, 8), (x0 + x1) / 2, 0.3, (z0 + z1) / 2, a); B.add(CYL8, '#4f5256', null, x1, 0.3, z1, 5, 0.16, 5); } };
+    drawRoad(RP); { const sp = new T.CatmullRomCurve3(SPUR.map(([x, z]) => new T.Vector3(x, 0, z))).getSpacedPoints(24).map(v => [v.x, v.z]); drawRoad(sp); RP.push(...sp); }
     // ---- lawn inside, dirt ring track outside ----
     L(FX0, FX1, FZ0, FZ1, LAWN, 0.34);
-    { const t = (x0, x1, z0, z1) => L(x0, x1, z0, z1, '#bda077', 0.36); t(FX0 - 26, FX1 + 26, FZ0 - 26, FZ0 - 18); t(FX0 - 26, FX1 + 26, FZ1 + 18, FZ1 + 26); t(FX0 - 26, FX0 - 18, FZ0 - 26, FZ1 + 26); t(FX1 + 18, FX1 + 26, FZ0 - 26, FZ1 + 26); }
-    // ---- two runways: piano keys at both ends of both, numbers and centre lines ----
-    const runway = (R, w, big) => { L(R[0], R[1], R[2], R[3], ASPH, 0.5); const zc = (R[2] + R[3]) / 2, hw = (R[3] - R[2]) / 2;
-      M(R[0], R[1], R[2] + 0.7, R[2] + 1.3); M(R[0], R[1], R[3] - 1.3, R[3] - 0.7); for (let x = R[0] + 50; x < R[1] - 50; x += fast ? 34 : 26) M(x, x + 14, zc - 0.35, zc + 0.35);
+    { const t = (x0, x1, z0, z1) => L(x0, x1, z0, z1, '#bda077', 0.36); t(FX0 - 24, FX1 + 24, FZ0 - 24, FZ0 - 16); t(FX0 - 24, FX0 - 16, FZ0 - 24, FZ1 + 12); t(FX1 + 16, FX1 + 24, FZ0 - 24, FZ1 + 12); }
+    // ---- two dark runways: piano keys, chevron blast pads, dashed centre lines, numbers ----
+    const runway = (R, nums) => { L(R[0], R[1], R[2], R[3], ASPH, 0.5); const zc = (R[2] + R[3]) / 2, hw = (R[3] - R[2]) / 2;
+      M(R[0], R[1], R[2] + 0.7, R[2] + 1.3); M(R[0], R[1], R[3] - 1.3, R[3] - 0.7); for (let x = R[0] + 48; x < R[1] - 48; x += 24) M(x, x + 12, zc - 0.35, zc + 0.35);
       [R[0], R[1]].forEach((ex, e) => { const s = e ? -1 : 1, X = d => ex + s * d, xs = (d0, d1) => [Math.min(X(d0), X(d1)), Math.max(X(d0), X(d1))];
         const n = Math.floor((hw - 2) / 2.4); for (let k = 0; k < n; k++) [-1, 1].forEach(sd => { const zz = zc + sd * (2.2 + k * 2.4); M(...xs(3, 20), zz - 0.7, zz + 0.7); });
-        if (big) { [-1, 1].forEach(sd => M(...xs(60, 78), zc + sd * 3.6 - 1.4, zc + sd * 3.6 + 1.4));
-          const seg = { 0: 'abcdef', 2: 'abged', 7: 'abc', 9: 'abcdfg' }, digit = (dg, u0, v0) => { const W = 3.8, H = 8, t = 0.9, P = (u, v, du, dv) => { const ax = ex + s * (v0 + v), az = zc + s * (u0 + u); M(Math.min(ax, ax + s * dv), Math.max(ax, ax + s * dv), Math.min(az, az + s * du), Math.max(az, az + s * du)); };
-            const S = seg[dg]; if (S.includes('a')) P(0, H - t, W, t); if (S.includes('g')) P(0, H / 2 - t / 2, W, t); if (S.includes('d')) P(0, 0, W, t); if (S.includes('f')) P(0, H / 2, t, H / 2); if (S.includes('e')) P(0, 0, t, H / 2); if (S.includes('b')) P(W - t, H / 2, t, H / 2); if (S.includes('c')) P(W - t, 0, t, H / 2); };
-          const nums = e ? [2, 7] : [0, 9]; digit(nums[0], -5, 26); digit(nums[1], 1.2, 26); } }); };
-    runway(RW1, 30, true); runway(RW2, 26, false);
-    // grass islands between the runways: five connectors with yellow centre lines and hold bars
-    [-215, -120, -20, 80, 180].forEach(lx => { L(lx - 7, lx + 7, RW2[3], RW1[2], ASPH, 0.5); M(lx - 0.22, lx + 0.22, RW2[3], RW1[2], YEL); [RW2[3] + 4, RW1[2] - 5].forEach(hz => M(lx - 7, lx + 7, hz, hz + 0.5, YEL)); });
-    // ---- north apron round the hangars (east half), connectors down to the upper runway ----
-    L(NAP[0], NAP[1], NAP[2], NAP[3], PAVE, 0.54); [10, 110, 205].forEach(lx => { L(lx - 7, lx + 7, NAP[3], RW2[2], PAVE2, 0.52); M(lx - 0.22, lx + 0.22, NAP[3] - 6, RW2[2], YEL, 0.56); });
-    M(NAP[0] + 3, NAP[1] - 3, NAP[3] - 7, NAP[3] - 6.6, YEL, 0.57); for (let x = NAP[0] + 22; x < NAP[1] - 10; x += 34) M(x, x + 0.4, NAP[3] - 30, NAP[3] - 7, YEL, 0.57);
-    [[-10, -192, '#5d6064', '#3d4044'], [38, -192, '#b6b1a4', '#8c8778'], [86, -192, '#7c8f9b', '#56646e'], [178, -176, '#5e8099', '#3d566b']].forEach(([hx, hz, c1, c2]) => put(B, 'hangar', hx, hz, 0, KH, { hangar_blue: c1, hangar_trim: c2 }, 0.54));
-    put(B, 'control_tower', 130, -160, 0, KTW, null, 0.54); put(B, 'admin_building', 222, -150, 0, 1.6, null, 0.54);
-    [[-10, -150, 0.15], [38, -148, -0.1], [86, -152, 0.2], [178, -136, -0.15], [60, -128, Math.PI / 2 + 0.3], [150, -128, Math.PI / 2]].forEach(([x, z, a]) => put(B, 'jet_fighter', x, z, a, KJ, null, 0.54));
-    [[12, -160, 0], [20, -160, 0], [62, -158, 0], [108, -140, Math.PI / 2], [120, -132, Math.PI / 2], [200, -140, 0], [-20, -130, Math.PI / 2], [240, -130, 0]].forEach(([x, z, a], i) => { if (!fast || i % 2 === 0) put(B, i % 3 === 1 ? 'support_truck_fuel' : 'support_truck_cargo', x, z, a, KT, null, 0.54); });
-    // ---- radar + comms corner (north-east, along the back fence) and the admin building at the east end ----
-    put(B, 'radar_dome', 122, -232, 0, 3.0); put(B, 'radar_dome', 214, -232, 0, 2.6); put(B, 'radar_dome', 244, -206, 0, 2.2);
-    put(B, 'satellite_dish', 150, -228, 0.4, 2.4); put(B, 'satellite_dish', 178, -230, -0.3, 2.4); put(B, 'satellite_dish', 262, -180, -0.8, 2.0);
-    put(B, 'comms_tower', 196, -232, 0, 3.4); put(B, 'comms_tower', 262, -150, 0.4, 3.0); L(230, 270, -112, -76, PAVE2, 0.42); put(B, 'admin_building', 252, -94, -Math.PI / 2, 2.8, null, 0.42);
-    // ---- the big fighter apron (south-west): helipads at the west end, two rows of fighters angled to the runway, trucks between ----
-    L(SAP[0], SAP[1], SAP[2], SAP[3], PAVE, 0.54); [-200, -60, 60].forEach(lx => { L(lx - 7, lx + 7, RW1[3], SAP[2], PAVE2, 0.52); M(lx - 0.22, lx + 0.22, RW1[3], SAP[2] + 6, YEL, 0.56); });
-    M(SAP[0] + 3, SAP[1] - 3, SAP[2] + 5, SAP[2] + 5.4, YEL, 0.57);
-    [[-240, 40], [-240, 78]].forEach(([x, z], i) => { M(x - 12, x + 12, z - 12, z - 11.6, WHITE, 0.58); M(x - 12, x + 12, z + 11.6, z + 12, WHITE, 0.58); M(x - 12, x - 11.6, z - 12, z + 12, WHITE, 0.58); M(x + 11.6, x + 12, z - 12, z + 12, WHITE, 0.58); put(B, 'helicopter', x, z, Math.PI + 0.6, KHE, null, 0.54); });
-    const NOSE = Math.PI + 0.6; for (let row = 0; row < 2; row++) for (let k = 0; k < (fast ? 4 : 6); k++) { const x = -190 + k * (fast ? 52 : 36) + row * 14, z = 42 + row * 44;
-      put(B, 'jet_fighter', x, z, NOSE, KJ, null, 0.54); M(x - 9, x + 9, z + 10, z + 10.4, WHITE, 0.58); M(x - 9, x - 8.6, z - 10, z + 10.4, WHITE, 0.58); M(x + 8.6, x + 9, z - 10, z + 10.4, WHITE, 0.58);
-      if (!fast || k % 2 === 0) put(B, (k + row) % 3 === 0 ? 'support_truck_fuel' : 'support_truck_cargo', x + 14, z + 18, NOSE, KT, null, 0.54); }
-    put(B, 'cargo_plane', 50, 70, NOSE, KC, null, 0.54);
-    // ---- fenced support yard (south-east): workshop, two blocks, yellow trucks in a row ----
-    L(SEC[0], SEC[1], SEC[2], SEC[3], PAVE2, 0.46); put(B, 'hangar', 170, 75, -Math.PI / 2, KH * 0.85, { hangar_blue: '#6a6c70', hangar_trim: '#45474b' }, 0.46);
-    put(B, 'admin_building', 236, 52, 0, 2.2, null, 0.46); put(B, 'admin_building', 240, 106, -Math.PI / 2, 1.8, null, 0.46);
-    for (let i = 0; i < (fast ? 3 : 5); i++) put(B, 'support_truck_cargo', 200 + i * 7, 122, 0, KT, null, 0.46);
-    // ---- gate (south-west corner of the apron): Dev's guardhouse + barrier, the sign by the road ----
-    L(GATE2[0] - 5, GATE2[0] + 5, SAP[3], GATE2[1] + 2, '#5f6266', 0.46); put(B, 'guardhouse', GATE2[0] + 9, GATE2[1] - 3, Math.PI, 1.7);
-    { const tex = signTex([['VINLAND AIR FORCE BASE', 0.36, 0.42], ['AUTHORISED ENTRY ONLY', 0.2, 0.78]], 1024, 256, '#2e3f55', '#f4efe2'), gx = C.x + GATE2[0] - 18, gz = C.z + GATE2[1] + 7;
-      box(B, '#8f9294', null, 0.3, 4.2, 0.3, gx - 6, 0.3, gz); box(B, '#8f9294', null, 0.3, 4.2, 0.3, gx + 6, 0.3, gz); box(B, '#2e3f55', null, 12.2, 3.1, 0.2, gx, 2.2, gz - 0.15);
-      if (tex) { const sm = new T.Mesh(new T.PlaneGeometry(12, 3), new T.MeshLambertMaterial({ map: tex })); sm.position.set(gx, 3.75, gz + 0.02); g.add(sm); } }
-    // ---- watchtowers: corners, mid-sides, by the gate ----
-    [[FX0, FZ0], [FX1, FZ0], [FX1, FZ1], [FX0, FZ1], [0, FZ0], [FX0, -50], [FX1, -50], [GATE2[0] - 14, FZ1], [110, FZ1], [110, 28]].forEach(([x, z]) => put(B, 'watchtower', x + (x <= FX0 ? 4 : x >= FX1 ? -4 : 0), z + (z <= FZ0 ? 4 : z >= FZ1 ? -4 : 0), 0, 1.8));
+        [-1, 1].forEach(sd => M(...xs(58, 74), zc + sd * 3.6 - 1.4, zc + sd * 3.6 + 1.4));
+        L(...xs(-36, 0), R[2], R[3], BLAST, 0.46);                                       // blast pad
+        for (let k = 0; k < 3; k++) { const tip = X(-6 - k * 10); [-1, 1].forEach(sd => seg(tip - C.x + C.x - 0, zc, tip - s * (hw - 2), zc + sd * (hw - 2), YEL, 0.9)); }   // chevrons point at the runway
+        const SG = { 0: 'abcdef', 1: 'bc', 2: 'abged', 7: 'abc', 9: 'abcdfg', 8: 'abcdefg', 6: 'acdefg' }, digit = (dg, u0, v0) => { const W = 3.8, H = 8, t = 0.9, P = (u, v, du, dv) => { const ax = ex + s * (v0 + v), az = zc + s * (u0 + u); M(Math.min(ax, ax + s * dv), Math.max(ax, ax + s * dv), Math.min(az, az + s * du), Math.max(az, az + s * du)); };
+          const S = SG[dg]; if (S.includes('a')) P(0, H - t, W, t); if (S.includes('g')) P(0, H / 2 - t / 2, W, t); if (S.includes('d')) P(0, 0, W, t); if (S.includes('f')) P(0, H / 2, t, H / 2); if (S.includes('e')) P(0, 0, t, H / 2); if (S.includes('b')) P(W - t, H / 2, t, H / 2); if (S.includes('c')) P(W - t, 0, t, H / 2); };
+        const nn = nums[e]; digit(nn[0], -5, 26); digit(nn[1], 1.2, 26); }); };
+    runway(RW1, [[0, 9], [2, 7]]); runway(RW2, [[0, 8], [2, 6]]);
+    // three connectors across the grass median, yellow centre lines curving onto both runways, hold bars
+    [-150, 20, 175].forEach(lx => { L(lx - 9, lx + 9, RW2[3], RW1[2], ASPH, 0.5); yline([[lx - 40, (RW2[2] + RW2[3]) / 2], [lx, (RW2[2] + RW2[3]) / 2], [lx, (RW1[2] + RW1[3]) / 2], [lx + 40, (RW1[2] + RW1[3]) / 2]], 14); [RW2[3] + 4, RW1[2] - 5].forEach(hz => M(lx - 9, lx + 9, hz, hz + 0.5, YEL)); });
+    // ---- hangar row: 4 hangars (charcoal, light grey, steel blue, slate blue), tower between 3 and 4, slightly forward ----
+    L(NAP[0], NAP[1], NAP[2], NAP[3], PAVE, 0.54); const TWZ = NAP[3] - 6;      // apron taxi line
+    const HX = [-12, 46, 104, 200], HZ = NAP[2] - 30.5, HCOL = [['#4a4d52', '#2f3236'], ['#b9bcbe', '#8e9295'], ['#5e7c96', '#3e566b'], ['#4f6378', '#33434f']];
+    HX.forEach((hx, i) => { put(B, 'hangar', hx, HZ, 0, KH, { hangar_blue: HCOL[i][0], hangar_trim: HCOL[i][1] }, 0.54); yline([[hx, NAP[2] + 1], [hx, TWZ], [hx + (i < 2 ? 30 : -30), TWZ]], 10); });
+    put(B, 'control_tower', 152, NAP[2] + 2, 0, KTW, null, 0.54);
+    seg(NAP[0] + 4, TWZ, NAP[1] - 4, TWZ);
+    [[0, 1], [236, -1]].forEach(([lx, s]) => { L(lx - 9, lx + 9, NAP[3], RW2[2], PAVE2, 0.52); yline([[lx - s * 30, TWZ], [lx, TWZ], [lx, (RW2[2] + RW2[3]) / 2], [lx + s * 40, (RW2[2] + RW2[3]) / 2]], 12); });
+    // a fighter out in front of each hangar, white stall box, trucks beside
+    HX.forEach((hx, i) => { const z = NAP[2] + 20; put(B, 'jet_fighter', hx, z, 0, KJ, null, 0.54); M(hx - 14, hx + 14, z + 15, z + 15.4, WHITE, 0.58); M(hx - 14, hx - 13.6, z - 14, z + 15.4, WHITE, 0.58); M(hx + 13.6, hx + 14, z - 14, z + 15.4, WHITE, 0.58);
+      if (!fast || i % 2 === 0) put(B, i % 2 ? 'support_truck_fuel' : 'support_truck_cargo', hx + 22, z + 4, 0, KT, null, 0.54); });
+    // ---- radar / comms corner, behind hangars 3-4, inside the fence ----
+    put(B, 'radar_dome', 152, -270, 0, 4.6); put(B, 'satellite_dish', 196, -262, 0.5, 3.4); put(B, 'satellite_dish', 226, -276, -0.3, 3.4); put(B, 'comms_tower', 258, -262, 0, 4.6);
+    [[152, -270, 13], [196, -262, 8], [226, -276, 8], [258, -262, 7]].forEach(([x, z, r]) => L(x - r, x + r, z - r, z + r, PAVE2, 0.4));
+    // ---- flight-line apron (bottom-left): helipads far left, six fighters in angled bays with white stall lines, fuel + support trucks beside them ----
+    L(SAP[0], SAP[1], SAP[2], SAP[3], PAVE, 0.54); const STZ = SAP[2] + 7;
+    seg(SAP[0] + 4, STZ, SAP[1] - 4, STZ);
+    [-210, -30].forEach((lx, i) => { L(lx - 9, lx + 9, RW1[3], SAP[2], PAVE2, 0.52); yline([[lx + (i ? -30 : 30), STZ], [lx, STZ], [lx, (RW1[2] + RW1[3]) / 2], [lx + (i ? 40 : -40), (RW1[2] + RW1[3]) / 2]], 12); });
+    [[-242, 50], [-242, 104]].forEach(([x, z]) => { L(x - 17, x + 17, z - 17, z + 17, PAVE2, 0.56); ring(B, YEL, C.x + x, 0.58, C.z + z, 12, 0.6, fast ? 16 : 24); M(x - 3.2, x - 2.1, z - 6, z + 6, WHITE, 0.6); M(x + 2.1, x + 3.2, z - 6, z + 6, WHITE, 0.6); M(x - 2.1, x + 2.1, z - 0.55, z + 0.55, WHITE, 0.6); put(B, 'helicopter', x, z, Math.PI * 0.75, KHE, null, 0.57); });
+    const NOSE = Math.PI + 0.55, BW = 40, BD = 46;
+    for (let row = 0; row < 2; row++) for (let k = 0; k < 3; k++) { const bx = -160 + k * BW + row * 18, bz = 42 + row * BD + BD / 2, x = bx + BW / 2 - 6, z = bz - 2;
+      M(bx, bx + 0.4, bz - BD / 2 + 4, bz + BD / 2 - 2, WHITE, 0.58); M(bx + BW, bx + BW + 0.4, bz - BD / 2 + 4, bz + BD / 2 - 2, WHITE, 0.58); M(bx, bx + BW + 0.4, bz + BD / 2 - 2.4, bz + BD / 2 - 2, WHITE, 0.58);
+      put(B, 'jet_fighter', x, z, NOSE, KJ, null, 0.54); yline([[x - 30, STZ], [x, STZ], [x, z - 8]], 10);
+      put(B, (k + row) % 2 ? 'support_truck_fuel' : 'support_truck_cargo', bx + BW - 5, bz + 12, Math.PI, KT, null, 0.54); }
+    // cargo plane taxiing on the lower runway
+    put(B, 'cargo_plane', 110, (RW1[2] + RW1[3]) / 2, -Math.PI / 2, KC, null, 0.5);
+    // ---- support zone (bottom-right): 2-storey admin, maintenance warehouse, white utility blocks, yellow buses/trucks on an inner road ----
+    L(SUP[0], SUP[1], SUP[2], SUP[3], PAVE2, 0.44);
+    L(SUP[0] - 24, SUP[0] - 14, SAP[3] - 6, FZ1 - 1, '#4f5256', 0.46); L(GATE2[0] - 6, SUP[0] - 14, FZ1 - 13, FZ1 - 3, '#4f5256', 0.46); L(SUP[0] - 14, SUP[1] - 4, 74, 84, '#4f5256', 0.47);   // inner road from the gate
+    for (let x = GATE2[0]; x < SUP[0] - 20; x += 14) M(x, x + 7, FZ1 - 8.2, FZ1 - 7.8, WHITE, 0.5);
+    put(B, 'admin_building', 232, 46, 0, 3.4, null, 0.44);
+    { const wb = at(C.x + 150, 0.44, C.z + 112, 0); box(B, '#cdbf9f', wb, 62, 11, 30, 0, 0, 0); box(B, '#5f6266', wb, 63, 0.8, 31, 0, 11, 0); box(B, '#bcae8e', wb, 62.4, 1.0, 30.4, 0, 9.5, 0);
+      for (let i = 0; i < 4; i++) { box(B, '#8e9295', wb, 9, 7, 0.2, -22 + i * 14.6, 0, -15.05); for (let k = 1; k < 6; k++) box(B, '#7b7f83', wb, 9, 0.12, 0.25, -22 + i * 14.6, k * 1.2, -15.1); } }
+    [[110, 40], [126, 40], [262, 112]].forEach(([x, z], i) => { const ub = at(C.x + x, 0.44, C.z + z, 0); box(B, '#eceae4', ub, 12, 4.5, 9, 0, 0, 0); box(B, '#8e9295', ub, 12.6, 0.5, 9.6, 0, 4.5, 0); box(B, '#3b4652', ub, 1.4, 2.4, 0.15, 0, 0, 4.55); box(B, '#5a6b7a', ub, 2.4, 1.2, 0.15, 3.2, 2, 4.55); });
+    for (let i = 0; i < (fast ? 3 : 5); i++) put(B, 'support_truck_cargo', 200 + i * 10, 92, 0, KT, null, 0.47);
+    // ---- gate: Dev's guardhouse + its barrier, a second red/white arm, a watchtower, the sign ----
+    L(GATE2[0] - 6, GATE2[0] + 6, SAP[3], FZ1 + 2, '#4f5256', 0.46); put(B, 'guardhouse', GATE2[0] + 12, FZ1 - 5, Math.PI, 2.6);
+    { const bb = at(C.x + GATE2[0] - 6.5, 0.3, C.z + FZ1 + 4, 0); box(B, '#d0c6aa', bb, 0.8, 1.3, 0.8, 0, 0, 0); for (let i = 0; i < 8; i++) box(B, i % 2 ? '#f2f1ea' : '#d6302a', bb, 1.5, 0.25, 0.25, 0.9 + i * 1.5, 1.05, 0); }
+    put(B, 'watchtower', GATE2[0] - 20, FZ1 - 6, 0, KW);
+    { const tex = signTex([['VINLAND AIR FORCE BASE', 0.36, 0.42], ['AUTHORISED ENTRY ONLY', 0.2, 0.78]], 1024, 256, '#2e3f55', '#f4efe2'), gx = C.x + GATE2[0] + 30, gz = C.z + FZ1 + 12;
+      box(B, '#8f9294', null, 0.3, 4.6, 0.3, gx - 7, 0.3, gz); box(B, '#8f9294', null, 0.3, 4.6, 0.3, gx + 7, 0.3, gz); box(B, '#2e3f55', null, 14.2, 3.6, 0.2, gx, 2.4, gz - 0.15);
+      if (tex) { const sm = new T.Mesh(new T.PlaneGeometry(14, 3.5), new T.MeshLambertMaterial({ map: tex })); sm.position.set(gx, 4.2, gz + 0.02); g.add(sm); } }
+    // ---- watchtowers on the corners and mid-sides ----
+    [[FX0, FZ0], [FX1, FZ0], [FX1, FZ1], [FX0, FZ1], [0, FZ0], [FX0, -75], [FX1, -75], [90, FZ1]].forEach(([x, z]) => put(B, 'watchtower', x + (x <= FX0 ? 5 : x >= FX1 ? -5 : 0), z + (z <= FZ0 ? 5 : z >= FZ1 ? -5 : 0), 0, KW));
     let tris = B.build(g);
-    // ---- fence: Dev's panel along the outer line + the support yard's own fence (instanced), gap at the gate ----
-    { const F = [], step = fast ? 24 : 12.5, lines = [[[FX0, FZ0], [FX1, FZ0], [FX1, FZ1], [FX0, FZ1], [FX0, FZ0]], [[105, FZ1], [105, 22], [FX1, 22]]];
+    // ---- fence: Dev's panel along the outer line + the support zone's own fence (instanced), gaps at the gate and the inner road ----
+    { const F = [], step = fast ? 24 : 12.5, lines = [[[FX0, FZ0], [FX1, FZ0], [FX1, FZ1], [FX0, FZ1], [FX0, FZ0]], [[SUP[0] - 6, FZ1], [SUP[0] - 6, SUP[2] - 6], [FX1, SUP[2] - 6]]];
       lines.forEach(P => { for (let k = 0; k < P.length - 1; k++) { const [x0, z0] = P[k], [x1, z1] = P[k + 1], Ln = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(Ln / step)), a = Math.atan2(z0 - z1, x1 - x0);
-        for (let i = 0; i < n; i++) { const t = (i + 0.5) / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t; if (Math.abs(x - GATE2[0]) < 8 && Math.abs(z - GATE2[1]) < 1) continue; if (Math.abs(x - 105) < 1 && Math.abs(z - 60) < 9) continue; F.push({ x: C.x + x, z: C.z + z, r: a, sx: (Ln / n) / 6.11, sy: 1.15, sz: 1 }); } } });
+        for (let i = 0; i < n; i++) { const t = (i + 0.5) / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t; if (Math.abs(x - GATE2[0]) < 9 && Math.abs(z - FZ1) < 1) continue; if (Math.abs(x - (SUP[0] - 6)) < 1 && z > 66 && z < 92) continue; F.push({ x: C.x + x, z: C.z + z, r: a, sx: (Ln / n) / 6.11, sy: 1.2, sz: 1 }); } } });
       many(g, 'fencing', F, fast, false); tris += F.length * 276; }
-    // ---- forest: Dev's pines + broadleaf trees in thick clumps all round, like the picture ----
-    { const TP = [], TB = [], N = fast ? 350 : 2300;
+    // ---- rolling hills + rocky mountains round the base (never inside the fence, on the road, the farms or the shore) ----
+    const PEAKS = [[520, -470, 260, 95], [330, -560, 200, 60], [-560, -420, 260, 55], [560, 330, 220, 70], [-600, 260, 230, 40], [80, -620, 240, 45], [-200, 420, 200, 30]];
+    const farm = (x, z) => z > 500 && x > -6680 && x < -5180;
+    const hmask = (x, z) => { const lx = x - C.x, lz = z - C.z, d = Math.hypot(Math.max(FX0 - lx, lx - FX1, 0), Math.max(FZ0 - lz, lz - FZ1, 0)); let m = sst((d - 45) / 110);
+      m *= sst((z + 720) / 80); if (farm(x, z)) m = 0; else m *= sst((Math.min(Math.abs(z - 500), 999) - 0) / 60) || 1; return m; };
+    const HR = []; { let cnt = 0; for (let i = 0; i < RP.length; i++) if (Math.abs(RP[i][0] - C.x) < 900) HR.push(RP[i]); }
+    const roadD = (x, z) => { let d = 1e9; for (const [a, b] of HR) { const q = Math.abs(a - x) + Math.abs(b - z); if (q < d * 1.5) d = Math.min(d, Math.hypot(a - x, b - z)); } return d; };
+    const hh = (x, z) => { let h = 0; PEAKS.forEach(([px, pz, r, ph]) => { const d = Math.hypot(x - C.x - px, (z - C.z - pz) * 1.1) / r; if (d < 1) h += ph * Math.pow(Math.cos(d * Math.PI / 2), 1.6); });
+      h += 7 * noise(x / 90, z / 90, 4); return h * hmask(x, z) * sst((roadD(x, z) - 14) / 40); };
+    { const X0 = C.x - 760, X1 = C.x + 760, ZA = Math.max(-800, C.z - 760), ZB = C.z + 640, CELL = fast ? 34 : 22, nx = Math.round((X1 - X0) / CELL), nz = Math.round((ZB - ZA) / CELL), pos = [], col = [], idx = [], HH = [];
+      const gr = new T.Color('#8fae55'), gr2 = new T.Color('#7d9e48'), dry = new T.Color('#b5b06a'), rock = new T.Color('#9a958c'), rock2 = new T.Color('#7f7a72'), snow = new T.Color('#e9ecef'), cc = new T.Color();
+      for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) { const x = X0 + (X1 - X0) * i / nx + (i % nx && j % nz ? (noise(i, j, 9) - 0.5) * CELL * 0.5 : 0), z = ZA + (ZB - ZA) * j / nz, h = hh(x, z); HH.push(h); pos.push(x, 0.32 + h, z);
+        const n = noise(x / 60, z / 60, 13); cc.copy(gr).lerp(gr2, n * 0.7).lerp(dry, sst((noise(x / 120, z / 120, 3) - 0.6) * 3) * 0.4); if (h > 38) cc.copy(rock).lerp(rock2, n); if (h > 78) cc.lerp(snow, Math.min(1, (h - 78) / 12)); col.push(cc.r, cc.g, cc.b); }
+      for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const a = j * (nx + 1) + i, b2 = a + 1, c = a + nx + 1, d = c + 1; if (Math.max(HH[a], HH[b2], HH[c], HH[d]) < 0.05) continue; idx.push(a, c, b2, b2, c, d); }
+      const G3 = new T.BufferGeometry(); G3.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); G3.setAttribute('color', new T.Float32BufferAttribute(col, 3)); G3.setIndex(idx); G3.computeVertexNormals();
+      const hm = new T.Mesh(G3.toNonIndexed(), new T.MeshLambertMaterial({ vertexColors: true, flatShading: true })); hm.geometry.computeVertexNormals(); hm.userData.ground = true; g.add(hm); tris += idx.length / 3; }
+    // ---- forest: Dev's pines + broadleaf trees packed into solid woods all round (jittered grid, clearings by noise), up the hills ----
+    { const TP = [], TB = [], SP = fast ? 22 : 14, RING = fast ? 230 : 330;
       const dB = (x, z) => { const lx = x - C.x, lz = z - C.z; return Math.hypot(Math.max(FX0 - lx, lx - FX1, 0), Math.max(FZ0 - lz, lz - FZ1, 0)); };
-      const ok = (x, z) => !inFence(x - C.x, z - C.z, 34) && !nearRoad(x, z, 12) && z > -775 && !(z > 520 && x > -6650 && x < -5200);
-      for (let i = 0; i < N * 20 && TP.length + TB.length < N; i++) { const x = C.x - 560 + R2() * 1120, z = C.z - 540 + R2() * 1000, d = dB(x, z); if (d < 34 || d > 250) continue; if (noise(x / 45, z / 45, 7) < 0.22 + d / 1000) continue; if (!ok(x, z)) continue;
-        (R2() < 0.62 ? TP : TB).push({ x, z, r: R2() * 6.28, s: 2.3 + R2() * 1.0 }); }
-      [[-150, -175, 40, 30], [-230, -160, 20, 30], [-255, 0, 14, 60]].forEach(([cx, cz, rx, rz]) => { for (let i = 0; i < (fast ? 5 : 14); i++) { const x = cx + (R2() - 0.5) * rx * 2, z = cz + (R2() - 0.5) * rz * 2; (R2() < 0.6 ? TP : TB).push({ x: C.x + x, z: C.z + z, r: R2() * 6.28, s: 1.8 + R2() * 0.6 }); } });
+      for (let z = C.z + FZ0 - RING; z < C.z + FZ1 + RING; z += SP) for (let x = C.x + FX0 - RING; x < C.x + FX1 + RING; x += SP) {
+        const px = x + (R2() - 0.5) * SP * 0.9, pz = z + (R2() - 0.5) * SP * 0.9, d = dB(px, pz); if (d < 34 || d > RING) continue; if (pz < -770 || farm(px, pz) || roadD(px, pz) < 11) continue;
+        if (noise(px / 70, pz / 70, 7) < 0.30 + d / 1400) continue; const h = hh(px, pz); if (h > 60) continue;
+        (noise(px / 40, pz / 40, 17) > 0.45 ? TP : TB).push({ x: px, y: 0.3 + h - 0.3, z: pz, r: R2() * 6.28, s: 4.4 + R2() * 1.8 }); }
       many(g, 'pine_tree', TP, fast, true); many(g, 'broadleaf_tree', TB, fast, true); tris += TP.length * 108 + TB.length * 144; g.userData.treeCount = TP.length + TB.length; }
+    // ---- soft look on the base (Dev's picture): lift the shaded sides with a little of each colour as glow, so models read smooth, not as flat cut-outs ----
+    { const FLAT = ['#8fae55', '#c4c7c9', '#b3b7ba', '#53565a', '#8d9093', '#4f5256', '#bda077'].map(c => new T.Color(c).getHex());
+      g.traverse(m => { if (!m.isMesh || m.userData.ground || !m.material || !m.material.color || m.material.map) return; const mm = m.material.clone(); mm.emissive = mm.color.clone().multiplyScalar(FLAT.includes(mm.color.getHex()) ? 0.04 : 0.17); m.material = mm; }); }
     g.traverse(m => { if (!m.isMesh || m.userData.inst) return; m.receiveShadow = !fast; m.castShadow = !fast && !(m.material && m.material.transparent); });
     g.userData.tris = tris; g.userData.zone = Z; g.userData.gate = GATE; return g; }
 
