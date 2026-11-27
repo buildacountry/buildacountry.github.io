@@ -40,7 +40,14 @@ const $ = id => document.getElementById(id), lt = $('czLt');
 const t0 = performance.now();
 while (!(LIFE.on || performance.now() - t0 > 9000)) await wait(250);
 await wait(1200);
+const skip = new Set();   // things the game does not draw: walkers, moving and parked cars, scooters, buses, the train, the ferry
+try { const wb = walkers.batches || {}; Object.values(wb).forEach(list => (list || []).forEach(x => skip.add(x.im || x))); } catch (e) {}
+try { LIFE.cars.forEach(c => (c.meshes || []).forEach(m => { skip.add(m); if (m.parent) skip.add(m.parent); })); ['carHatch', 'carSedan', 'carSUV', 'carTaxi', 'carVan', 'carPickup', 'carSports', 'scooter', 'autoRickshaw'].forEach(k => LIFE.inst && LIFE.inst[k] && skip.add(LIFE.inst[k])); } catch (e) {}
+try { TRANSIT.list.forEach(l => l.cars.forEach(c => skip.add(c.m))); } catch (e) {}
+try { peopleObjs.forEach(x => skip.add(x.im || x)); } catch (e) {}   // shop owners, staff, police: Kenney citizens take their places (section 6d)
+const hidW = []; skip.forEach(o => { if (o && o.isObject3D && o.visible) { o.visible = false; hidW.push(o); } });   // 27 Nov: the game does not draw these, so they are not walls either (a bus waiting at the Market stop when the game loaded left an invisible wall on the pavement)
 try { const t0 = performance.now(); buildWalkGrid({ step: 0.85, slopes: true }); console.log('cozy: walk grid ' + Math.round(performance.now() - t0) + ' ms'); } catch (e) { console.warn('cozy: walk grid', e); }   // the map's own "where can you walk" rule, built before we take its meshes away. 27 Nov: plus grid2 for walking, where bridge ramps, pier decks and canal bridges (up to 0.85 m) are not walls
+hidW.forEach(o => { o.visible = true; });
 const G2 = WALK.grid2, blocked2 = (x, z) => { if (x < BUILT.x0 || x > BUILT.x1 || z < COAST.shore + 6 || z > BUILT.z1) return true; if (!G2) return blockedAt(x, z); const i = Math.floor((x - WG.x0) / WG.s), j = Math.floor((z - WG.z0) / WG.s); return i < 0 || j < 0 || i >= WG.w || j >= WG.h || G2[j * WG.w + i] === 1; };
 const walkFree = (x, z) => !blocked2(x - RAD, z - RAD) && !blocked2(x + RAD, z - RAD) && !blocked2(x - RAD, z + RAD) && !blocked2(x + RAD, z + RAD) && !blocked2(x, z);   // you (the player) walk by grid2; trees, flowers and walkers keep the old grid   // the map's own "where can you walk" rule, built before we take its meshes away
 renderer.render = () => {};   // the map stops drawing: everything below is drawn by the cozy screen
@@ -55,11 +62,6 @@ const TILE = 128, KOFF = 1000, kOf = (ix, iz) => (ix + KOFF) * 10000 + (iz + KOF
 const B_MAIN = 0, B_MAIND = 1, B_GLASS = 2, B_WARM = 3, B_LAMP = 4, B_WATER = 5, B_TEX = 16;
 const GLASS = 0x3f5866, WARM = 0xf0c36a, LAMPS = new Set([0xf6d27a, 0xffd98a]), WATER = 0x5ab4d0;
 const REMAP = { 0x86ab5c: 0x8fc25a, 0x76a052: 0x84b74f, 0x93b865: 0x9ccb63, 0x3f6f3a: 0x3f7a45, 0x45474d: 0x55585f };
-const skip = new Set();   // things that move: walkers, cars, buses, trains, the ferry
-try { const wb = walkers.batches || {}; Object.values(wb).forEach(list => (list || []).forEach(x => skip.add(x.im || x))); } catch (e) {}
-try { LIFE.cars.forEach(c => (c.meshes || []).forEach(m => { skip.add(m); if (m.parent) skip.add(m.parent); })); ['carHatch', 'carSedan', 'carSUV', 'carTaxi', 'carVan', 'carPickup', 'carSports', 'scooter', 'autoRickshaw'].forEach(k => LIFE.inst && LIFE.inst[k] && skip.add(LIFE.inst[k])); } catch (e) {}
-try { TRANSIT.list.forEach(l => l.cars.forEach(c => skip.add(c.m))); } catch (e) {}
-try { peopleObjs.forEach(x => skip.add(x.im || x)); } catch (e) {}   // shop owners, staff, police: Kenney citizens take their places (section 6d)
 const shapes = [], shapeOf = new Map(), textures = [], texOf = new Map();
 const pS = [], pB = [], pC = [], pM = [];   // each place: shape, bucket, colour, and where it stands (12 numbers); packed into typed arrays below
 const chimTops = [];   // the real top of every chimney, found in the copied shapes (the small highest part of a home's stone-coloured piece)
@@ -635,6 +637,14 @@ function boxedIn(x, z) {   // 27 Nov: true when there is no way out within 2.5 m
   for (let h = 0; h < q.length; h++) { const [i, j] = q[h]; if (Math.hypot(i, j) * S >= 2.5) return boxV = false;
     for (const [a, b] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]]) { const k = a + ',' + b; if (seen.has(k) || Math.abs(a) > N || Math.abs(b) > N) continue; seen.add(k); if (walkFree(x + a * S, z + b * S) && !(wet(a, b) && !wet(i, j))) q.push([a, b]); } }
   return boxV = true; }
+function sidestep(a, st, ok) {   // 27 Nov: blocked head-on by something small: if there is a way past within 1 m to one side, step that way (the nearer side first)
+  const dx = Math.sin(a), dz = Math.cos(a), rx = dz, rz = -dx;
+  for (let o = 0.25; o <= 1.001; o += 0.25) for (const sg of [1, -1]) { let k = 0.25;
+    for (; k <= o + 1e-6; k += 0.25) if (!ok(px + rx * sg * k, pz + rz * sg * k)) break;
+    if (k <= o + 1e-6) continue;   // something in the way on that side
+    const ex = px + rx * sg * o, ez = pz + rz * sg * o; if (!ok(ex + dx * 0.25, ez + dz * 0.25) || !ok(ex + dx * 0.5, ez + dz * 0.5)) continue;   // no way past there
+    const m = Math.min(st * 0.8, o), qx = px + rx * sg * m, qz = pz + rz * sg * m; if (ok(qx, qz)) return [qx, qz]; }
+  return null; }
 document.addEventListener('visibilitychange', () => { hidden = document.hidden; if (!hidden) { clock.getDelta(); requestAnimationFrame(frame); } });
 function frame() { if (hidden) return; requestAnimationFrame(frame);
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -642,7 +652,10 @@ function frame() { if (hidden) return; requestAnimationFrame(frame);
   if (driving) stepCar(dt, ix, iz);
   else if (mag > 0.1) { const run = running || keys.shift, a = Math.atan2(ix, iz) + yaw + Math.PI, s = (run ? 9 : 4.6) * mag, nx = px + Math.sin(a) * s * dt, nz = pz + Math.cos(a) * s * dt;
     const okAt = FARV && !wetAt(px, pz) ? (x, z) => walkFree(x, z) && !wetAt(x, z) : walkFree;   // test link: no walking on water
-    if (okAt(nx, nz)) { px = nx; pz = nz; stuckT = 0; } else if (okAt(nx, pz)) { px = nx; stuckT = 0; } else if (okAt(px, nz)) { pz = nz; stuckT = 0; }
+    const st = s * dt, ax = Math.abs(nx - px), az = Math.abs(nz - pz); let go = okAt(nx, nz) ? [nx, nz] : null;
+    if (!go) { const sx = ax > 0.02 * st && okAt(nx, pz), sz = az > 0.02 * st && okAt(px, nz);   // slide along the wall
+      go = sx && ax >= 0.4 * st ? [nx, pz] : sz && az >= 0.4 * st ? [px, nz] : sidestep(a, st, okAt) || (sx ? [nx, pz] : sz ? [px, nz] : null); }   // 27 Nov: walking straight into a lamp post, a bin or a corner: step round it
+    if (go) { px = go[0]; pz = go[1]; stuckT = 0; }
     else if ((stuckT += dt) > 0.5 && boxedIn(px, pz) && (walkFree(nx, nz) || !walkFree(px, pz))) { px = nx; pz = nz; }   // 27 Nov: never stuck. Pushing for half a second with no way out from here: he walks out
     let d = a - me.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); me.root.rotation.y += d * Math.min(1, dt * 12); me.play(run ? 'sprint' : 'walk'); } else me.play('idle');
   if (!driving) { footY += (floorAt(px, pz, footY) - footY) * Math.min(1, dt * 12); me.root.position.set(px, 0.12 + Math.max(0, footY - GND), pz); me.step(dt); }
