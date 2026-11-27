@@ -234,7 +234,7 @@ function rasterGround(Gr, Hy, ox, oz, ax, ay, az, bx, by, bz, cx, cy, cz, r, g, 
   const i0 = Math.max(0, Math.floor(Math.min(ax, bx, cx) - ox)), i1 = Math.min(TILE - 1, Math.floor(Math.max(ax, bx, cx) - ox)), j0 = Math.max(0, Math.floor(Math.min(az, bz, cz) - oz)), j1 = Math.min(TILE - 1, Math.floor(Math.max(az, bz, cz) - oz));
   for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const px = ox + i + 0.5 - ax, pz = oz + j + 0.5 - az, s1 = (px * vz - pz * vx) / den, s2 = (ux * pz - uz * px) / den; if (s1 < -0.01 || s2 < -0.01 || s1 + s2 > 1.01) continue;
     const c = j * TILE + i; if (y >= Hy[c]) { Hy[c] = y; Gr[c] = grassy; } } }
-const onRoad = (x, z) => ROADS.some(([w, d, rx, rz]) => Math.abs(x - rx) <= w / 2 + 0.6 && Math.abs(z - rz) <= d / 2 + 0.6);   // a road over water is a bridge
+const onRoadW = (x, z) => ROADS.some(([w, d, rx, rz]) => Math.abs(x - rx) <= w / 2 + 0.6 && Math.abs(z - rz) <= d / 2 + 0.6);   // a road over water is a bridge
 const FLV = [0, 0, 0];
 const fget = (x, z) => { const tx = Math.floor(x / TILE), tz = Math.floor(z / TILE), lx = x - tx * TILE, lz = z - tz * TILE; let any = false; FLV[0] = FLV[1] = FLV[2] = FNO;   // floors here, from this square and any next square whose edge strip covers it
   for (let dx = lx < FM ? -1 : 0; dx <= (lx >= TILE - FM ? 1 : 0); dx++) for (let dz = lz < FM ? -1 : 0; dz <= (lz >= TILE - FM ? 1 : 0); dz++) { const F = floors.get(kOf(tx + dx, tz + dz)); if (!F) continue; any = true;
@@ -243,7 +243,7 @@ const fget = (x, z) => { const tx = Math.floor(x / TILE), tz = Math.floor(z / TI
 const decked = (x, z) => { const f = fget(x, z); return !!f && f[0] > f[2] + 20; };   // a bridge or pier deck above the water: you can walk there
 const floor1 = (x, z, foot) => { const f = fget(x, z); if (!f) return GND; return f[0] !== FNO && f[0] <= (foot + 0.6) * 100 ? f[0] / 100 : f[1] !== FNO ? f[1] / 100 : GND; };   // the floor you can step onto here (up to 0.6 m up)
 const floorAt = (x, z, foot) => { const a = [floor1(x, z, foot), floor1(x + 1, z, foot), floor1(x - 1, z, foot), floor1(x, z + 1, foot), floor1(x, z - 1, foot)].sort((p, q) => p - q); return a[2]; };   // the middle of 5 cells: a bench or railing next to you doesn't lift or drop you, ramps still do
-const wetAt = (x, z) => { const k = tkey(x, z), Gr = ground.get(k); return !!Gr && Gr[Math.floor(z - kZ(k) * TILE) * TILE + Math.floor(x - kX(k) * TILE)] === 3 && !onRoad(x, z) && !decked(x, z); };
+const wetAt = (x, z) => { const k = tkey(x, z), Gr = ground.get(k); return !!Gr && Gr[Math.floor(z - kZ(k) * TILE) * TILE + Math.floor(x - kX(k) * TILE)] === 3 && !onRoadW(x, z) && !decked(x, z); };
 function buildTile(k, lod) {
   const ox = kX(k) * TILE, oz = kZ(k) * TILE;
   const all = tilePlaces.get(k) || [], pieces = chunks.get(k) || [];
@@ -567,8 +567,10 @@ function makeCar() { if (car || !carLib) return car; car = carLib.scene.clone(tr
   CAR.W = Math.min(sz.x, sz.z) * k; CAR.L = 4.4; car.userData.faceX = sz.x > sz.z;   // Kenney cars point along +z; if not, turn them
   if (PH) { const sh = new T.Mesh(new T.PlaneGeometry(CAR.W * 1.05 / k, 4.6 / k), blobM); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.03 / k; car.add(sh); }
   S3.add(car); return car; }
-const fits = (x, z, a) => { const hw = CAR.W / 2 - 0.22, hl = CAR.L / 2 - 0.3, s = Math.sin(a), c = Math.cos(a);
-  return onRoad(x + s * hl + c * hw, z + c * hl - s * hw) && onRoad(x + s * hl - c * hw, z + c * hl + s * hw) && onRoad(x - s * hl + c * hw, z - c * hl - s * hw) && onRoad(x - s * hl - c * hw, z - c * hl + s * hw); };
+const carOn = (x, z) => DRV.grid ? onRoad(x, z) : onRoadW(x, z);   // 27 Nov: the car drives where the map's car does: roads, the pavement beside them (Dev, 18 Nov), level crossings and the bridge decks
+const corners = (x, z, a) => { const hw = CAR.W / 2 - 0.22, hl = CAR.L / 2 - 0.3, s = Math.sin(a), c = Math.cos(a);   // how many of the car's 4 corners are on the road
+  return carOn(x + s * hl + c * hw, z + c * hl - s * hw) + carOn(x + s * hl - c * hw, z + c * hl + s * hw) + carOn(x - s * hl + c * hw, z - c * hl - s * hw) + carOn(x - s * hl - c * hw, z - c * hl + s * hw); };
+const fits = (x, z, a) => corners(x, z, a) === 4;
 function enterCar() { try { driveRoads(); } catch (e) {} if (!DRV.grid || !makeCar()) { toast('Driving is not ready here yet'); return; }
   if (!DRV.car) DRV.car = { userData: { W: CAR.W, L: CAR.L } };   // the map's nearestRoadSpot reads the car size from here
   const parked = car.visible && Math.hypot(CAR.x - px, CAR.z - pz) < 7 && car.userData.placed;
@@ -579,9 +581,18 @@ driveBtn.onclick = () => driving ? leaveCar() : enterCar();
 function stepCar(dt, ix, iz) { const thr = -iz, steer = ix, MAX = 17, REV = -6;
   CAR.v += (thr > 0.1 ? thr * 9 : thr < -0.1 ? (CAR.v > 0.3 ? thr * 16 : thr * 5) : -Math.sign(CAR.v) * Math.min(Math.abs(CAR.v), 4 * dt) / dt) * dt;
   CAR.v = Math.max(REV, Math.min(MAX, CAR.v));
-  if (Math.abs(CAR.v) > 0.2) CAR.a -= steer * 1.6 * dt * Math.min(1, Math.abs(CAR.v) / 6) * Math.sign(CAR.v);
-  const nx = CAR.x + Math.sin(CAR.a) * CAR.v * dt, nz = CAR.z + Math.cos(CAR.a) * CAR.v * dt;
-  if (fits(nx, nz, CAR.a)) { CAR.x = nx; CAR.z = nz; } else if (fits(nx, CAR.z, CAR.a)) { CAR.x = nx; CAR.v *= 0.7; } else if (fits(CAR.x, nz, CAR.a)) { CAR.z = nz; CAR.v *= 0.7; } else CAR.v = -CAR.v * 0.2;
+  if (Math.abs(CAR.v) > 0.5) { const fx = Math.sin(CAR.a) * Math.sign(CAR.v), fz = Math.cos(CAR.a) * Math.sign(CAR.v); let cap = 1e9;   // people on the pavement ahead: brake gently (nobody gets hit, ever)
+    for (const w of walkersK) { if (!w.c) continue; const p = w.c.root.position, ox = p.x - CAR.x, oz = p.z - CAR.z, ahead = ox * fx + oz * fz;
+      if (ahead > 0 && ahead < CAR.L / 2 + 6 && Math.abs(ox * fz - oz * fx) < 1.6) cap = Math.min(cap, Math.max(0, (ahead - CAR.L / 2 - 1.2) * 1.4)); }
+    if (Math.abs(CAR.v) > cap) CAR.v = Math.sign(CAR.v) * cap; }
+  // 27 Nov (Dev: "stuck on the bridge ... sticking when it touches the pavement"): steer only if the car still fits; at a kerb, slide along it and slow down a little (like the map's car)
+  const na = Math.abs(CAR.v) > 0.2 ? CAR.a - steer * 1.6 * dt * Math.min(1, Math.abs(CAR.v) / 6) * Math.sign(CAR.v) : CAR.a;
+  const nx = CAR.x + Math.sin(na) * CAR.v * dt, nz = CAR.z + Math.cos(na) * CAR.v * dt, here = corners(CAR.x, CAR.z, CAR.a);
+  const ok = (x, z, a) => { const n = corners(x, z, a); return n === 4 || (here < 4 && n >= here); };   // a car already part off the road may make any move that is not worse, so it never gets stuck
+  const scrape = ax => { const t = ax ? Math.round((CAR.a - Math.PI / 2) / Math.PI) * Math.PI + Math.PI / 2 : Math.round(CAR.a / Math.PI) * Math.PI, d = t - CAR.a, sa = CAR.a + d * Math.min(1, dt * 4);   // scraping along a kerb: lose a little speed (more when you hit it steeply) and turn to run along it
+    CAR.v *= 1 - Math.min(1, dt * 2.5 * Math.abs(Math.sin(d))); if (ok(CAR.x, CAR.z, sa)) CAR.a = sa; };
+  if (ok(nx, nz, na)) { CAR.x = nx; CAR.z = nz; CAR.a = na; } else if (Math.abs(nx - CAR.x) > 1e-3 && ok(nx, CAR.z, CAR.a)) { CAR.x = nx; scrape(true); } else if (Math.abs(nz - CAR.z) > 1e-3 && ok(CAR.x, nz, CAR.a)) { CAR.z = nz; scrape(false); }
+  else if (ok(CAR.x, CAR.z, na)) { CAR.a = na; CAR.v *= 0.5; } else CAR.v *= 0.3;
   carY += (floorAt(CAR.x, CAR.z, carY) - carY) * Math.min(1, dt * 8); car.position.set(CAR.x, 0.02 + Math.max(0, carY - GND), CAR.z); car.rotation.y = CAR.a + (car.userData.faceX ? Math.PI / 2 : 0);
   px = CAR.x; pz = CAR.z; let d = CAR.a - yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); yaw += d * Math.min(1, dt * 2.5); }
 
@@ -694,5 +705,5 @@ CZ.inspect = (x, z) => { const k = tkey(x, z), list = tilePlaces.get(k) || [], p
   const topShapes = {}; for (const i of list) { const id = PL.s[i]; topShapes[id] = (topShapes[id] || 0) + shapes[id].n / 3; }
   const top = Object.entries(topShapes).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id, t]) => id + ':' + Math.round(t) + 't/' + shapes[id].n / 3 + 'per r' + shapes[id].r.toFixed(1));
   return JSON.stringify({ placeTris: Math.round(pl), pieceTris: Math.round(pc), places: list.length, bySize, piecesByBucket: byB, top }); };
-CZ.api = { pos: () => [Math.round(px * 10) / 10, Math.round(pz * 10) / 10], probe: (x, z) => (wetAt(x, z) ? 'W' : '') + (walkFree(x, z) ? '' : 'X') + (CZ.greenAt && CZ.greenAt(x, z) ? 'g' : '') + '.', pitch: v => { pitch = v; first = true; }, cam: (f, d) => { LFOV = f; LDIST = d; CAM.fov = camFov(); CAM.updateProjectionMatrix(); first = true; }, drive: () => enterCar(), out: () => leaveCar(), car: () => [CAR.x, CAR.z, CAR.a, CAR.v], keys, floor: (x, z) => { const f = fget(x, z); return f ? [f[0], f[1], f[2], Math.round(floorAt(x, z, footY) * 100)] : null; }, foot: () => Math.round(footY * 100), home: u => { const h = homes.find(h => h.user === u || h.n === u); return h ? [Math.round(h.x), Math.round(h.z), h.n] : null; }, go: (x, z, y) => { px = x; pz = z; if (y != null) yaw = y; first = true; stream(px, pz, true); streamNature(px, pz, true); }, setTime: h => { fixedHour = h; tick(); }, wt: v => { WT.fix = v; }, renderer: R3, tiles, scene: S3 };
+CZ.api = { pos: () => [Math.round(px * 10) / 10, Math.round(pz * 10) / 10], probe: (x, z) => (wetAt(x, z) ? 'W' : '') + (walkFree(x, z) ? '' : 'X') + (CZ.greenAt && CZ.greenAt(x, z) ? 'g' : '') + '.', pitch: v => { pitch = v; first = true; }, cam: (f, d) => { LFOV = f; LDIST = d; CAM.fov = camFov(); CAM.updateProjectionMatrix(); first = true; }, drive: () => enterCar(), out: () => leaveCar(), car: () => [Math.round(CAR.x * 10) / 10, Math.round(CAR.z * 10) / 10, Math.round(CAR.a * 100) / 100, Math.round(CAR.v * 10) / 10, Math.round(carY * 100)], carAt: (x, z, a) => { CAR.x = x; CAR.z = z; CAR.a = a; CAR.v = 0; }, keys, floor: (x, z) => { const f = fget(x, z); return f ? [f[0], f[1], f[2], Math.round(floorAt(x, z, footY) * 100)] : null; }, foot: () => Math.round(footY * 100), home: u => { const h = homes.find(h => h.user === u || h.n === u); return h ? [Math.round(h.x), Math.round(h.z), h.n] : null; }, go: (x, z, y) => { px = x; pz = z; if (y != null) yaw = y; first = true; stream(px, pz, true); streamNature(px, pz, true); }, setTime: h => { fixedHour = h; tick(); }, wt: v => { WT.fix = v; }, renderer: R3, tiles, scene: S3 };
 })().catch(e => { console.error('cozy', e); const l = document.getElementById('czLt'); if (l) l.textContent = 'Could not build: ' + e.message; });
