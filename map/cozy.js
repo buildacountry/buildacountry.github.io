@@ -140,12 +140,13 @@ if (FARV) { const SC = T.ShaderChunk, V = 'varying float fogDepth;', ch = {
     fog_pars_fragment: SC.fog_pars_fragment.replace(V, V + ' varying vec3 vFogPos;'), fog_fragment: SC.fog_fragment.replace(/fogDepth/g, 'length( vFogPos )') };
   if (Object.keys(ch).every(k => ch[k] !== SC[k])) Object.assign(SC, ch); }
 const R3 = new T.WebGLRenderer({ antialias: !PH, powerPreference: 'high-performance' });
-R3.setPixelRatio(Math.min(devicePixelRatio, PH ? (FARV ? 1.25 : 1.5) : 2));   // test link: phones draw a little less sharp (fewer pixels to fill, hard to see on a small screen) R3.setSize(innerWidth, innerHeight);
+const fitR3 = () => { const pr = Math.min(devicePixelRatio || 1, PH ? (FARV ? 1.25 : 1.5) : 2); if (R3.getPixelRatio() !== pr) R3.setPixelRatio(pr); R3.setSize(innerWidth, innerHeight); };   // test link: phones draw a little less sharp (fewer pixels to fill). 27 Nov: real screen size again after every resize or browser zoom (a hidden setSize made laptops blurry)
+fitR3();
 R3.outputEncoding = T.sRGBEncoding; R3.toneMapping = T.NoToneMapping;
 R3.shadowMap.enabled = !PH; R3.shadowMap.type = T.PCFSoftShadowMap;
 root.prepend(R3.domElement);
 const S3 = new T.Scene(), CAM = new T.PerspectiveCamera(camFov(), innerWidth / innerHeight, 0.5, 900);
-addEventListener('resize', () => { R3.setSize(innerWidth, innerHeight); CAM.aspect = innerWidth / innerHeight; CAM.fov = camFov(); CAM.updateProjectionMatrix(); });
+addEventListener('resize', () => { fitR3(); CAM.aspect = innerWidth / innerHeight; CAM.fov = camFov(); CAM.updateProjectionMatrix(); });
 const lin = h => new T.Color(h).convertSRGBToLinear();
 // far view (Dev, 27 Nov: the old 165 m haze felt like a "gas chamber"). Squares out to VIEW are built in full;
 // from VIEW out to FAR they are built as cheap outlines (big shapes only, corners snapped, one mesh per square).
