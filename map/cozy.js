@@ -133,7 +133,11 @@ const FARV = /[?&]far(=|&|$)/.test(location.search);
 let LFOV = 50, LDIST = 22;   // landscape camera on the test link: wider view, a bit closer
 const camFov = () => innerWidth > innerHeight ? (FARV ? LFOV : 40) : 46;
 // haze by real distance, not by depth on screen: with a wide, low camera the edge of the built world would show at the sides
-if (FARV) T.ShaderChunk.fog_vertex = T.ShaderChunk.fog_vertex.replace('fogDepth = - mvPosition.z;', 'fogDepth = length( mvPosition.xyz );');
+// (worked out per pixel, because the ground and the sea are giant triangles and a per-corner distance would wash them out)
+if (FARV) { const SC = T.ShaderChunk, V = 'varying float fogDepth;', ch = {
+    fog_pars_vertex: SC.fog_pars_vertex.replace(V, V + ' varying vec3 vFogPos;'), fog_vertex: SC.fog_vertex.replace('fogDepth = - mvPosition.z;', 'fogDepth = - mvPosition.z; vFogPos = mvPosition.xyz;'),
+    fog_pars_fragment: SC.fog_pars_fragment.replace(V, V + ' varying vec3 vFogPos;'), fog_fragment: SC.fog_fragment.replace(/fogDepth/g, 'length( vFogPos )') };
+  if (Object.keys(ch).every(k => ch[k] !== SC[k])) Object.assign(SC, ch); }
 const R3 = new T.WebGLRenderer({ antialias: !PH, powerPreference: 'high-performance' });
 R3.setPixelRatio(Math.min(devicePixelRatio, PH ? 1.5 : 2)); R3.setSize(innerWidth, innerHeight);
 R3.outputEncoding = T.sRGBEncoding; R3.toneMapping = T.NoToneMapping;
