@@ -128,16 +128,25 @@ CZ.phase = 'copied';
 
 // ---------- 3. our renderer, light, sky ----------
 const PH = PHONE;
+// test link ?cozy&far (27 Nov): see far + a game camera that looks ahead (landscape). Normal players keep the old view until Dev says OK.
+const FARV = /[?&]far(=|&|$)/.test(location.search);
+let LFOV = 50, LDIST = 22;   // landscape camera on the test link: wider view, a bit closer
+const camFov = () => innerWidth > innerHeight ? (FARV ? LFOV : 40) : 46;
+// haze by real distance, not by depth on screen: with a wide, low camera the edge of the built world would show at the sides
+if (FARV) T.ShaderChunk.fog_vertex = T.ShaderChunk.fog_vertex.replace('fogDepth = - mvPosition.z;', 'fogDepth = length( mvPosition.xyz );');
 const R3 = new T.WebGLRenderer({ antialias: !PH, powerPreference: 'high-performance' });
 R3.setPixelRatio(Math.min(devicePixelRatio, PH ? 1.5 : 2)); R3.setSize(innerWidth, innerHeight);
 R3.outputEncoding = T.sRGBEncoding; R3.toneMapping = T.NoToneMapping;
 R3.shadowMap.enabled = !PH; R3.shadowMap.type = T.PCFSoftShadowMap;
 root.prepend(R3.domElement);
-const S3 = new T.Scene(), CAM = new T.PerspectiveCamera(innerWidth > innerHeight ? 40 : 46, innerWidth / innerHeight, 0.5, 900);
-addEventListener('resize', () => { R3.setSize(innerWidth, innerHeight); CAM.aspect = innerWidth / innerHeight; CAM.fov = innerWidth > innerHeight ? 40 : 46; CAM.updateProjectionMatrix(); });
+const S3 = new T.Scene(), CAM = new T.PerspectiveCamera(camFov(), innerWidth / innerHeight, 0.5, 900);
+addEventListener('resize', () => { R3.setSize(innerWidth, innerHeight); CAM.aspect = innerWidth / innerHeight; CAM.fov = camFov(); CAM.updateProjectionMatrix(); });
 const lin = h => new T.Color(h).convertSRGBToLinear();
-S3.fog = new T.Fog(0xb6d8ef, PH ? 85 : 110, PH ? 165 : 205);
-const VIEW = PH ? 165 : 215;   // squares within this distance are built
+// far view (Dev, 27 Nov: the old 165 m haze felt like a "gas chamber"). Squares out to VIEW are built in full;
+// from VIEW out to FAR they are built as cheap outlines (big shapes only, corners snapped, one mesh per square).
+const VIEW = PH ? 165 : 215;   // squares within this distance are built in full
+const FAR = FARV ? (PH ? 430 : 560) : VIEW;    // far squares out to here (test link only for now)
+S3.fog = FARV ? new T.Fog(0xb6d8ef, PH ? 150 : 190, FAR + 10) : new T.Fog(0xb6d8ef, PH ? 85 : 110, PH ? 165 : 205);
 // one material for everything solid; vertex colours are stored as small sRGB bytes and made linear in the shader
 const srgbColors = m => { m.onBeforeCompile = s => { s.vertexShader = s.vertexShader.replace('#include <color_vertex>', '#include <color_vertex>\n#ifdef USE_COLOR\nvColor.rgb = pow(color.rgb, vec3(2.2));\n#endif'); }; return m; };
 const MAT = o => srgbColors(PH ? new T.MeshLambertMaterial(o) : new T.MeshStandardMaterial(Object.assign({ roughness: 0.86, metalness: 0, flatShading: true }, o)));
@@ -172,8 +181,10 @@ const PA = new T.Vector3(), PB = new T.Vector3(), PC = new T.Vector3(), NA = new
 const NEAR = PHONE ? 75 : 135, SMALL = 0.95, TINY = 0.5;
 const keepFar = b => b === B_GLASS || b === B_WARM || b === B_LAMP || b === B_WATER || b >= B_TEX;
 const LOCELL = 0.7;
-function lowShape(S) {   // the same shape with its corners snapped to a 70 cm grid: details melt away, the outline and colours stay
-  if (S.lo) return S.lo; const P = S.P, keep = [], q = v => Math.round(v / LOCELL) * LOCELL;
+const BIG = 1.6, FARCELL = 1.4, TINY2 = 1.6;   // far squares: only shapes this big (m), corners on a 1.4 m grid, no triangles smaller than 1.6 m
+const L2C = { [B_GLASS]: [44, 54, 68], [B_WARM]: [232, 180, 94], [B_LAMP]: [246, 210, 122], [B_WATER]: [63, 163, 196] };   // far squares use one material, so these get their colour baked in
+function lowShape(S, cell = LOCELL, key = 'lo') {   // the same shape with its corners snapped to a grid (70 cm near, 1.4 m far): details melt away, the outline and colours stay
+  if (S[key]) return S[key]; const P = S.P, keep = [], q = v => Math.round(v / cell) * cell;
   for (let t = 0; t < S.n; t += 3) { const a = [q(P[t * 3]), q(P[t * 3 + 1]), q(P[t * 3 + 2])], b = [q(P[t * 3 + 3]), q(P[t * 3 + 4]), q(P[t * 3 + 5])], c = [q(P[t * 3 + 6]), q(P[t * 3 + 7]), q(P[t * 3 + 8])];
     const same = (u, v) => u[0] === v[0] && u[1] === v[1] && u[2] === v[2]; if (same(a, b) || same(b, c) || same(a, c)) continue;
     const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2]; if (Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx) < 1e-4) continue;
@@ -181,7 +192,7 @@ function lowShape(S) {   // the same shape with its corners snapped to a 70 cm g
   const n = keep.length / 4 * 3, P2 = new Float32Array(n * 3), C2 = S.C ? new Uint8Array(n * 3) : null; const seen = new Set(); let o = 0;
   for (let i = 0; i < keep.length; i += 4) { const t = keep[i], key = [keep[i + 1], keep[i + 2], keep[i + 3]].map(v => v.join(',')).sort().join('|'); if (seen.has(key)) continue; seen.add(key);
     for (let j = 0; j < 3; j++) { P2.set(keep[i + 1 + j], (o + j) * 3); if (C2) C2.set(S.C.subarray((t + j) * 3, (t + j) * 3 + 3), (o + j) * 3); } o += 3; }
-  return (S.lo = { P: P2.subarray(0, o * 3), C: C2 ? C2.subarray(0, o * 3) : null, U: null, n: o, r: S.r }); }
+  return (S[key] = { P: P2.subarray(0, o * 3), C: C2 ? C2.subarray(0, o * 3) : null, U: null, n: o, r: S.r }); }
 // what the ground is, metre by metre, in each square: 1 = grass (green), 2 = anything else (sand, paving, plaza, water). Nature only grows on 1.
 const ground = new Map();
 function rasterGround(Gr, Hy, ox, oz, ax, ay, az, bx, by, bz, cx, cy, cz, r, g, b) {
@@ -195,18 +206,21 @@ function rasterGround(Gr, Hy, ox, oz, ax, ay, az, bx, by, bz, cx, cy, cz, r, g, 
 function buildTile(k, lod) {
   const ox = kX(k) * TILE, oz = kZ(k) * TILE;
   const all = tilePlaces.get(k) || [], pieces = chunks.get(k) || [];
-  const list = lod ? all.filter(i => { const q = i * 12, m = PL.m, sc = Math.sqrt(m[q] ** 2 + m[q + 1] ** 2 + m[q + 2] ** 2); return keepFar(PL.b[i]) || shapes[PL.s[i]].r * sc >= SMALL; }) : all;
-  const tiny = (P, t) => { let e = 0; for (let j = 0; j < 3; j++) { const a = t * 3 + j * 3, b = t * 3 + ((j + 1) % 3) * 3; e = Math.max(e, Math.hypot(P[a] - P[b], P[a + 1] - P[b + 1], P[a + 2] - P[b + 2])); } return e < TINY; };
+  const L2 = lod === 2, bk = b => L2 ? B_MAIND : b;
+  const list = L2 ? all.filter(i => { if (PL.b[i] >= B_TEX) return false; const q = i * 12, m = PL.m, sc = Math.sqrt(m[q] ** 2 + m[q + 1] ** 2 + m[q + 2] ** 2); return shapes[PL.s[i]].r * sc >= BIG; })
+    : lod ? all.filter(i => { const q = i * 12, m = PL.m, sc = Math.sqrt(m[q] ** 2 + m[q + 1] ** 2 + m[q + 2] ** 2); return keepFar(PL.b[i]) || shapes[PL.s[i]].r * sc >= SMALL; }) : all;
+  const tiny = (P, t, lim = TINY) => { let e = 0; for (let j = 0; j < 3; j++) { const a = t * 3 + j * 3, b = t * 3 + ((j + 1) % 3) * 3; e = Math.max(e, Math.hypot(P[a] - P[b], P[a + 1] - P[b + 1], P[a + 2] - P[b + 2])); } return e < lim; };
   // count vertices per bucket
   const cnt = {}; const add = (b, n) => cnt[b] = (cnt[b] || 0) + n;
-  const shapeFor = i => { const S = shapes[PL.s[i]]; return lod && !keepFar(PL.b[i]) && S.n > 24 ? lowShape(S) : S; };
-  for (const i of list) add(PL.b[i], shapeFor(i).n);
-  for (const p of pieces) { if (!lod || keepFar(p.b)) { add(p.b, p.P.length / 3); continue; } let n = 0; for (let t = 0; t < p.P.length / 3; t += 3) if (!tiny(p.P, t)) n += 3; add(p.b, n); }
+  const shapeFor = i => { const S = shapes[PL.s[i]]; return L2 ? (S.n > 12 ? lowShape(S, FARCELL, 'lo2') : S) : lod && !keepFar(PL.b[i]) && S.n > 24 ? lowShape(S) : S; };
+  for (const i of list) add(bk(PL.b[i]), shapeFor(i).n);
+  for (const p of pieces) { if (L2) { if (p.b >= B_TEX) continue; let n = 0; for (let t = 0; t < p.P.length / 3; t += 3) if (!tiny(p.P, t, TINY2)) n += 3; add(B_MAIND, n); continue; }
+    if (!lod || keepFar(p.b)) { add(p.b, p.P.length / 3); continue; } let n = 0; for (let t = 0; t < p.P.length / 3; t += 3) if (!tiny(p.P, t)) n += 3; add(p.b, n); }
   const out = {};
   for (const b in cnt) out[b] = { P: new Int16Array(cnt[b] * 3), N: new Int8Array(cnt[b] * 3), C: new Uint8Array(cnt[b] * 3), U: +b >= B_TEX ? new Float32Array(cnt[b] * 2) : null, o: 0, far: [] };
   const glow = new Map(), addGlow = (x, y, z) => { const g = Math.round(x / 1.1) + ',' + Math.round(y / 1.1) + ',' + Math.round(z / 1.1); if (!glow.has(g)) glow.set(g, [x, y, z]); };
   const put = (b, ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1, r2, g2, b2, r3, g3, b3, u) => { const O = out[b]; const lx = [ax - ox, bx - ox, cx - ox], ly = [ay, by, cy], lz = [az - oz, bz - oz, cz - oz];
-    if (lx.some(v => Math.abs(v) > 320) || lz.some(v => Math.abs(v) > 320) || ly.some(v => Math.abs(v) > 320)) { O.far.push([ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1]); return; }
+    if (lx.some(v => Math.abs(v) > 320) || lz.some(v => Math.abs(v) > 320) || ly.some(v => Math.abs(v) > 320)) { if (!L2) O.far.push([ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1]); return; }
     PA.set(bx - ax, by - ay, bz - az); PB.set(cx - ax, cy - ay, cz - az); NA.crossVectors(PA, PB).normalize();
     const n0 = Math.round(NA.x * 127), n1 = Math.round(NA.y * 127), n2 = Math.round(NA.z * 127), o = O.o;
     for (let j = 0; j < 3; j++) { const d = (o + j) * 3; O.P[d] = Math.round(lx[j] * 100); O.P[d + 1] = Math.round(ly[j] * 100); O.P[d + 2] = Math.round(lz[j] * 100); O.N[d] = n0; O.N[d + 1] = n1; O.N[d + 2] = n2; }
@@ -215,18 +229,19 @@ function buildTile(k, lod) {
     if ((b === B_GLASS || b === B_WARM) && (ay + by + cy) / 3 >= LOWGLASS || b === B_LAMP) addGlow((ax + bx + cx) / 3, (ay + by + cy) / 3, (az + bz + cz) / 3); };
   const UV = new Float32Array(6);
   const Gr = new Uint8Array(TILE * TILE), Hy = new Float32Array(TILE * TILE).fill(-9);
-  for (const p of huge) { if (p.b >= B_TEX) continue; const P = p.P, C = p.C; for (let t = 0; t < P.length / 3; t += 3) rasterGround(Gr, Hy, ox, oz, P[t * 3], P[t * 3 + 1], P[t * 3 + 2], P[t * 3 + 3], P[t * 3 + 4], P[t * 3 + 5], P[t * 3 + 6], P[t * 3 + 7], P[t * 3 + 8], C[t * 3], C[t * 3 + 1], C[t * 3 + 2]); }
+  if (!L2) for (const p of huge) { if (p.b >= B_TEX) continue; const P = p.P, C = p.C; for (let t = 0; t < P.length / 3; t += 3) rasterGround(Gr, Hy, ox, oz, P[t * 3], P[t * 3 + 1], P[t * 3 + 2], P[t * 3 + 3], P[t * 3 + 4], P[t * 3 + 5], P[t * 3 + 6], P[t * 3 + 7], P[t * 3 + 8], C[t * 3], C[t * 3 + 1], C[t * 3 + 2]); }
   const put0 = put; const putG = (b, ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1, ...rest) => { if (b === B_MAIN || b === B_MAIND || b === B_WATER) rasterGround(Gr, Hy, ox, oz, ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1); put0(b, ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1, ...rest); };
   for (const i of list) { const sid = PL.s[i], b = PL.b[i], rgb = PL.c[i], S = shapeFor(i), q = i * 12, m = PL.m; MM.set(m[q], m[q + 3], m[q + 6], m[q + 9], m[q + 1], m[q + 4], m[q + 7], m[q + 10], m[q + 2], m[q + 5], m[q + 8], m[q + 11], 0, 0, 0, 1); const flip = MM.determinant() < 0, e = MM.elements;
-    const R = rgb >> 16 & 255, G = rgb >> 8 & 255, Bc = rgb & 255;
+    const lc = L2 && L2C[b], R = lc ? lc[0] : rgb >> 16 & 255, G = lc ? lc[1] : rgb >> 8 & 255, Bc = lc ? lc[2] : rgb & 255, putP = L2 ? put0 : putG, bb = bk(b);
     for (let t = 0; t < S.n; t += 3) { const ia = t, ib = flip ? t + 2 : t + 1, ic = flip ? t + 1 : t + 2, P = S.P;
       const tr = (q, v) => { const x = P[q * 3], y = P[q * 3 + 1], z = P[q * 3 + 2]; v.set(e[0] * x + e[4] * y + e[8] * z + e[12], e[1] * x + e[5] * y + e[9] * z + e[13], e[2] * x + e[6] * y + e[10] * z + e[14]); };
       tr(ia, PA); tr(ib, PB); tr(ic, PC); const ax = PA.x, ay = PA.y, az = PA.z, bx = PB.x, by = PB.y, bz = PB.z, cx = PC.x, cy = PC.y, cz = PC.z;
       const cc = (q, ch, base) => S.C ? Math.round(S.C[q * 3 + ch] * base / 255) : base;
       if (S.U) { UV[0] = S.U[ia * 2]; UV[1] = S.U[ia * 2 + 1]; UV[2] = S.U[ib * 2]; UV[3] = S.U[ib * 2 + 1]; UV[4] = S.U[ic * 2]; UV[5] = S.U[ic * 2 + 1]; }
-      putG(b, ax, ay, az, bx, by, bz, cx, cy, cz, cc(ia, 0, R), cc(ia, 1, G), cc(ia, 2, Bc), cc(ib, 0, R), cc(ib, 1, G), cc(ib, 2, Bc), cc(ic, 0, R), cc(ic, 1, G), cc(ic, 2, Bc), S.U ? UV : null); } }
-  for (const p of pieces) { const P = p.P, C = p.C, skipTiny = lod && !keepFar(p.b); for (let t = 0; t < P.length / 3; t += 3) { if (skipTiny && tiny(P, t)) continue; if (p.U) UV.set(p.U.subarray(t * 2, t * 2 + 6));
-    putG(p.b, P[t * 3], P[t * 3 + 1], P[t * 3 + 2], P[t * 3 + 3], P[t * 3 + 4], P[t * 3 + 5], P[t * 3 + 6], P[t * 3 + 7], P[t * 3 + 8], C[t * 3], C[t * 3 + 1], C[t * 3 + 2], C[t * 3 + 3], C[t * 3 + 4], C[t * 3 + 5], C[t * 3 + 6], C[t * 3 + 7], C[t * 3 + 8], p.U ? UV : null); } }
+      putP(bb, ax, ay, az, bx, by, bz, cx, cy, cz, cc(ia, 0, R), cc(ia, 1, G), cc(ia, 2, Bc), cc(ib, 0, R), cc(ib, 1, G), cc(ib, 2, Bc), cc(ic, 0, R), cc(ic, 1, G), cc(ic, 2, Bc), S.U ? UV : null); } }
+  for (const p of pieces) { if (L2 && p.b >= B_TEX) continue; const P = p.P, C = L2 && L2C[p.b] ? new Uint8Array(P.length).map((_, i) => L2C[p.b][i % 3]) : p.C, skipTiny = lod && !keepFar(p.b);
+    for (let t = 0; t < P.length / 3; t += 3) { if (L2 ? tiny(P, t, TINY2) : skipTiny && tiny(P, t)) continue; if (p.U && !L2) UV.set(p.U.subarray(t * 2, t * 2 + 6));
+    (L2 ? put0 : putG)(bk(p.b), P[t * 3], P[t * 3 + 1], P[t * 3 + 2], P[t * 3 + 3], P[t * 3 + 4], P[t * 3 + 5], P[t * 3 + 6], P[t * 3 + 7], P[t * 3 + 8], C[t * 3], C[t * 3 + 1], C[t * 3 + 2], C[t * 3 + 3], C[t * 3 + 4], C[t * 3 + 5], C[t * 3 + 6], C[t * 3 + 7], C[t * 3 + 8], p.U && !L2 ? UV : null); } }
   const grp = new T.Group(); grp.position.set(ox, 0, oz); grp.scale.setScalar(0.01);
   for (const b in out) { const O = out[b]; if (!O.o) continue; const g = new T.BufferGeometry();
     g.setAttribute('position', new T.BufferAttribute(O.P.subarray(0, O.o * 3), 3)); g.setAttribute('normal', new T.BufferAttribute(O.N.subarray(0, O.o * 3), 3, true)); g.setAttribute('color', new T.BufferAttribute(O.C.subarray(0, O.o * 3), 3, true));
@@ -238,12 +253,12 @@ function buildTile(k, lod) {
           for (let t = 0; t < O.o / 3; t++) if (!!lo[t] === want) { P2.set(O.P.subarray(t * 9, t * 9 + 9), q * 9); N2.set(O.N.subarray(t * 9, t * 9 + 9), q * 9); C2.set(O.C.subarray(t * 9, t * 9 + 9), q * 9); q++; }
           const g2 = new T.BufferGeometry(); g2.setAttribute('position', new T.BufferAttribute(P2, 3)); g2.setAttribute('normal', new T.BufferAttribute(N2, 3, true)); g2.setAttribute('color', new T.BufferAttribute(C2, 3, true)); g2.computeBoundingSphere(); return g2; };
         grp.add(new T.Mesh(split(true), MS.glassLow)); if (O.o / 3 - nlo > 0) grp.add(new T.Mesh(split(false), MS[b])); continue; } }
-    const mesh = new T.Mesh(g, MS[b]); mesh.castShadow = +b === B_MAIN || +b === B_MAIND; mesh.receiveShadow = +b !== B_GLASS && +b !== B_WARM && +b !== B_LAMP; grp.add(mesh);
+    const mesh = new T.Mesh(g, MS[b]); mesh.castShadow = !L2 && (+b === B_MAIN || +b === B_MAIND); mesh.receiveShadow = !L2 && +b !== B_GLASS && +b !== B_WARM && +b !== B_LAMP; grp.add(mesh);
     if (O.far.length) { const F = new Float32Array(O.far.length * 9), FC = new Uint8Array(O.far.length * 9); O.far.forEach((f, q) => { F.set(f.slice(0, 9), q * 9); for (let j = 0; j < 3; j++) { FC[q * 9 + j * 3] = f[9]; FC[q * 9 + j * 3 + 1] = f[10]; FC[q * 9 + j * 3 + 2] = f[11]; } });
       const gf = new T.BufferGeometry(); gf.setAttribute('position', new T.BufferAttribute(F, 3)); gf.setAttribute('color', new T.BufferAttribute(FC, 3, true)); gf.computeVertexNormals(); const mf = new T.Mesh(gf, MS[b]); mf.receiveShadow = true; mf.userData.world = true; S3.add(mf); (tilesExtra.get(k) || tilesExtra.set(k, []).get(k)).push(mf); } }
   if (glow.size) { const gp = []; for (const [x, y, z] of glow.values()) gp.push((x - ox) * 100, y * 100, (z - oz) * 100); const gg = new T.BufferGeometry(); gg.setAttribute('position', new T.Float32BufferAttribute(gp, 3)); gg.computeBoundingSphere(); const pts = new T.Points(gg, glowMat); grp.add(pts); }
   grp.traverse(o => { o.matrixAutoUpdate = false; o.updateMatrix(); }); grp.updateMatrixWorld(true);
-  ground.set(k, Gr);
+  if (!L2) ground.set(k, Gr);
   grp.userData.lod = lod; S3.add(grp); tiles.set(k, grp); built++;
 }
 const tilesExtra = new Map();
@@ -261,14 +276,16 @@ function streamNature(px, pz, all) { let n = 0; const r = Math.ceil(NVIEW / TILE
 function dropTile(k) { ground.delete(k); const g = tiles.get(k); if (!g) return; S3.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); tiles.delete(k); (tilesExtra.get(k) || []).forEach(m => { S3.remove(m); m.geometry.dispose(); }); tilesExtra.delete(k); }
 // giant triangles (the ground under everything, the sea): one mesh each, always drawn
 huge.forEach(p => { const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(p.P, 3)); g.setAttribute('color', new T.BufferAttribute(p.C, 3, true)); if (p.U) g.setAttribute('uv', new T.BufferAttribute(p.U, 2)); g.computeVertexNormals(); const m = new T.Mesh(g, MS[p.b] || MS[B_MAIN]); m.receiveShadow = true; S3.add(m); });
-function wanted(px, pz) { const out = []; const r = Math.ceil(VIEW / TILE) + 1, cx = Math.floor(px / TILE), cz = Math.floor(pz / TILE);
-  for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++) { const x0 = (cx + i) * TILE, z0 = (cz + j) * TILE, dx = Math.max(x0 - px, 0, px - x0 - TILE), dz = Math.max(z0 - pz, 0, pz - z0 - TILE), d = Math.hypot(dx, dz); if (d < VIEW) out.push([kOf(cx + i, cz + j), d]); }
+function wanted(px, pz) { const out = []; const r = Math.ceil(FAR / TILE) + 1, cx = Math.floor(px / TILE), cz = Math.floor(pz / TILE);
+  for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++) { const x0 = (cx + i) * TILE, z0 = (cz + j) * TILE, dx = Math.max(x0 - px, 0, px - x0 - TILE), dz = Math.max(z0 - pz, 0, pz - z0 - TILE), d = Math.hypot(dx, dz); if (d < FAR) out.push([kOf(cx + i, cz + j), d]); }
   return out.sort((a, b) => a[1] - b[1]); }
 function stream(px, pz, all) { const w = wanted(px, pz), need = new Set(w.map(a => a[0])); let n = 0;
-  for (const [k, d] of w) { const want = d < NEAR ? 0 : 1, have = tiles.get(k);
-    if (have === null || (have && have.userData.lod === want)) continue; if (!have && !tilePlaces.has(k) && !chunks.has(k)) { tiles.set(k, null); if (!ground.has(k)) { const ox = kX(k) * TILE, oz = kZ(k) * TILE, Gr = new Uint8Array(TILE * TILE), Hy = new Float32Array(TILE * TILE).fill(-9); for (const p of huge) { if (p.b >= B_TEX) continue; const P = p.P, C = p.C; for (let t = 0; t < P.length / 3; t += 3) rasterGround(Gr, Hy, ox, oz, P[t * 3], P[t * 3 + 1], P[t * 3 + 2], P[t * 3 + 3], P[t * 3 + 4], P[t * 3 + 5], P[t * 3 + 6], P[t * 3 + 7], P[t * 3 + 8], C[t * 3], C[t * 3 + 1], C[t * 3 + 2]); } ground.set(k, Gr); } continue; }
+  for (const [k, d] of w) { const want = d < NEAR ? 0 : d < VIEW ? 1 : 2, have = tiles.get(k);
+    if (have === null || (have && have.userData.lod === want)) continue; if (!have && !tilePlaces.has(k) && !chunks.has(k)) { if (want === 2) continue; tiles.set(k, null); if (!ground.has(k)) { const ox = kX(k) * TILE, oz = kZ(k) * TILE, Gr = new Uint8Array(TILE * TILE), Hy = new Float32Array(TILE * TILE).fill(-9); for (const p of huge) { if (p.b >= B_TEX) continue; const P = p.P, C = p.C; for (let t = 0; t < P.length / 3; t += 3) rasterGround(Gr, Hy, ox, oz, P[t * 3], P[t * 3 + 1], P[t * 3 + 2], P[t * 3 + 3], P[t * 3 + 4], P[t * 3 + 5], P[t * 3 + 6], P[t * 3 + 7], P[t * 3 + 8], C[t * 3], C[t * 3 + 1], C[t * 3 + 2]); } ground.set(k, Gr); } continue; }
+    if (all && want === 2) continue;   // far squares come in one per frame after the start, so loading is not slower
     if (have) dropTile(k); buildTile(k, want); if (!all && ++n >= 1) break; }
-  for (const k of [...tiles.keys()]) { if (need.has(k)) continue; const kx = kX(k), kz = kZ(k); const dx = Math.max(kx * TILE - px, 0, px - kx * TILE - TILE), dz = Math.max(kz * TILE - pz, 0, pz - kz * TILE - TILE); if (Math.hypot(dx, dz) > VIEW + 140) { if (tiles.get(k)) dropTile(k); else tiles.delete(k); } } }
+  for (const k of [...tiles.keys()]) { const g = tiles.get(k); if (FARV && g) g.visible = need.has(k);   // squares past the haze stay ready but are not drawn
+    if (need.has(k)) continue; const kx = kX(k), kz = kZ(k); const dx = Math.max(kx * TILE - px, 0, px - kx * TILE - TILE), dz = Math.max(kz * TILE - pz, 0, pz - kz * TILE - TILE); if (Math.hypot(dx, dz) > FAR + 140) { if (tiles.get(k)) dropTile(k); else tiles.delete(k); } } }
 
 // ---------- 4b. nature on free land (Dev, 27 Nov) ----------
 // Small things (flowers, grass tufts, bushes, rocks, lighter grass patches) on free grass, never on a road, a plaza, a garden
@@ -391,7 +408,7 @@ function makeCitizen(donor, shadow) { const base = lib.anim, r = base.scene.clon
     once(n) { const a = acts[n]; if (!a) return; if (c.cur && acts[c.cur]) acts[c.cur].fadeOut(0.15); a.reset().setLoop(T.LoopOnce, 1); a.clampWhenFinished = true; a.fadeIn(0.15).play(); c.cur = n; c.busy = a.getClip().duration; } };
   c.play('idle'); return c; }
 const me = makeCitizen('female-b', true);
-let px = 0, pz = 30, yaw = Math.PI, pitch = 0.72; me.root.rotation.y = Math.PI;
+let px = 0, pz = 30, yaw = Math.PI, pitch = FARV && innerWidth > innerHeight ? 0.42 : 0.72; me.root.rotation.y = Math.PI;
 { const want = (QS.get('visit') || '').replace(/^@/, '').toLowerCase(), h = want && homes.find(x => (x.user || '').toLowerCase() === want); if (h) { px = h.x; pz = h.z + 9; } const f = nearestFree(px, pz); px = f[0]; pz = f[1]; }
 const keys = {}; addEventListener('keydown', e => keys[e.key.toLowerCase()] = true); addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 const stick = $('czStick'), knob = $('czKnob'), joy = { x: 0, y: 0, id: null };
@@ -399,8 +416,9 @@ stick.addEventListener('pointerdown', e => { joy.id = e.pointerId; stick.setPoin
 stick.addEventListener('pointermove', e => { if (e.pointerId === joy.id) mj(e); });
 const ej = e => { if (e.pointerId !== joy.id) return; joy.id = null; joy.x = joy.y = 0; knob.style.transform = ''; }; stick.addEventListener('pointerup', ej); stick.addEventListener('pointercancel', ej);
 function mj(e) { const r = stick.getBoundingClientRect(); let dx = e.clientX - r.left - r.width / 2, dy = e.clientY - r.top - r.height / 2; const d = Math.hypot(dx, dy), m = r.width / 2 - 12; if (d > m) { dx *= m / d; dy *= m / d; } joy.x = dx / m; joy.y = dy / m; knob.style.transform = `translate(${dx}px,${dy}px)`; }
+let dragged = false; if (FARV) addEventListener('resize', () => { if (!dragged) pitch = innerWidth > innerHeight ? 0.42 : 0.72; });   // test link: turning the phone sideways gives the look-ahead camera
 let look = null; R3.domElement.addEventListener('pointerdown', e => { look = { id: e.pointerId, x: e.clientX, y: e.clientY }; });
-addEventListener('pointermove', e => { if (!look || e.pointerId !== look.id) return; yaw -= (e.clientX - look.x) * 0.006; pitch = Math.min(1.15, Math.max(0.3, pitch + (e.clientY - look.y) * 0.004)); look.x = e.clientX; look.y = e.clientY; });
+addEventListener('pointermove', e => { if (!look || e.pointerId !== look.id) return; dragged = true; yaw -= (e.clientX - look.x) * 0.006; pitch = Math.min(1.15, Math.max(FARV ? 0.14 : 0.3, pitch + (e.clientY - look.y) * 0.004)); look.x = e.clientX; look.y = e.clientY; });
 addEventListener('pointerup', e => { if (look && e.pointerId === look.id) look = null; });
 let running = false; $('czRun').onclick = () => { running = !running; $('czRun').setAttribute('aria-pressed', running); };
 
@@ -586,7 +604,7 @@ function frame() { if (hidden) return; requestAnimationFrame(frame);
     let d = a - me.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); me.root.rotation.y += d * Math.min(1, dt * 12); me.play(run ? 'sprint' : 'walk'); } else me.play('idle');
   if (!driving) { me.root.position.set(px, 0.12, pz); me.step(dt); }
   stream(px, pz, false); streamNature(px, pz, false);
-  const dist = (innerWidth > innerHeight ? 24 : 30) * (driving ? 1.25 : 1), cp = Math.cos(pitch);
+  const dist = (innerWidth > innerHeight ? (FARV ? LDIST : 24) : 30) * (driving ? 1.25 : 1), cp = Math.cos(pitch);
   camPos.set(px - Math.sin(yaw) * dist * cp, 1.5 + Math.sin(pitch) * dist, pz - Math.cos(yaw) * dist * cp);
   if (first) { CAM.position.copy(camPos); first = false; } else CAM.position.lerp(camPos, Math.min(1, dt * 5));
   camLook.set(px, 1.6, pz); CAM.lookAt(camLook);
@@ -607,5 +625,5 @@ CZ.inspect = (x, z) => { const k = tkey(x, z), list = tilePlaces.get(k) || [], p
   const topShapes = {}; for (const i of list) { const id = PL.s[i]; topShapes[id] = (topShapes[id] || 0) + shapes[id].n / 3; }
   const top = Object.entries(topShapes).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id, t]) => id + ':' + Math.round(t) + 't/' + shapes[id].n / 3 + 'per r' + shapes[id].r.toFixed(1));
   return JSON.stringify({ placeTris: Math.round(pl), pieceTris: Math.round(pc), places: list.length, bySize, piecesByBucket: byB, top }); };
-CZ.api = { drive: () => enterCar(), out: () => leaveCar(), car: () => [CAR.x, CAR.z, CAR.a, CAR.v], keys, go: (x, z, y) => { px = x; pz = z; if (y != null) yaw = y; first = true; stream(px, pz, true); streamNature(px, pz, true); }, setTime: h => { fixedHour = h; tick(); }, renderer: R3, tiles, scene: S3 };
+CZ.api = { pitch: v => { pitch = v; first = true; }, cam: (f, d) => { LFOV = f; LDIST = d; CAM.fov = camFov(); CAM.updateProjectionMatrix(); first = true; }, drive: () => enterCar(), out: () => leaveCar(), car: () => [CAR.x, CAR.z, CAR.a, CAR.v], keys, go: (x, z, y) => { px = x; pz = z; if (y != null) yaw = y; first = true; stream(px, pz, true); streamNature(px, pz, true); }, setTime: h => { fixedHour = h; tick(); }, renderer: R3, tiles, scene: S3 };
 })().catch(e => { console.error('cozy', e); const l = document.getElementById('czLt'); if (l) l.textContent = 'Could not build: ' + e.message; });
