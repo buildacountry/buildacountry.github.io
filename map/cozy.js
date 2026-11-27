@@ -199,14 +199,16 @@ function lowShape(S, cell = LOCELL, key = 'lo') {   // the same shape with its c
   return (S[key] = { P: P2.subarray(0, o * 3), C: C2 ? C2.subarray(0, o * 3) : null, U: null, n: o, r: S.r }); }
 // what the ground is, metre by metre, in each square: 1 = grass (green), 2 = anything else (sand, paving, plaza, water). Nature only grows on 1.
 const ground = new Map();
-function rasterGround(Gr, Hy, ox, oz, ax, ay, az, bx, by, bz, cx, cy, cz, r, g, b) {
+function rasterGround(Gr, Hy, ox, oz, ax, ay, az, bx, by, bz, cx, cy, cz, r, g, b, wet) {
   if (Math.max(ay, by, cy) > 0.7) return; const ux = bx - ax, uz = bz - az, vx = cx - ax, vz = cz - az, den = ux * vz - uz * vx; if (Math.abs(den) < 1e-6) return;
   const ny = ((by - ay) * vz - (bz - az) * (cy - ay)); // only roughly flat faces matter; steep ones are walls
   if (Math.abs((by - ay)) > 0.3 || Math.abs(cy - ay) > 0.3) return;
-  const grassy = g > r * 1.04 && g > b * 1.15 ? 1 : 2, y = (ay + by + cy) / 3;
+  const grassy = wet && FARV ? 3 : g > r * 1.04 && g > b * 1.15 ? 1 : 2, y = (ay + by + cy) / 3;   // 3 = water (test link: you can't walk on it)
   const i0 = Math.max(0, Math.floor(Math.min(ax, bx, cx) - ox)), i1 = Math.min(TILE - 1, Math.floor(Math.max(ax, bx, cx) - ox)), j0 = Math.max(0, Math.floor(Math.min(az, bz, cz) - oz)), j1 = Math.min(TILE - 1, Math.floor(Math.max(az, bz, cz) - oz));
   for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const px = ox + i + 0.5 - ax, pz = oz + j + 0.5 - az, s1 = (px * vz - pz * vx) / den, s2 = (ux * pz - uz * px) / den; if (s1 < -0.01 || s2 < -0.01 || s1 + s2 > 1.01) continue;
     const c = j * TILE + i; if (y >= Hy[c]) { Hy[c] = y; Gr[c] = grassy; } } }
+const onRoad = (x, z) => ROADS.some(([w, d, rx, rz]) => Math.abs(x - rx) <= w / 2 + 0.6 && Math.abs(z - rz) <= d / 2 + 0.6);   // a road over water is a bridge
+const wetAt = (x, z) => { const k = tkey(x, z), Gr = ground.get(k); return !!Gr && Gr[Math.floor(z - kZ(k) * TILE) * TILE + Math.floor(x - kX(k) * TILE)] === 3 && !onRoad(x, z); };
 function buildTile(k, lod) {
   const ox = kX(k) * TILE, oz = kZ(k) * TILE;
   const all = tilePlaces.get(k) || [], pieces = chunks.get(k) || [];
@@ -233,8 +235,8 @@ function buildTile(k, lod) {
     if ((b === B_GLASS || b === B_WARM) && (ay + by + cy) / 3 >= LOWGLASS || b === B_LAMP) addGlow((ax + bx + cx) / 3, (ay + by + cy) / 3, (az + bz + cz) / 3); };
   const UV = new Float32Array(6);
   const Gr = new Uint8Array(TILE * TILE), Hy = new Float32Array(TILE * TILE).fill(-9);
-  if (!L2) for (const p of huge) { if (p.b >= B_TEX) continue; const P = p.P, C = p.C; for (let t = 0; t < P.length / 3; t += 3) rasterGround(Gr, Hy, ox, oz, P[t * 3], P[t * 3 + 1], P[t * 3 + 2], P[t * 3 + 3], P[t * 3 + 4], P[t * 3 + 5], P[t * 3 + 6], P[t * 3 + 7], P[t * 3 + 8], C[t * 3], C[t * 3 + 1], C[t * 3 + 2]); }
-  const put0 = put; const putG = (b, ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1, ...rest) => { if (b === B_MAIN || b === B_MAIND || b === B_WATER) rasterGround(Gr, Hy, ox, oz, ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1); put0(b, ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1, ...rest); };
+  if (!L2) for (const p of huge) { if (p.b >= B_TEX) continue; const P = p.P, C = p.C; for (let t = 0; t < P.length / 3; t += 3) rasterGround(Gr, Hy, ox, oz, P[t * 3], P[t * 3 + 1], P[t * 3 + 2], P[t * 3 + 3], P[t * 3 + 4], P[t * 3 + 5], P[t * 3 + 6], P[t * 3 + 7], P[t * 3 + 8], C[t * 3], C[t * 3 + 1], C[t * 3 + 2], p.b === B_WATER); }
+  const put0 = put; const putG = (b, ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1, ...rest) => { if (b === B_MAIN || b === B_MAIND || b === B_WATER) rasterGround(Gr, Hy, ox, oz, ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1, b === B_WATER); put0(b, ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1, ...rest); };
   for (const i of list) { const sid = PL.s[i], b = PL.b[i], rgb = PL.c[i], S = shapeFor(i), q = i * 12, m = PL.m; MM.set(m[q], m[q + 3], m[q + 6], m[q + 9], m[q + 1], m[q + 4], m[q + 7], m[q + 10], m[q + 2], m[q + 5], m[q + 8], m[q + 11], 0, 0, 0, 1); const flip = MM.determinant() < 0, e = MM.elements;
     const lc = L2 && L2C[b], R = lc ? lc[0] : rgb >> 16 & 255, G = lc ? lc[1] : rgb >> 8 & 255, Bc = lc ? lc[2] : rgb & 255, putP = L2 ? put0 : putG, bb = bk(b);
     for (let t = 0; t < S.n; t += 3) { const ia = t, ib = flip ? t + 2 : t + 1, ic = flip ? t + 1 : t + 2, P = S.P;
@@ -285,7 +287,7 @@ function wanted(px, pz) { const out = []; const r = Math.ceil(FAR / TILE) + 1, c
   return out.sort((a, b) => a[1] - b[1]); }
 function stream(px, pz, all) { const w = wanted(px, pz), need = new Set(w.map(a => a[0])); let n = 0;
   for (const [k, d] of w) { const want = d < NEAR ? 0 : d < VIEW ? 1 : 2, have = tiles.get(k);
-    if (have === null || (have && have.userData.lod === want)) continue; if (!have && !tilePlaces.has(k) && !chunks.has(k)) { if (want === 2) continue; tiles.set(k, null); if (!ground.has(k)) { const ox = kX(k) * TILE, oz = kZ(k) * TILE, Gr = new Uint8Array(TILE * TILE), Hy = new Float32Array(TILE * TILE).fill(-9); for (const p of huge) { if (p.b >= B_TEX) continue; const P = p.P, C = p.C; for (let t = 0; t < P.length / 3; t += 3) rasterGround(Gr, Hy, ox, oz, P[t * 3], P[t * 3 + 1], P[t * 3 + 2], P[t * 3 + 3], P[t * 3 + 4], P[t * 3 + 5], P[t * 3 + 6], P[t * 3 + 7], P[t * 3 + 8], C[t * 3], C[t * 3 + 1], C[t * 3 + 2]); } ground.set(k, Gr); } continue; }
+    if (have === null || (have && have.userData.lod === want)) continue; if (!have && !tilePlaces.has(k) && !chunks.has(k)) { if (want === 2) continue; tiles.set(k, null); if (!ground.has(k)) { const ox = kX(k) * TILE, oz = kZ(k) * TILE, Gr = new Uint8Array(TILE * TILE), Hy = new Float32Array(TILE * TILE).fill(-9); for (const p of huge) { if (p.b >= B_TEX) continue; const P = p.P, C = p.C; for (let t = 0; t < P.length / 3; t += 3) rasterGround(Gr, Hy, ox, oz, P[t * 3], P[t * 3 + 1], P[t * 3 + 2], P[t * 3 + 3], P[t * 3 + 4], P[t * 3 + 5], P[t * 3 + 6], P[t * 3 + 7], P[t * 3 + 8], C[t * 3], C[t * 3 + 1], C[t * 3 + 2], p.b === B_WATER); } ground.set(k, Gr); } continue; }
     if (all && want === 2) continue;   // far squares come in one per frame after the start, so loading is not slower
     if (have) dropTile(k); buildTile(k, want); if (!all && ++n >= 1) break; }
   for (const k of [...tiles.keys()]) { const g = tiles.get(k); if (FARV && g) g.visible = need.has(k);   // squares past the haze stay ready but are not drawn
@@ -302,7 +304,7 @@ function stream(px, pz, all) { const w = wanted(px, pz), need = new Set(w.map(a 
   const MD = window.VIN_MAPDATA || {}, paved = [...(MD.flat || []).filter(f => f[0] !== 'g').map(f => [f[1], f[2], f[1] + f[3], f[2] + f[4]]), ...(MD.places || []).filter(p => p[0]).map(p => [p[1], p[2], p[1] + p[3], p[2] + p[4]]), ...(MD.slots || []).map(([x, z]) => [x - 7, z - 7, x + 7, z + 7])], pavedAt = hash(16, paved, 2);
   const homeBoxes = homes.filter(h => h.status !== 'abandoned').map(h => [h.x - 6, h.z - 6, h.x + 6, h.z + 6]), homesAt = hash(16, homeBoxes, 1);
   const plotBoxes = (typeof PLOTS !== 'undefined' ? PLOTS : []).map(p => [p[0] - 7, p[1] - 7, p[0] + 7, p[1] + 7]), plotsAt = hash(16, plotBoxes, 1);
-  const greenAt = (x, z) => { const k = tkey(x, z), Gr = ground.get(k); if (!Gr) return false; const i = Math.floor(x - kX(k) * TILE), j = Math.floor(z - kZ(k) * TILE); return Gr[j * TILE + i] !== 2; };   // 0 = only the textured grass sheet underneath: grass
+  const greenAt = (x, z) => { const k = tkey(x, z), Gr = ground.get(k); if (!Gr) return false; const i = Math.floor(x - kX(k) * TILE), j = Math.floor(z - kZ(k) * TILE); return Gr[j * TILE + i] < 2; };   // 0 = only the textured grass sheet underneath: grass
   CZ.greenAt = greenAt; CZ._hugeDbg = () => JSON.stringify(huge.map(p => { let mx = [1e9, -1e9, 1e9, -1e9, 1e9, -1e9]; for (let i = 0; i < p.P.length; i += 3) { mx[0] = Math.min(mx[0], p.P[i]); mx[1] = Math.max(mx[1], p.P[i]); mx[2] = Math.min(mx[2], p.P[i + 1]); mx[3] = Math.max(mx[3], p.P[i + 1]); mx[4] = Math.min(mx[4], p.P[i + 2]); mx[5] = Math.max(mx[5], p.P[i + 2]); } return [p.b, p.P.length / 9, Array.from(p.C.slice(0, 3)), mx.map(Math.round)]; }).filter(h => h[3][2] > 0.1 || h[2][0] > 240)); CZ.pieceDbg = (x, z) => JSON.stringify((chunks.get(tkey(x, z)) || []).map(p => [p.b, p.P.length / 9, Array.from(p.C.slice(0, 9)), Array.from(p.P.slice(0, 3)).map(v => +v.toFixed(2))]).slice(0, 12)); CZ.groundStats = (x, z) => { const Gr = ground.get(tkey(x, z)); if (!Gr) return 'no ground'; let a = 0, b = 0, c = 0; Gr.forEach(v => v === 1 ? a++ : v === 2 ? b++ : c++); return { green: a, other: b, none: c }; };
   const okSmall = (x, z) => greenAt(x, z) && freeAt(x, z) && !inBox(roadsAt(x, z), x, z, 1.6) && !inBox(pavedAt(x, z), x, z, 0.5) && !inBox(homesAt(x, z), x, z, 0.5);
   const okTree = (x, z) => okSmall(x, z) && !inBox(roadsAt(x, z), x, z, 4.5) && !inBox(plotsAt(x, z), x, z, 2.5) && freeAt(x + 1.5, z) && freeAt(x - 1.5, z) && freeAt(x, z + 1.5) && freeAt(x, z - 1.5);
@@ -336,7 +338,10 @@ function stream(px, pz, all) { const w = wanted(px, pz), need = new Set(w.map(a 
   //  - lawns in town: kept clean, with now and then one neat round flower bed
   const parkRects = (MD.flat || []).filter(f => f[0] === 'g').map(f => [f[1], f[2], f[1] + f[3], f[2] + f[4]]), parksAt = hash(32, parkRects, 0);
   const inPark = (x, z) => inBox(parksAt(x, z), x, z, -1);
+  const CIVIC = /^(School|Library|Hospital|Mall|Parliament|Embassy|Central Bank|Police HQ|Fire Station|Transport Hub|Beach Resort|Vinland National Stadium)$/;
+  const bigRects = (MD.places || []).filter(p => CIVIC.test(p[0])).map(p => [p[1], p[2], p[1] + p[3], p[2] + p[4]]), bigAt = hash(32, bigRects, 32);
   const wild = (x, z) => !inBox(plotsAt(x, z), x, z, 15) && !inBox(homesAt(x, z), x, z, 15);
+  const kept = (x, z) => FARV && inBox(bigAt(x, z), x, z, 30);   // test link: land around the big civic buildings is a kept lawn, no wild groves
   CZ.groves = new Map();   // grove centres per square: where butterflies and fireflies gather
   const CELL = 15;
   CZ.nature = (k, ox, oz, put) => { let sd = (k * 2654435761) >>> 0 || 1; const rnd = () => (sd = (sd * 1664525 + 1013904223) >>> 0) / 4294967296; const groves = [];
@@ -344,7 +349,7 @@ function stream(px, pz, all) { const w = wanted(px, pz), need = new Set(w.map(a 
     for (let x = ox; x < ox + TILE; x += CELL) for (let z = oz; z < oz + TILE; z += CELL) {
       const cx = x + 2 + rnd() * (CELL - 4), cz = z + 2 + rnd() * (CELL - 4), roll = rnd();
       if (Math.abs(cx) > 7800 || cz < COAST.shore + 14 || !greenAt(cx, cz)) continue;
-      const park = inPark(cx, cz), open = !park && wild(cx, cz);
+      const town = kept(cx, cz), park = !town && inPark(cx, cz), open = !town && !park && wild(cx, cz);
       if (park || open) {
         if (roll > (park ? 0.78 : 0.5)) continue;
         let trees = 0; const nT = 1 + Math.floor(rnd() * 3);
@@ -465,7 +470,7 @@ function drawSmoke(dt) { if (RM) return; smokeT += dt;
 const hashS = t => { let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
 const donorOf = u => DONORS[hashS(u || 'x') % DONORS.length];
 const UPV3 = new T.Vector3(0, 1, 0), spots = [];
-try { shops.forEach(s => { if (!s.owner) return; const o = new T.Vector3(1.9, 0, 3.6).applyAxisAngle(UPV3, s.ry || 0); spots.push({ x: s.x + o.x, z: s.z + o.z, ry: (s.ry || 0) + 0.25, user: s.owner.user, role: s.job || 'Shop owner', pose: 'idle' });
+try { shops.forEach(s => { if (!s.owner) return; const o = new T.Vector3(1.9, 0, 3.6).applyAxisAngle(UPV3, s.ry || 0); spots.push({ x: s.x + o.x, z: s.z + o.z, ry: (s.ry || 0) + 0.25, user: s.owner.user, role: s.job || 'Shop owner', pose: 'idle', own: !!s.el });
   (s.staff || []).forEach((w, j) => { const q = new T.Vector3(j ? 3.2 : -1.9, 0, j ? 4.2 : 3.6).applyAxisAngle(UPV3, s.ry || 0); spots.push({ x: s.x + q.x, z: s.z + q.z, ry: (s.ry || 0) - 0.3, user: w.user, role: 'works here', pose: 'idle' }); }); }); } catch (e) {}
 try { (standers || []).forEach(st => spots.push({ x: st.x, z: st.z, ry: 0, user: st.h.user, role: 'Police', pose: 'idle' })); } catch (e) {}
 const activeUsers = homes.filter(h => h.status === 'active' && h.user).map(h => h.user);
@@ -498,7 +503,7 @@ function stepPeople(dt) {
 const ppl = document.createElement('style'); ppl.textContent = '#czTags div.npc { background: rgba(255,250,240,.85); font-size: 11px; font-weight: 600; } #czTags div.npc i { font-style: normal; opacity: .65; margin-left: 4px; }'; document.head.appendChild(ppl);
 const npcPool = []; for (let i = 0; i < 8; i++) { const d = document.createElement('div'); d.className = 'npc'; d.hidden = true; tagsEl.appendChild(d); npcPool.push(d); }
 function drawPeopleTags() { const list = [];
-  for (const [sp, c] of placed) list.push([Math.hypot(sp.x - px, sp.z - pz), c.root.position, '@' + sp.user, sp.role]);
+  for (const [sp, c] of placed) if (!(FARV && sp.own)) list.push([Math.hypot(sp.x - px, sp.z - pz), c.root.position, '@' + sp.user, sp.role]);
   for (const w of walkersK) if (w.c) list.push([Math.hypot(w.c.root.position.x - px, w.c.root.position.z - pz), w.c.root.position, '@' + w.user, '']);
   list.sort((a, b) => a[0] - b[0]); let k = 0;
   for (const [d, p, name, role] of list) { if (k >= npcPool.length || d > 26) break; PV.set(p.x, p.y + 2.6, p.z).project(CAM); if (PV.z > 1 || Math.abs(PV.x) > 1.05 || Math.abs(PV.y) > 1.05) continue;
@@ -604,7 +609,8 @@ function frame() { if (hidden) return; requestAnimationFrame(frame);
   const ix = joy.x + ((keys.d || keys.arrowright) ? 1 : 0) - ((keys.a || keys.arrowleft) ? 1 : 0), iz = joy.y + ((keys.s || keys.arrowdown) ? 1 : 0) - ((keys.w || keys.arrowup) ? 1 : 0), mag = Math.min(1, Math.hypot(ix, iz));
   if (driving) stepCar(dt, ix, iz);
   else if (mag > 0.1) { const run = running || keys.shift, a = Math.atan2(ix, iz) + yaw + Math.PI, s = (run ? 9 : 4.6) * mag, nx = px + Math.sin(a) * s * dt, nz = pz + Math.cos(a) * s * dt;
-    if (freeAt(nx, nz)) { px = nx; pz = nz; } else if (freeAt(nx, pz)) px = nx; else if (freeAt(px, nz)) pz = nz;
+    const okAt = FARV && !wetAt(px, pz) ? (x, z) => freeAt(x, z) && !wetAt(x, z) : freeAt;   // test link: no walking on water
+    if (okAt(nx, nz)) { px = nx; pz = nz; } else if (okAt(nx, pz)) px = nx; else if (okAt(px, nz)) pz = nz;
     let d = a - me.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); me.root.rotation.y += d * Math.min(1, dt * 12); me.play(run ? 'sprint' : 'walk'); } else me.play('idle');
   if (!driving) { me.root.position.set(px, 0.12, pz); me.step(dt); }
   stream(px, pz, false); streamNature(px, pz, false);
@@ -629,5 +635,5 @@ CZ.inspect = (x, z) => { const k = tkey(x, z), list = tilePlaces.get(k) || [], p
   const topShapes = {}; for (const i of list) { const id = PL.s[i]; topShapes[id] = (topShapes[id] || 0) + shapes[id].n / 3; }
   const top = Object.entries(topShapes).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id, t]) => id + ':' + Math.round(t) + 't/' + shapes[id].n / 3 + 'per r' + shapes[id].r.toFixed(1));
   return JSON.stringify({ placeTris: Math.round(pl), pieceTris: Math.round(pc), places: list.length, bySize, piecesByBucket: byB, top }); };
-CZ.api = { pitch: v => { pitch = v; first = true; }, cam: (f, d) => { LFOV = f; LDIST = d; CAM.fov = camFov(); CAM.updateProjectionMatrix(); first = true; }, drive: () => enterCar(), out: () => leaveCar(), car: () => [CAR.x, CAR.z, CAR.a, CAR.v], keys, go: (x, z, y) => { px = x; pz = z; if (y != null) yaw = y; first = true; stream(px, pz, true); streamNature(px, pz, true); }, setTime: h => { fixedHour = h; tick(); }, renderer: R3, tiles, scene: S3 };
+CZ.api = { pos: () => [Math.round(px * 10) / 10, Math.round(pz * 10) / 10], probe: (x, z) => (wetAt(x, z) ? 'W' : '') + (freeAt(x, z) ? '' : 'X') + (CZ.greenAt && CZ.greenAt(x, z) ? 'g' : '') + '.', pitch: v => { pitch = v; first = true; }, cam: (f, d) => { LFOV = f; LDIST = d; CAM.fov = camFov(); CAM.updateProjectionMatrix(); first = true; }, drive: () => enterCar(), out: () => leaveCar(), car: () => [CAR.x, CAR.z, CAR.a, CAR.v], keys, go: (x, z, y) => { px = x; pz = z; if (y != null) yaw = y; first = true; stream(px, pz, true); streamNature(px, pz, true); }, setTime: h => { fixedHour = h; tick(); }, renderer: R3, tiles, scene: S3 };
 })().catch(e => { console.error('cozy', e); const l = document.getElementById('czLt'); if (l) l.textContent = 'Could not build: ' + e.message; });
