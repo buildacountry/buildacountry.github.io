@@ -140,7 +140,7 @@ if (FARV) { const SC = T.ShaderChunk, V = 'varying float fogDepth;', ch = {
     fog_pars_fragment: SC.fog_pars_fragment.replace(V, V + ' varying vec3 vFogPos;'), fog_fragment: SC.fog_fragment.replace(/fogDepth/g, 'length( vFogPos )') };
   if (Object.keys(ch).every(k => ch[k] !== SC[k])) Object.assign(SC, ch); }
 const R3 = new T.WebGLRenderer({ antialias: !PH, powerPreference: 'high-performance' });
-R3.setPixelRatio(Math.min(devicePixelRatio, PH ? 1.5 : 2)); R3.setSize(innerWidth, innerHeight);
+R3.setPixelRatio(Math.min(devicePixelRatio, PH ? (FARV ? 1.25 : 1.5) : 2));   // test link: phones draw a little less sharp (fewer pixels to fill, hard to see on a small screen) R3.setSize(innerWidth, innerHeight);
 R3.outputEncoding = T.sRGBEncoding; R3.toneMapping = T.NoToneMapping;
 R3.shadowMap.enabled = !PH; R3.shadowMap.type = T.PCFSoftShadowMap;
 root.prepend(R3.domElement);
@@ -150,8 +150,8 @@ const lin = h => new T.Color(h).convertSRGBToLinear();
 // far view (Dev, 27 Nov: the old 165 m haze felt like a "gas chamber"). Squares out to VIEW are built in full;
 // from VIEW out to FAR they are built as cheap outlines (big shapes only, corners snapped, one mesh per square).
 const VIEW = PH ? 165 : 215;   // squares within this distance are built in full
-const FAR = FARV ? (PH ? 430 : 560) : VIEW;    // far squares out to here (test link only for now)
-S3.fog = FARV ? new T.Fog(0xb6d8ef, PH ? 150 : 190, FAR + 10) : new T.Fog(0xb6d8ef, PH ? 85 : 110, PH ? 165 : 205);
+const FAR = FARV ? (PH ? 380 : 560) : VIEW;    // far squares out to here (test link only for now)
+S3.fog = FARV ? new T.Fog(0xb6d8ef, PH ? 140 : 190, FAR + 10) : new T.Fog(0xb6d8ef, PH ? 85 : 110, PH ? 165 : 205);
 // one material for everything solid; vertex colours are stored as small sRGB bytes and made linear in the shader
 const srgbColors = m => { m.onBeforeCompile = s => { s.vertexShader = s.vertexShader.replace('#include <color_vertex>', '#include <color_vertex>\n#ifdef USE_COLOR\nvColor.rgb = pow(color.rgb, vec3(2.2));\n#endif'); }; return m; };
 const MAT = o => srgbColors(PH ? new T.MeshLambertMaterial(o) : new T.MeshStandardMaterial(Object.assign({ roughness: 0.86, metalness: 0, flatShading: true }, o)));
@@ -286,10 +286,12 @@ huge.forEach(p => { const g = new T.BufferGeometry(); g.setAttribute('position',
 function wanted(px, pz) { const out = []; const r = Math.ceil(FAR / TILE) + 1, cx = Math.floor(px / TILE), cz = Math.floor(pz / TILE);
   for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++) { const x0 = (cx + i) * TILE, z0 = (cz + j) * TILE, dx = Math.max(x0 - px, 0, px - x0 - TILE), dz = Math.max(z0 - pz, 0, pz - z0 - TILE), d = Math.hypot(dx, dz); if (d < FAR) out.push([kOf(cx + i, cz + j), d]); }
   return out.sort((a, b) => a[1] - b[1]); }
-function stream(px, pz, all) { const w = wanted(px, pz), need = new Set(w.map(a => a[0])); let n = 0;
+let streamN = 0;
+function stream(px, pz, all) { const w = wanted(px, pz), need = new Set(w.map(a => a[0])); let n = 0; streamN++;
   for (const [k, d] of w) { const want = d < NEAR ? 0 : d < VIEW ? 1 : 2, have = tiles.get(k);
     if (have === null || (have && have.userData.lod === want)) continue; if (!have && !tilePlaces.has(k) && !chunks.has(k)) { if (want === 2) continue; tiles.set(k, null); if (!ground.has(k)) { const ox = kX(k) * TILE, oz = kZ(k) * TILE, Gr = new Uint8Array(TILE * TILE), Hy = new Float32Array(TILE * TILE).fill(-9); for (const p of huge) { if (p.b >= B_TEX) continue; const P = p.P, C = p.C; for (let t = 0; t < P.length / 3; t += 3) rasterGround(Gr, Hy, ox, oz, P[t * 3], P[t * 3 + 1], P[t * 3 + 2], P[t * 3 + 3], P[t * 3 + 4], P[t * 3 + 5], P[t * 3 + 6], P[t * 3 + 7], P[t * 3 + 8], C[t * 3], C[t * 3 + 1], C[t * 3 + 2], p.b === B_WATER); } ground.set(k, Gr); } continue; }
     if (all && want === 2) continue;   // far squares come in one per frame after the start, so loading is not slower
+    if (want === 2 && streamN % 3) break;   // and at most one every 3 frames, so walking doesn't stutter (everything nearer is already done: the list is nearest first)
     if (have) dropTile(k); buildTile(k, want); if (!all && ++n >= 1) break; }
   for (const k of [...tiles.keys()]) { const g = tiles.get(k); if (FARV && g) g.visible = need.has(k);   // squares past the haze stay ready but are not drawn
     if (need.has(k)) continue; const kx = kX(k), kz = kZ(k); const dx = Math.max(kx * TILE - px, 0, px - kx * TILE - TILE), dz = Math.max(kz * TILE - pz, 0, pz - kz * TILE - TILE); if (Math.hypot(dx, dz) > FAR + 140) { if (tiles.get(k)) dropTile(k); else tiles.delete(k); } } }
@@ -386,6 +388,7 @@ function applyTime(h) { let i = 0; while (i < TOD.length - 2 && TOD[i + 1][0] <=
   night = A[9] + (B[9] - A[9]) * t; S3.fog.color.copy(skyU.bot.value).lerp(skyU.mid.value, 0.35);
   MS[B_GLASS].color.copy(lin('#2c3644')).lerp(lin('#ffcc73'), night); MS[B_WARM].color.copy(lin('#e8b45e')).lerp(lin('#ffd890'), night); MS[B_LAMP].color.copy(lin('#f6d27a')).lerp(lin('#fff0c0'), night); MS[B_WATER].color.copy(lin('#3fa3c4')).lerp(lin('#1f4a78'), night);
   glowMat.opacity = 0.12 + 0.88 * night; stars.material.opacity = Math.max(0, night - 0.3) / 0.7;
+  if (FARV) { glowMat.visible = night > 0.04; stars.visible = stars.material.opacity > 0; }   // test link: by day the window glow and stars are not drawn at all (one less draw per square)
   const day = h > 6.2 && h < 18.1, a = Math.min(1, Math.max(0, (h - 6.4) / 11.5)) * Math.PI; SUND.set(day ? -Math.cos(a) : 0.35, day ? Math.max(0.12, Math.sin(a)) : 0.85, day ? 0.35 : -0.4).normalize();
   disc.material.color.set(day ? '#fff1c8' : '#dfe6ff'); disc.scale.setScalar(day ? 80 : 46);
   $('czIco').textContent = night > 0.6 ? '🌙' : (h > 16.5 && h < 18.5) || (h > 5.5 && h < 7.5) ? '🌇' : '☀️'; }
