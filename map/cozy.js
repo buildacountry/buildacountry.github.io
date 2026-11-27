@@ -40,7 +40,9 @@ const $ = id => document.getElementById(id), lt = $('czLt');
 const t0 = performance.now();
 while (!(LIFE.on || performance.now() - t0 > 9000)) await wait(250);
 await wait(1200);
-if (!WALK.grid) { try { buildWalkGrid(); } catch (e) { console.warn('cozy: walk grid', e); } }   // the map's own "where can you walk" rule, built before we take its meshes away
+try { const t0 = performance.now(); buildWalkGrid({ step: 0.85, slopes: true }); console.log('cozy: walk grid ' + Math.round(performance.now() - t0) + ' ms'); } catch (e) { console.warn('cozy: walk grid', e); }   // the map's own "where can you walk" rule, built before we take its meshes away. 27 Nov: plus grid2 for walking, where bridge ramps, pier decks and canal bridges (up to 0.85 m) are not walls
+const G2 = WALK.grid2, blocked2 = (x, z) => { if (x < BUILT.x0 || x > BUILT.x1 || z < COAST.shore + 6 || z > BUILT.z1) return true; if (!G2) return blockedAt(x, z); const i = Math.floor((x - WG.x0) / WG.s), j = Math.floor((z - WG.z0) / WG.s); return i < 0 || j < 0 || i >= WG.w || j >= WG.h || G2[j * WG.w + i] === 1; };
+const walkFree = (x, z) => !blocked2(x - RAD, z - RAD) && !blocked2(x + RAD, z - RAD) && !blocked2(x - RAD, z + RAD) && !blocked2(x + RAD, z + RAD) && !blocked2(x, z);   // you (the player) walk by grid2; trees, flowers and walkers keep the old grid   // the map's own "where can you walk" rule, built before we take its meshes away
 renderer.render = () => {};   // the map stops drawing: everything below is drawn by the cozy screen
 renderer.domElement.style.visibility = 'hidden';
 lt.textContent = 'cutting the country into squares';
@@ -201,6 +203,14 @@ function lowShape(S, cell = LOCELL, key = 'lo') {   // the same shape with its c
   return (S[key] = { P: P2.subarray(0, o * 3), C: C2 ? C2.subarray(0, o * 3) : null, U: null, n: o, r: S.r }); }
 // what the ground is, metre by metre, in each square: 1 = grass (green), 2 = anything else (sand, paving, plaza, water). Nature only grows on 1.
 const ground = new Map();
+const floors = new Map(), FNO = -32768, GND = 0.22, FM = 16, FW = TILE + 2 * FM;   // 27 Nov: per square, per 1 m: [highest floor up to 3.5 m, highest floor up to 0.6 m, water surface] in cm, so people walk ON bridges and piers (GND = normal ground)
+function rasterFloor(F, ox, oz, ax, ay, az, bx, by, bz, cx, cy, cz, water) {
+  if (Math.min(ay, by, cy) > 3.5) return; const ux = bx - ax, uy = by - ay, uz = bz - az, vx = cx - ax, vy = cy - ay, vz = cz - az, den = ux * vz - uz * vx;
+  if (Math.abs(den) < 1e-6 || Math.abs(den) / Math.hypot(uy * vz - uz * vy, den, ux * vy - uy * vx) < 0.8) return;   // only floors: walls and steep slopes don't count
+  const i0 = Math.max(-FM, Math.floor(Math.min(ax, bx, cx) - ox)), i1 = Math.min(TILE + FM - 1, Math.floor(Math.max(ax, bx, cx) - ox)), j0 = Math.max(-FM, Math.floor(Math.min(az, bz, cz) - oz)), j1 = Math.min(TILE + FM - 1, Math.floor(Math.max(az, bz, cz) - oz));   // 16 m past the square's edge: a bridge owned by the next square still counts here
+  for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const px = ox + i + 0.5 - ax, pz = oz + j + 0.5 - az, s1 = (px * vz - pz * vx) / den, s2 = (ux * pz - uz * px) / den; if (s1 < -0.01 || s2 < -0.01 || s1 + s2 > 1.01) continue;
+    const y = ay + s1 * uy + s2 * vy; if (y > 3.5) continue; const h = Math.round(y * 100), c = ((j + FM) * FW + i + FM) * 3;
+    if (water) { if (y <= 0.7 && h > F[c + 2]) F[c + 2] = h; } else { if (h > F[c]) F[c] = h; if (y <= 0.6 && h > F[c + 1]) F[c + 1] = h; } } }
 function rasterGround(Gr, Hy, ox, oz, ax, ay, az, bx, by, bz, cx, cy, cz, r, g, b, wet) {
   if (Math.max(ay, by, cy) > 0.7) return; const ux = bx - ax, uz = bz - az, vx = cx - ax, vz = cz - az, den = ux * vz - uz * vx; if (Math.abs(den) < 1e-6) return;
   const ny = ((by - ay) * vz - (bz - az) * (cy - ay)); // only roughly flat faces matter; steep ones are walls
@@ -210,7 +220,15 @@ function rasterGround(Gr, Hy, ox, oz, ax, ay, az, bx, by, bz, cx, cy, cz, r, g, 
   for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const px = ox + i + 0.5 - ax, pz = oz + j + 0.5 - az, s1 = (px * vz - pz * vx) / den, s2 = (ux * pz - uz * px) / den; if (s1 < -0.01 || s2 < -0.01 || s1 + s2 > 1.01) continue;
     const c = j * TILE + i; if (y >= Hy[c]) { Hy[c] = y; Gr[c] = grassy; } } }
 const onRoad = (x, z) => ROADS.some(([w, d, rx, rz]) => Math.abs(x - rx) <= w / 2 + 0.6 && Math.abs(z - rz) <= d / 2 + 0.6);   // a road over water is a bridge
-const wetAt = (x, z) => { const k = tkey(x, z), Gr = ground.get(k); return !!Gr && Gr[Math.floor(z - kZ(k) * TILE) * TILE + Math.floor(x - kX(k) * TILE)] === 3 && !onRoad(x, z); };
+const FLV = [0, 0, 0];
+const fget = (x, z) => { const tx = Math.floor(x / TILE), tz = Math.floor(z / TILE), lx = x - tx * TILE, lz = z - tz * TILE; let any = false; FLV[0] = FLV[1] = FLV[2] = FNO;   // floors here, from this square and any next square whose edge strip covers it
+  for (let dx = lx < FM ? -1 : 0; dx <= (lx >= TILE - FM ? 1 : 0); dx++) for (let dz = lz < FM ? -1 : 0; dz <= (lz >= TILE - FM ? 1 : 0); dz++) { const F = floors.get(kOf(tx + dx, tz + dz)); if (!F) continue; any = true;
+    const c = ((Math.floor(lz - dz * TILE) + FM) * FW + Math.floor(lx - dx * TILE) + FM) * 3; if (F[c] > FLV[0]) FLV[0] = F[c]; if (F[c + 1] > FLV[1]) FLV[1] = F[c + 1]; if (F[c + 2] > FLV[2]) FLV[2] = F[c + 2]; }
+  return any ? FLV : null; };
+const decked = (x, z) => { const f = fget(x, z); return !!f && f[0] > f[2] + 20; };   // a bridge or pier deck above the water: you can walk there
+const floor1 = (x, z, foot) => { const f = fget(x, z); if (!f) return GND; return f[0] !== FNO && f[0] <= (foot + 0.6) * 100 ? f[0] / 100 : f[1] !== FNO ? f[1] / 100 : GND; };   // the floor you can step onto here (up to 0.6 m up)
+const floorAt = (x, z, foot) => { const a = [floor1(x, z, foot), floor1(x + 1, z, foot), floor1(x - 1, z, foot), floor1(x, z + 1, foot), floor1(x, z - 1, foot)].sort((p, q) => p - q); return a[2]; };   // the middle of 5 cells: a bench or railing next to you doesn't lift or drop you, ramps still do
+const wetAt = (x, z) => { const k = tkey(x, z), Gr = ground.get(k); return !!Gr && Gr[Math.floor(z - kZ(k) * TILE) * TILE + Math.floor(x - kX(k) * TILE)] === 3 && !onRoad(x, z) && !decked(x, z); };
 function buildTile(k, lod) {
   const ox = kX(k) * TILE, oz = kZ(k) * TILE;
   const all = tilePlaces.get(k) || [], pieces = chunks.get(k) || [];
@@ -236,9 +254,10 @@ function buildTile(k, lod) {
     if (u && O.U) O.U.set(u, o * 2); O.o += 3;
     if ((b === B_GLASS || b === B_WARM) && (ay + by + cy) / 3 >= LOWGLASS || b === B_LAMP) addGlow((ax + bx + cx) / 3, (ay + by + cy) / 3, (az + bz + cz) / 3); };
   const UV = new Float32Array(6);
-  const Gr = new Uint8Array(TILE * TILE), Hy = new Float32Array(TILE * TILE).fill(-9);
+  const Gr = new Uint8Array(TILE * TILE), Hy = new Float32Array(TILE * TILE).fill(-9), F = L2 ? null : new Int16Array(FW * FW * 3).fill(FNO);
+  if (!L2) for (const p of huge) { if (p.b === B_GLASS || p.b === B_WARM || p.b === B_LAMP) continue; const P = p.P; for (let t = 0; t < P.length / 3; t += 3) rasterFloor(F, ox, oz, P[t * 3], P[t * 3 + 1], P[t * 3 + 2], P[t * 3 + 3], P[t * 3 + 4], P[t * 3 + 5], P[t * 3 + 6], P[t * 3 + 7], P[t * 3 + 8], p.b === B_WATER); }
   if (!L2) for (const p of huge) { if (p.b >= B_TEX) continue; const P = p.P, C = p.C; for (let t = 0; t < P.length / 3; t += 3) rasterGround(Gr, Hy, ox, oz, P[t * 3], P[t * 3 + 1], P[t * 3 + 2], P[t * 3 + 3], P[t * 3 + 4], P[t * 3 + 5], P[t * 3 + 6], P[t * 3 + 7], P[t * 3 + 8], C[t * 3], C[t * 3 + 1], C[t * 3 + 2], p.b === B_WATER); }
-  const put0 = put; const putG = (b, ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1, ...rest) => { if (b === B_MAIN || b === B_MAIND || b === B_WATER) rasterGround(Gr, Hy, ox, oz, ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1, b === B_WATER); put0(b, ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1, ...rest); };
+  const put0 = put; const putG = (b, ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1, ...rest) => { if (b !== B_GLASS && b !== B_WARM && b !== B_LAMP) rasterFloor(F, ox, oz, ax, ay, az, bx, by, bz, cx, cy, cz, b === B_WATER); if (b === B_MAIN || b === B_MAIND || b === B_WATER) rasterGround(Gr, Hy, ox, oz, ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1, b === B_WATER); put0(b, ax, ay, az, bx, by, bz, cx, cy, cz, r1, g1, b1, ...rest); };
   for (const i of list) { const sid = PL.s[i], b = PL.b[i], rgb = PL.c[i], S = shapeFor(i), q = i * 12, m = PL.m; MM.set(m[q], m[q + 3], m[q + 6], m[q + 9], m[q + 1], m[q + 4], m[q + 7], m[q + 10], m[q + 2], m[q + 5], m[q + 8], m[q + 11], 0, 0, 0, 1); const flip = MM.determinant() < 0, e = MM.elements;
     const lc = L2 && L2C[b], R = lc ? lc[0] : rgb >> 16 & 255, G = lc ? lc[1] : rgb >> 8 & 255, Bc = lc ? lc[2] : rgb & 255, putP = L2 ? put0 : putG, bb = bk(b);
     for (let t = 0; t < S.n; t += 3) { const ia = t, ib = flip ? t + 2 : t + 1, ic = flip ? t + 1 : t + 2, P = S.P;
@@ -266,7 +285,7 @@ function buildTile(k, lod) {
       const gf = new T.BufferGeometry(); gf.setAttribute('position', new T.BufferAttribute(F, 3)); gf.setAttribute('color', new T.BufferAttribute(FC, 3, true)); gf.computeVertexNormals(); const mf = new T.Mesh(gf, MS[b]); mf.receiveShadow = true; mf.userData.world = true; S3.add(mf); (tilesExtra.get(k) || tilesExtra.set(k, []).get(k)).push(mf); } }
   if (glow.size) { const gp = []; for (const [x, y, z] of glow.values()) gp.push((x - ox) * 100, y * 100, (z - oz) * 100); const gg = new T.BufferGeometry(); gg.setAttribute('position', new T.Float32BufferAttribute(gp, 3)); gg.computeBoundingSphere(); const pts = new T.Points(gg, glowMat); grp.add(pts); }
   grp.traverse(o => { o.matrixAutoUpdate = false; o.updateMatrix(); }); grp.updateMatrixWorld(true);
-  if (!L2) ground.set(k, Gr);
+  if (!L2) { ground.set(k, Gr); floors.set(k, F); } else floors.delete(k);
   grp.userData.lod = lod; S3.add(grp); tiles.set(k, grp); built++;
 }
 const tilesExtra = new Map();
@@ -281,7 +300,7 @@ function buildNature(k) { if (!ground.has(k)) return; const ox = kX(k) * TILE, o
 function streamNature(px, pz, all) { let n = 0; const r = Math.ceil(NVIEW / TILE) + 1, cx = Math.floor(px / TILE), cz = Math.floor(pz / TILE), need = new Set();
   for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++) { const x0 = (cx + i) * TILE, z0 = (cz + j) * TILE, d = Math.hypot(Math.max(x0 - px, 0, px - x0 - TILE), Math.max(z0 - pz, 0, pz - z0 - TILE)); if (d > NVIEW) continue; const k = kOf(cx + i, cz + j); need.add(k); if (!natTiles.has(k) && (all || n++ < 1)) buildNature(k); }
   for (const [k, m] of natTiles) { if (need.has(k)) continue; const d = Math.hypot(Math.max(kX(k) * TILE - px, 0, px - kX(k) * TILE - TILE), Math.max(kZ(k) * TILE - pz, 0, pz - kZ(k) * TILE - TILE)); if (d > NVIEW + 90) { if (m) { S3.remove(m); m.geometry.dispose(); } natTiles.delete(k); } } }
-function dropTile(k) { ground.delete(k); const g = tiles.get(k); if (!g) return; S3.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); tiles.delete(k); (tilesExtra.get(k) || []).forEach(m => { S3.remove(m); m.geometry.dispose(); }); tilesExtra.delete(k); }
+function dropTile(k) { ground.delete(k); floors.delete(k); const g = tiles.get(k); if (!g) return; S3.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); tiles.delete(k); (tilesExtra.get(k) || []).forEach(m => { S3.remove(m); m.geometry.dispose(); }); tilesExtra.delete(k); }
 // giant triangles (the ground under everything, the sea): one mesh each, always drawn
 huge.forEach(p => { const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(p.P, 3)); g.setAttribute('color', new T.BufferAttribute(p.C, 3, true)); if (p.U) g.setAttribute('uv', new T.BufferAttribute(p.U, 2)); g.computeVertexNormals(); const m = new T.Mesh(g, MS[p.b] || MS[B_MAIN]); m.receiveShadow = true; S3.add(m); });
 function wanted(px, pz) { const out = []; const r = Math.ceil(FAR / TILE) + 1, cx = Math.floor(px / TILE), cz = Math.floor(pz / TILE);
@@ -424,7 +443,8 @@ function makeCitizen(donor, shadow) { const base = lib.anim, r = base.scene.clon
 const me = makeCitizen('female-b', true);
 let px = 0, pz = 30, yaw = Math.PI, pitch = FARV && innerWidth > innerHeight ? 0.42 : 0.72; me.root.rotation.y = Math.PI;
 { const want = (QS.get('visit') || '').replace(/^@/, '').toLowerCase(), h = want && homes.find(x => (x.user || '').toLowerCase() === want); if (h) { px = h.x; pz = h.z + 9; } const f = nearestFree(px, pz); px = f[0]; pz = f[1]; }
-const keys = {}; addEventListener('keydown', e => keys[e.key.toLowerCase()] = true); addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+const keys = {}; addEventListener('blur', () => { for (const k in keys) keys[k] = false; });   // 27 Nov: a key held while you switch windows (or take a screenshot) no longer stays pressed
+addEventListener('keydown', e => keys[e.key.toLowerCase()] = true); addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 const stick = $('czStick'), knob = $('czKnob'), joy = { x: 0, y: 0, id: null };
 stick.addEventListener('pointerdown', e => { joy.id = e.pointerId; stick.setPointerCapture(e.pointerId); mj(e); });
 stick.addEventListener('pointermove', e => { if (e.pointerId === joy.id) mj(e); });
@@ -539,7 +559,7 @@ function enterCar() { try { driveRoads(); } catch (e) {} if (!DRV.grid || !makeC
   const parked = car.visible && Math.hypot(CAR.x - px, CAR.z - pz) < 7 && car.userData.placed;
   if (!parked) { const sp = nearestRoadSpot(px, pz); if (!sp || Math.hypot(sp[0] - px, sp[1] - pz) > 28) { toast('Walk to a road first'); return; } CAR.x = sp[0]; CAR.z = sp[1]; CAR.a = sp[2]; }
   CAR.v = 0; car.userData.placed = true; car.visible = true; driving = true; me.root.visible = false; driveBtn.textContent = '🚶 Get out'; $('czRun').hidden = true; toast('Up on the stick to drive, sideways to steer'); }
-function leaveCar() { driving = false; CAR.v = 0; const s = Math.sin(CAR.a), c = Math.cos(CAR.a), f = nearestFree(CAR.x + c * 2.6, CAR.z - s * 2.6); px = f[0]; pz = f[1]; me.root.visible = true; driveBtn.textContent = '🚗 Drive'; $('czRun').hidden = false; }
+function leaveCar() { driving = false; CAR.v = 0; const s = Math.sin(CAR.a), c = Math.cos(CAR.a), f = nearestFree(CAR.x + c * 2.6, CAR.z - s * 2.6); px = f[0]; pz = f[1]; footY = carY; me.root.visible = true; driveBtn.textContent = '🚗 Drive'; $('czRun').hidden = false; }
 driveBtn.onclick = () => driving ? leaveCar() : enterCar();
 function stepCar(dt, ix, iz) { const thr = -iz, steer = ix, MAX = 17, REV = -6;
   CAR.v += (thr > 0.1 ? thr * 9 : thr < -0.1 ? (CAR.v > 0.3 ? thr * 16 : thr * 5) : -Math.sign(CAR.v) * Math.min(Math.abs(CAR.v), 4 * dt) / dt) * dt;
@@ -547,7 +567,7 @@ function stepCar(dt, ix, iz) { const thr = -iz, steer = ix, MAX = 17, REV = -6;
   if (Math.abs(CAR.v) > 0.2) CAR.a -= steer * 1.6 * dt * Math.min(1, Math.abs(CAR.v) / 6) * Math.sign(CAR.v);
   const nx = CAR.x + Math.sin(CAR.a) * CAR.v * dt, nz = CAR.z + Math.cos(CAR.a) * CAR.v * dt;
   if (fits(nx, nz, CAR.a)) { CAR.x = nx; CAR.z = nz; } else if (fits(nx, CAR.z, CAR.a)) { CAR.x = nx; CAR.v *= 0.7; } else if (fits(CAR.x, nz, CAR.a)) { CAR.z = nz; CAR.v *= 0.7; } else CAR.v = -CAR.v * 0.2;
-  car.position.set(CAR.x, 0.02, CAR.z); car.rotation.y = CAR.a + (car.userData.faceX ? Math.PI / 2 : 0);
+  carY += (floorAt(CAR.x, CAR.z, carY) - carY) * Math.min(1, dt * 8); car.position.set(CAR.x, 0.02 + Math.max(0, carY - GND), CAR.z); car.rotation.y = CAR.a + (car.userData.faceX ? Math.PI / 2 : 0);
   px = CAR.x; pz = CAR.z; let d = CAR.a - yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); yaw += d * Math.min(1, dt * 2.5); }
 
 // ---------- 6f. flags, butterflies and fireflies (Dev, 27 Nov: "flags and butterflies, in parks and natural dense areas more") ----------
@@ -608,21 +628,29 @@ function stepLife(dt, t) { buntU.uT.value = t;
 lt.textContent = 'building the streets around you';
 await wait(20); stream(px, pz, true); streamNature(px, pz, true);
 const clock = new T.Clock(), camPos = new T.Vector3(), camLook = new T.Vector3(); let frames = 0, fpsT = 0, first = true, hidden = false;
+let stuckT = 0, boxK = '', boxV = false, boxT = 0, footY = GND, carY = GND;   // footY / carY: the floor you (or the car) stand on, smoothed
+function boxedIn(x, z) {   // 27 Nov: true when there is no way out within 2.5 m (0.25 m steps, same rules as walking)
+  const key = Math.round(x * 4) + ',' + Math.round(z * 4), now = performance.now(); if (key === boxK && now - boxT < 300) return boxV; boxK = key; boxT = now;
+  const S = 0.25, N = 12, wet = (i, j) => FARV && wetAt(x + i * S, z + j * S), seen = new Set(['0,0']), q = [[0, 0]];
+  for (let h = 0; h < q.length; h++) { const [i, j] = q[h]; if (Math.hypot(i, j) * S >= 2.5) return boxV = false;
+    for (const [a, b] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]]) { const k = a + ',' + b; if (seen.has(k) || Math.abs(a) > N || Math.abs(b) > N) continue; seen.add(k); if (walkFree(x + a * S, z + b * S) && !(wet(a, b) && !wet(i, j))) q.push([a, b]); } }
+  return boxV = true; }
 document.addEventListener('visibilitychange', () => { hidden = document.hidden; if (!hidden) { clock.getDelta(); requestAnimationFrame(frame); } });
 function frame() { if (hidden) return; requestAnimationFrame(frame);
   const dt = Math.min(clock.getDelta(), 0.05);
   const ix = joy.x + ((keys.d || keys.arrowright) ? 1 : 0) - ((keys.a || keys.arrowleft) ? 1 : 0), iz = joy.y + ((keys.s || keys.arrowdown) ? 1 : 0) - ((keys.w || keys.arrowup) ? 1 : 0), mag = Math.min(1, Math.hypot(ix, iz));
   if (driving) stepCar(dt, ix, iz);
   else if (mag > 0.1) { const run = running || keys.shift, a = Math.atan2(ix, iz) + yaw + Math.PI, s = (run ? 9 : 4.6) * mag, nx = px + Math.sin(a) * s * dt, nz = pz + Math.cos(a) * s * dt;
-    const okAt = FARV && !wetAt(px, pz) ? (x, z) => freeAt(x, z) && !wetAt(x, z) : freeAt;   // test link: no walking on water
-    if (okAt(nx, nz)) { px = nx; pz = nz; } else if (okAt(nx, pz)) px = nx; else if (okAt(px, nz)) pz = nz;
+    const okAt = FARV && !wetAt(px, pz) ? (x, z) => walkFree(x, z) && !wetAt(x, z) : walkFree;   // test link: no walking on water
+    if (okAt(nx, nz)) { px = nx; pz = nz; stuckT = 0; } else if (okAt(nx, pz)) { px = nx; stuckT = 0; } else if (okAt(px, nz)) { pz = nz; stuckT = 0; }
+    else if ((stuckT += dt) > 0.5 && boxedIn(px, pz) && (walkFree(nx, nz) || !walkFree(px, pz))) { px = nx; pz = nz; }   // 27 Nov: never stuck. Pushing for half a second with no way out from here: he walks out
     let d = a - me.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); me.root.rotation.y += d * Math.min(1, dt * 12); me.play(run ? 'sprint' : 'walk'); } else me.play('idle');
-  if (!driving) { me.root.position.set(px, 0.12, pz); me.step(dt); }
+  if (!driving) { footY += (floorAt(px, pz, footY) - footY) * Math.min(1, dt * 12); me.root.position.set(px, 0.12 + Math.max(0, footY - GND), pz); me.step(dt); }
   stream(px, pz, false); streamNature(px, pz, false);
   const dist = (innerWidth > innerHeight ? (FARV ? LDIST : 24) : 30) * (driving ? 1.25 : 1), cp = Math.cos(pitch);
-  camPos.set(px - Math.sin(yaw) * dist * cp, 1.5 + Math.sin(pitch) * dist, pz - Math.cos(yaw) * dist * cp);
+  const rise = Math.max(0, (driving ? carY : footY) - GND); camPos.set(px - Math.sin(yaw) * dist * cp, 1.5 + rise + Math.sin(pitch) * dist, pz - Math.cos(yaw) * dist * cp);
   if (first) { CAM.position.copy(camPos); first = false; } else CAM.position.lerp(camPos, Math.min(1, dt * 5));
-  camLook.set(px, 1.6, pz); CAM.lookAt(camLook);
+  camLook.set(px, 1.6 + rise, pz); CAM.lookAt(camLook);
   sky.position.set(px, 0, pz); stars.position.copy(sky.position); disc.position.set(px + SUND.x * 520, SUND.y * 520, pz + SUND.z * 520);
   sun.position.set(px + SUND.x * 170, SUND.y * 170, pz + SUND.z * 170); sun.target.position.set(px, 0, pz); sun.target.updateMatrixWorld();
   peopleT -= dt; if (peopleT <= 0) { peopleT = 1; refreshPeople(); } stepPeople(dt);
@@ -640,5 +668,5 @@ CZ.inspect = (x, z) => { const k = tkey(x, z), list = tilePlaces.get(k) || [], p
   const topShapes = {}; for (const i of list) { const id = PL.s[i]; topShapes[id] = (topShapes[id] || 0) + shapes[id].n / 3; }
   const top = Object.entries(topShapes).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id, t]) => id + ':' + Math.round(t) + 't/' + shapes[id].n / 3 + 'per r' + shapes[id].r.toFixed(1));
   return JSON.stringify({ placeTris: Math.round(pl), pieceTris: Math.round(pc), places: list.length, bySize, piecesByBucket: byB, top }); };
-CZ.api = { pos: () => [Math.round(px * 10) / 10, Math.round(pz * 10) / 10], probe: (x, z) => (wetAt(x, z) ? 'W' : '') + (freeAt(x, z) ? '' : 'X') + (CZ.greenAt && CZ.greenAt(x, z) ? 'g' : '') + '.', pitch: v => { pitch = v; first = true; }, cam: (f, d) => { LFOV = f; LDIST = d; CAM.fov = camFov(); CAM.updateProjectionMatrix(); first = true; }, drive: () => enterCar(), out: () => leaveCar(), car: () => [CAR.x, CAR.z, CAR.a, CAR.v], keys, go: (x, z, y) => { px = x; pz = z; if (y != null) yaw = y; first = true; stream(px, pz, true); streamNature(px, pz, true); }, setTime: h => { fixedHour = h; tick(); }, renderer: R3, tiles, scene: S3 };
+CZ.api = { pos: () => [Math.round(px * 10) / 10, Math.round(pz * 10) / 10], probe: (x, z) => (wetAt(x, z) ? 'W' : '') + (walkFree(x, z) ? '' : 'X') + (CZ.greenAt && CZ.greenAt(x, z) ? 'g' : '') + '.', pitch: v => { pitch = v; first = true; }, cam: (f, d) => { LFOV = f; LDIST = d; CAM.fov = camFov(); CAM.updateProjectionMatrix(); first = true; }, drive: () => enterCar(), out: () => leaveCar(), car: () => [CAR.x, CAR.z, CAR.a, CAR.v], keys, floor: (x, z) => { const f = fget(x, z); return f ? [f[0], f[1], f[2], Math.round(floorAt(x, z, footY) * 100)] : null; }, foot: () => Math.round(footY * 100), home: u => { const h = homes.find(h => h.user === u || h.n === u); return h ? [Math.round(h.x), Math.round(h.z), h.n] : null; }, go: (x, z, y) => { px = x; pz = z; if (y != null) yaw = y; first = true; stream(px, pz, true); streamNature(px, pz, true); }, setTime: h => { fixedHour = h; tick(); }, renderer: R3, tiles, scene: S3 };
 })().catch(e => { console.error('cozy', e); const l = document.getElementById('czLt'); if (l) l.textContent = 'Could not build: ' + e.message; });

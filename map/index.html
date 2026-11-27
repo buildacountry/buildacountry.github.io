@@ -6346,9 +6346,10 @@ const WALK = { on: false, x: 0, z: 34, ang: Math.PI, yaw: Math.PI, pitch: 0.36, 
   me: 'w' + Math.random().toString(36).slice(2, 9), shirt: Math.floor(Math.random() * 9), ch: null, sent: 0, lastSend: { x: 0, z: 0 }, moving: false, phase: 0, count: 1, near: null, lastEmoji: 0, idle: 0 };
 // ---- the collision map: 0.5 m cells, built once from what is in the scene ----
 const WG = { x0: BUILT.x0 - 8, z0: BUILT.z0 - 8, s: 0.5 }; WG.w = Math.ceil((BUILT.x1 - BUILT.x0 + 16) / WG.s); WG.h = Math.ceil((BUILT.z1 - BUILT.z0 + 16) / WG.s);
-function buildWalkGrid() {
-  const g = new Uint8Array(WG.w * WG.h), skip = new Set(); peopleObjs.forEach(o => skip.add(o.im || o)); (WALK.batches || []).forEach(b => skip.add(b.im));
-  const mark = (x, z) => { const i = Math.floor((x - WG.x0) / WG.s), j = Math.floor((z - WG.z0) / WG.s); if (i >= 0 && j >= 0 && i < WG.w && j < WG.h) g[j * WG.w + i] = 1; };
+function buildWalkGrid(opt) {   // opt (cozy game, 27 Nov): also builds WALK.grid2 where things lower than opt.step are steps you climb, and gentle slopes (bridge ramps) are not walls. WALK.grid stays exactly as before
+  const STEP = (opt && opt.step) || 0.55, SLOPES = !!(opt && opt.slopes);
+  const g = new Uint8Array(WG.w * WG.h), g2 = opt ? new Uint8Array(WG.w * WG.h) : null, skip = new Set(); let G = g; peopleObjs.forEach(o => skip.add(o.im || o)); (WALK.batches || []).forEach(b => skip.add(b.im));
+  const mark = (x, z) => { const i = Math.floor((x - WG.x0) / WG.s), j = Math.floor((z - WG.z0) / WG.s); if (i >= 0 && j >= 0 && i < WG.w && j < WG.h) G[j * WG.w + i] = 1; };
   const box = (x0, z0, x1, z1) => { for (let x = x0; x <= x1 + 1e-6; x += WG.s * 0.9) for (let z = z0; z <= z1 + 1e-6; z += WG.s * 0.9) mark(x, z); mark(x1, z1); };
   const line = (ax, az, bx, bz) => { const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / (WG.s * 0.6))); for (let k = 0; k <= n; k++) mark(ax + (bx - ax) * k / n, az + (bz - az) * k / n); };
   const M = new THREE.Matrix4(), IM = new THREE.Matrix4(), V = new THREE.Vector3(), A = new THREE.Vector3(), Bv = new THREE.Vector3(), Cv = new THREE.Vector3(), BB = new THREE.Box3();
@@ -6361,21 +6362,26 @@ function buildWalkGrid() {
     for (let k = 0; k < n; k++) {
       if (o.isInstancedMesh) { o.getMatrixAt(k, IM); M.multiplyMatrices(o.matrixWorld, IM); } else M.copy(o.matrixWorld);
       BB.copy(gb).applyMatrix4(M);
-      if (BB.max.y < 0.55 || BB.min.y > 1.7) continue;                            // ground, roads, low pads, roofs, high signs
+      const hit1 = !(BB.max.y < 0.55 || BB.min.y > 1.7), hit2 = !!g2 && !(BB.max.y < STEP || BB.min.y > 1.2);   // grid2: things hanging above 1.2 m (bunting, signs, awnings) are overhead, not walls   // ground, roads, low pads, roofs, high signs
+      if (!hit1 && !hit2) continue;
       const fw = BB.max.x - BB.min.x, fd = BB.max.z - BB.min.z;
-      if (fw * fd < 160) { box(BB.min.x + 0.1, BB.min.z + 0.1, BB.max.x - 0.1, BB.max.z - 0.1); continue; }   // small things: block their footprint
+      const area = fw * fd, big = area >= 160;
+      if (!big) { if (hit1) { G = g; box(BB.min.x + 0.1, BB.min.z + 0.1, BB.max.x - 0.1, BB.max.z - 0.1); } if (hit2 && area <= 12) { G = g2; box(BB.min.x + 0.1, BB.min.z + 0.1, BB.max.x - 0.1, BB.max.z - 0.1); } }   // small things: block their footprint
+      const t1 = hit1 && big, t2 = hit2 && (big || area > 12);   // grid2: things bigger than 12 m2 (an arch, a gate, a shelter) are traced too, so you can walk under or through their open parts
+      if (!t1 && !t2) continue;
       // big merged things (a whole street baked into one mesh): trace the walls, triangle by triangle
       const pos = geo.attributes.position, idx = geo.index, tn = (idx ? idx.count : pos.count) / 3;
       for (let t = 0; t < tn; t++) {
         const ia = idx ? idx.getX(t * 3) : t * 3, ib = idx ? idx.getX(t * 3 + 1) : t * 3 + 1, ic = idx ? idx.getX(t * 3 + 2) : t * 3 + 2;
         A.fromBufferAttribute(pos, ia).applyMatrix4(M); Bv.fromBufferAttribute(pos, ib).applyMatrix4(M); Cv.fromBufferAttribute(pos, ic).applyMatrix4(M);
         const lo = Math.min(A.y, Bv.y, Cv.y), hi = Math.max(A.y, Bv.y, Cv.y);
-        if (hi < 0.55 || lo > 1.7 || hi - lo < 0.3) continue;                    // floors, tops and roofs are not walls
-        line(A.x, A.z, Bv.x, Bv.z); line(Bv.x, Bv.z, Cv.x, Cv.z); line(Cv.x, Cv.z, A.x, A.z);
+        if (hi - lo < 0.3) continue;                                                // floors, tops and roofs are not walls
+        if (t1 && hi >= 0.55 && lo <= 1.7) { G = g; line(A.x, A.z, Bv.x, Bv.z); line(Bv.x, Bv.z, Cv.x, Cv.z); line(Cv.x, Cv.z, A.x, A.z); }
+        if (t2 && hi >= STEP && lo <= 1.2 && !(SLOPES && (() => { const ux = Bv.x - A.x, uy = Bv.y - A.y, uz = Bv.z - A.z, vx = Cv.x - A.x, vy = Cv.y - A.y, vz = Cv.z - A.z, ny = uz * vx - ux * vz; return Math.abs(ny) >= 0.8 * Math.hypot(uy * vz - uz * vy, ny, ux * vy - uy * vx); })())) { G = g2; line(A.x, A.z, Bv.x, Bv.z); line(Bv.x, Bv.z, Cv.x, Cv.z); line(Cv.x, Cv.z, A.x, A.z); }   // grid2: a ramp you can walk up is not a wall
       }
     }
   });
-  WALK.grid = g;
+  WALK.grid = g; if (g2) WALK.grid2 = g2;
 }
 const blockedAt = (x, z) => { if (x < BUILT.x0 || x > BUILT.x1 || z < COAST.shore + 6 || z > BUILT.z1) return true; const g = WALK.grid; if (!g) return false;
   const i = Math.floor((x - WG.x0) / WG.s), j = Math.floor((z - WG.z0) / WG.s); return i < 0 || j < 0 || i >= WG.w || j >= WG.h || g[j * WG.w + i] === 1; };
