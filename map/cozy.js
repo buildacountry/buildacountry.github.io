@@ -47,7 +47,7 @@ lt.textContent = 'cutting the country into squares';
 await wait(30);
 
 // test link ?cozy&far (27 Nov): see far, a game camera that looks ahead (landscape) and the map-walk fixes. Normal players keep the old game until Dev says OK.
-const FARV = /[?&]far(=|&|$)/.test(location.search);
+const FARV = /[?&]far(=|&|$)/.test(location.search) || !PHONE;   // far view + look-ahead camera: laptops for everyone (Dev, 27 Nov), phones only on the test link (?far) until tested sideways
 // ---------- 2. copy the map: each shape once, each place it stands, cut into squares ----------
 const TILE = 128, KOFF = 1000, kOf = (ix, iz) => (ix + KOFF) * 10000 + (iz + KOFF), tkey = (x, z) => kOf(Math.floor(x / TILE), Math.floor(z / TILE)), kX = k => Math.floor(k / 10000) - KOFF, kZ = k => k % 10000 - KOFF;   // square numbers are always positive
 const B_MAIN = 0, B_MAIND = 1, B_GLASS = 2, B_WARM = 3, B_LAMP = 4, B_WATER = 5, B_TEX = 16;
