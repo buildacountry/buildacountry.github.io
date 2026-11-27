@@ -60,8 +60,8 @@ const FARV = /[?&]far(=|&|$)/.test(location.search) || !PHONE;   // far view + l
 // ---------- 2. copy the map: each shape once, each place it stands, cut into squares ----------
 const TILE = 128, KOFF = 1000, kOf = (ix, iz) => (ix + KOFF) * 10000 + (iz + KOFF), tkey = (x, z) => kOf(Math.floor(x / TILE), Math.floor(z / TILE)), kX = k => Math.floor(k / 10000) - KOFF, kZ = k => k % 10000 - KOFF;   // square numbers are always positive
 const B_MAIN = 0, B_MAIND = 1, B_GLASS = 2, B_WARM = 3, B_LAMP = 4, B_WATER = 5, B_TEX = 16;
-const GLASS = 0x3f5866, WARM = 0xf0c36a, LAMPS = new Set([0xf6d27a, 0xffd98a]), WATER = 0x5ab4d0;
-const REMAP = { 0x86ab5c: 0x8fc25a, 0x76a052: 0x84b74f, 0x93b865: 0x9ccb63, 0x3f6f3a: 0x3f7a45, 0x45474d: 0x55585f };
+const GLASS = 0x3f5866, WARM = 0xf0c36a, LAMPS = new Set([0xf6d27a, 0xffd98a]), WATERS = new Set([0x3fa3c4, 0x4aa3cf, 0x3a8fc2, 0x2f7db3, 0x7fd0de, 0x3f9cc2, 0x4ab3dc, 0x5fb3c8]);   // 27 Nov: canal + pools (kept their colour), river + lake (3 depths), sea, beach pools, tanks: all water now (it moves, and you can't walk on it)
+const REMAP = { 0x5ab4d0: 0x3fa3c4, 0x86ab5c: 0x8fc25a, 0x76a052: 0x84b74f, 0x93b865: 0x9ccb63, 0x3f6f3a: 0x3f7a45, 0x45474d: 0x55585f };
 const shapes = [], shapeOf = new Map(), textures = [], texOf = new Map();
 const pS = [], pB = [], pC = [], pM = [];   // each place: shape, bucket, colour, and where it stands (12 numbers); packed into typed arrays below
 const chimTops = [];   // the real top of every chimney, found in the copied shapes (the small highest part of a home's stone-coloured piece)
@@ -72,7 +72,7 @@ const addPlace = (sid, b, rgb, e) => { if (rgb === 0xd9c49a && b === B_MAIN) { c
 const chunks = new Map();   // tile -> list of world-space pieces {b, P(Float32), C(Uint8 sRGB), U}
 const huge = [];   // giant triangles (ground, sea): drawn always
 const hex = c => (Math.round(c.r * 255) << 16) | (Math.round(c.g * 255) << 8) | Math.round(c.b * 255);
-const bucketOf = (rgb, m) => m.map ? B_TEX + texId(m) : rgb === GLASS ? B_GLASS : rgb === WARM ? B_WARM : LAMPS.has(rgb) ? B_LAMP : rgb === WATER ? B_WATER : m.side === T.DoubleSide ? B_MAIND : B_MAIN;
+const bucketOf = (rgb, m) => m.map ? B_TEX + texId(m) : rgb === GLASS ? B_GLASS : rgb === WARM ? B_WARM : LAMPS.has(rgb) ? B_LAMP : WATERS.has(rgb) ? B_WATER : m.side === T.DoubleSide ? B_MAIND : B_MAIN;
 function texId(m) { const k = m.map.uuid + (m.transparent ? 't' : '') + (m.type === 'MeshBasicMaterial' ? 'b' : '') + (m.side === T.DoubleSide ? 'd' : ''); if (texOf.has(k)) return texOf.get(k);
   const id = textures.length; textures.push({ image: m.map.image, flipY: m.map.flipY, wrapS: m.map.wrapS, wrapT: m.map.wrapT, repeat: m.map.repeat.clone(), offset: m.map.offset.clone(), tr: m.transparent, op: m.opacity, basic: m.type === 'MeshBasicMaterial', ds: m.side === T.DoubleSide }); texOf.set(k, id); return id; }
 function shapeId(g, gi, start, count, withUv) { const k = g.uuid + ':' + gi + ':' + (withUv ? 1 : 0); if (shapeOf.has(k)) return shapeOf.get(k);
@@ -159,10 +159,23 @@ const FAR = FARV ? (PH ? 380 : 560) : VIEW;    // far squares out to here (test 
 S3.fog = FARV ? new T.Fog(0xb6d8ef, PH ? 140 : 190, FAR + 10) : new T.Fog(0xb6d8ef, PH ? 85 : 110, PH ? 165 : 205);
 // one material for everything solid; vertex colours are stored as small sRGB bytes and made linear in the shader
 const srgbColors = m => { m.onBeforeCompile = s => { s.vertexShader = s.vertexShader.replace('#include <color_vertex>', '#include <color_vertex>\n#ifdef USE_COLOR\nvColor.rgb = pow(color.rgb, vec3(2.2));\n#endif'); }; return m; };
+// moving water (Dev, 27 Nov: "soothing water movement"): small ripples drift with the flow (the river and the canal run to the sea, the sea rolls in, lakes and pools just breathe).
+// Only the shine and shade move, in the water's own shader: a few sums per pixel, nothing extra to draw, so phones stay fast. Ripples fade out by 140 m.
+const WT = { value: 0 }, WNIGHT = new T.Color(0.3, 0.19, 0.34);   // water clock; night tint (the same deep blue as before)
+const RIPPLE = `{ vec3 nw = (vec4(normal, 0.0) * viewMatrix).xyz; float fd = (1.0 - smoothstep(45.0, 140.0, distance(vWP, cameraPosition))) * step(0.6, nw.y);
+  if (fd > 0.0) { vec2 fl = vec2(0.0);
+    if (vWP.x > 395.0 && vWP.x < 545.0) fl = vec2(0.0, -0.7); else if (abs(vWP.x) < 10.0 && vWP.z > -582.0 && vWP.z < -286.0) fl = vec2(0.0, -0.35); else if (vWP.z < -800.0) fl = vec2(0.0, 0.45);
+    vec2 q = vWP.xz - fl * uWT; float a1 = dot(q, vec2(0.8, 0.6)) * 1.3 + uWT * 1.1, a2 = dot(q, vec2(-0.5, 0.86)) * 2.1 + uWT * 1.6, a3 = dot(q, vec2(0.2, -0.98)) * 3.4 - uWT * 2.0, a4 = dot(q, vec2(-0.9, -0.44)) * 5.0 + uWT * 2.6;
+    vec2 gr = vec2(0.8, 0.6) * (0.65 * cos(a1)) + vec2(-0.5, 0.86) * (0.63 * cos(a2)) + vec2(0.2, -0.98) * (0.51 * cos(a3)) + vec2(-0.9, -0.44) * (0.3 * cos(a4));
+    normal = normalize((viewMatrix * vec4(normalize(vec3(-gr.x * 0.08 * fd, 1.0, -gr.y * 0.08 * fd)), 0.0)).xyz);
+    diffuseColor.rgb *= 1.0 + 0.09 * fd * (0.45 * sin(a1) + 0.3 * sin(a2) + 0.15 * sin(a3) + 0.1 * sin(a4)); } }`;
+const waterMat = m => { m.onBeforeCompile = s => { s.uniforms.uWT = WT;
+  s.vertexShader = 'varying vec3 vWP;\n' + s.vertexShader.replace('#include <color_vertex>', '#include <color_vertex>\n#ifdef USE_COLOR\nvColor.rgb = pow(color.rgb, vec3(2.2));\n#endif').replace('#include <project_vertex>', '#include <project_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+  s.fragmentShader = 'uniform float uWT;\nvarying vec3 vWP;\n' + s.fragmentShader.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + RIPPLE); }; return m; };
 const MAT = o => srgbColors(PH ? new T.MeshLambertMaterial(o) : new T.MeshStandardMaterial(Object.assign({ roughness: 0.86, metalness: 0, flatShading: true }, o)));
 const MS = { [B_MAIN]: MAT({ vertexColors: true }), [B_MAIND]: MAT({ vertexColors: true, side: T.DoubleSide }),
   [B_GLASS]: new T.MeshBasicMaterial({ color: lin('#2c3644') }), glassLow: new T.MeshBasicMaterial({ color: lin('#3f5866') }), [B_WARM]: new T.MeshBasicMaterial({ color: lin('#e8b45e') }), [B_LAMP]: new T.MeshBasicMaterial({ color: lin('#f6d27a') }),
-  [B_WATER]: srgbColors(new T.MeshStandardMaterial({ color: lin('#3fa3c4'), roughness: 0.28, metalness: 0.05, transparent: true, opacity: 0.95 })) };
+  [B_WATER]: waterMat(PH ? new T.MeshPhongMaterial({ vertexColors: true, specular: 0x5a5a5a, shininess: 46, transparent: true, opacity: 0.95 }) : new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.28, metalness: 0.05, transparent: true, opacity: 0.95 })) };   // phones: the lighter shine (same look, less work per pixel)
 textures.forEach((t, i) => { const tx = new T.Texture(t.image); tx.needsUpdate = true; tx.encoding = T.sRGBEncoding; tx.flipY = t.flipY; tx.wrapS = t.wrapS; tx.wrapT = t.wrapT; tx.repeat.copy(t.repeat); tx.offset.copy(t.offset); tx.anisotropy = 4;
   const side = t.ds ? T.DoubleSide : T.FrontSide, m = t.basic ? new T.MeshBasicMaterial({ map: tx, transparent: t.tr, opacity: t.op, side, vertexColors: true }) : MAT({ map: tx, vertexColors: true, transparent: t.tr, opacity: t.op, side });
   if (t.basic) srgbColors(m); if (t.tr) { m.depthWrite = false; m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -4; } MS[B_TEX + i] = m; });
@@ -192,7 +205,7 @@ const NEAR = PHONE ? 75 : 135, SMALL = 0.95, TINY = 0.5;
 const keepFar = b => b === B_GLASS || b === B_WARM || b === B_LAMP || b === B_WATER || b >= B_TEX;
 const LOCELL = 0.7;
 const BIG = 1.6, FARCELL = 1.4, TINY2 = 1.6;   // far squares: only shapes this big (m), corners on a 1.4 m grid, no triangles smaller than 1.6 m
-const L2C = { [B_GLASS]: [44, 54, 68], [B_WARM]: [232, 180, 94], [B_LAMP]: [246, 210, 122], [B_WATER]: [63, 163, 196] };   // far squares use one material, so these get their colour baked in
+const L2C = { [B_GLASS]: [44, 54, 68], [B_WARM]: [232, 180, 94], [B_LAMP]: [246, 210, 122] };   // far squares use one material, so these get their colour baked in
 function lowShape(S, cell = LOCELL, key = 'lo') {   // the same shape with its corners snapped to a grid (70 cm near, 1.4 m far): details melt away, the outline and colours stay
   if (S[key]) return S[key]; const P = S.P, keep = [], q = v => Math.round(v / cell) * cell;
   for (let t = 0; t < S.n; t += 3) { const a = [q(P[t * 3]), q(P[t * 3 + 1]), q(P[t * 3 + 2])], b = [q(P[t * 3 + 3]), q(P[t * 3 + 4]), q(P[t * 3 + 5])], c = [q(P[t * 3 + 6]), q(P[t * 3 + 7]), q(P[t * 3 + 8])];
@@ -217,7 +230,7 @@ function rasterGround(Gr, Hy, ox, oz, ax, ay, az, bx, by, bz, cx, cy, cz, r, g, 
   if (Math.max(ay, by, cy) > 0.7) return; const ux = bx - ax, uz = bz - az, vx = cx - ax, vz = cz - az, den = ux * vz - uz * vx; if (Math.abs(den) < 1e-6) return;
   const ny = ((by - ay) * vz - (bz - az) * (cy - ay)); // only roughly flat faces matter; steep ones are walls
   if (Math.abs((by - ay)) > 0.3 || Math.abs(cy - ay) > 0.3) return;
-  const grassy = wet && FARV ? 3 : g > r * 1.04 && g > b * 1.15 ? 1 : 2, y = (ay + by + cy) / 3;   // 3 = water (test link: you can't walk on it)
+  const grassy = wet ? 3 : g > r * 1.04 && g > b * 1.15 ? 1 : 2, y = (ay + by + cy) / 3;   // 3 = water: you can't walk on it (Dev, 27 Nov)
   const i0 = Math.max(0, Math.floor(Math.min(ax, bx, cx) - ox)), i1 = Math.min(TILE - 1, Math.floor(Math.max(ax, bx, cx) - ox)), j0 = Math.max(0, Math.floor(Math.min(az, bz, cz) - oz)), j1 = Math.min(TILE - 1, Math.floor(Math.max(az, bz, cz) - oz));
   for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const px = ox + i + 0.5 - ax, pz = oz + j + 0.5 - az, s1 = (px * vz - pz * vx) / den, s2 = (ux * pz - uz * px) / den; if (s1 < -0.01 || s2 < -0.01 || s1 + s2 > 1.01) continue;
     const c = j * TILE + i; if (y >= Hy[c]) { Hy[c] = y; Gr[c] = grassy; } } }
@@ -408,7 +421,7 @@ function applyTime(h) { let i = 0; while (i < TOD.length - 2 && TOD[i + 1][0] <=
   mixHex(A[1], B[1], t, skyU.bot.value); mixHex(A[2], B[2], t, skyU.mid.value); mixHex(A[3], B[3], t, skyU.top.value);
   mixHex(A[4], B[4], t, sun.color); sun.intensity = (A[5] + (B[5] - A[5]) * t) * LIGHT; mixHex(A[6], B[6], t, hemi.color); mixHex(A[7], B[7], t, hemi.groundColor); hemi.intensity = (A[8] + (B[8] - A[8]) * t) * LIGHT;
   night = A[9] + (B[9] - A[9]) * t; S3.fog.color.copy(skyU.bot.value).lerp(skyU.mid.value, 0.35);
-  MS[B_GLASS].color.copy(lin('#2c3644')).lerp(lin('#ffcc73'), night); MS[B_WARM].color.copy(lin('#e8b45e')).lerp(lin('#ffd890'), night); MS[B_LAMP].color.copy(lin('#f6d27a')).lerp(lin('#fff0c0'), night); MS[B_WATER].color.copy(lin('#3fa3c4')).lerp(lin('#1f4a78'), night);
+  MS[B_GLASS].color.copy(lin('#2c3644')).lerp(lin('#ffcc73'), night); MS[B_WARM].color.copy(lin('#e8b45e')).lerp(lin('#ffd890'), night); MS[B_LAMP].color.copy(lin('#f6d27a')).lerp(lin('#fff0c0'), night); MS[B_WATER].color.setRGB(1, 1, 1).lerp(WNIGHT, night);
   glowMat.opacity = 0.12 + 0.88 * night; stars.material.opacity = Math.max(0, night - 0.3) / 0.7;
   if (FARV) { glowMat.visible = night > 0.04; stars.visible = stars.material.opacity > 0; }   // test link: by day the window glow and stars are not drawn at all (one less draw per square)
   const day = h > 6.2 && h < 18.1, a = Math.min(1, Math.max(0, (h - 6.4) / 11.5)) * Math.PI; SUND.set(day ? -Math.cos(a) : 0.35, day ? Math.max(0.12, Math.sin(a)) : 0.85, day ? 0.35 : -0.4).normalize();
@@ -633,7 +646,7 @@ const clock = new T.Clock(), camPos = new T.Vector3(), camLook = new T.Vector3()
 let stuckT = 0, boxK = '', boxV = false, boxT = 0, footY = GND, carY = GND;   // footY / carY: the floor you (or the car) stand on, smoothed
 function boxedIn(x, z) {   // 27 Nov: true when there is no way out within 2.5 m (0.25 m steps, same rules as walking)
   const key = Math.round(x * 4) + ',' + Math.round(z * 4), now = performance.now(); if (key === boxK && now - boxT < 300) return boxV; boxK = key; boxT = now;
-  const S = 0.25, N = 12, wet = (i, j) => FARV && wetAt(x + i * S, z + j * S), seen = new Set(['0,0']), q = [[0, 0]];
+  const S = 0.25, N = 12, wet = (i, j) => wetAt(x + i * S, z + j * S), seen = new Set(['0,0']), q = [[0, 0]];
   for (let h = 0; h < q.length; h++) { const [i, j] = q[h]; if (Math.hypot(i, j) * S >= 2.5) return boxV = false;
     for (const [a, b] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]]) { const k = a + ',' + b; if (seen.has(k) || Math.abs(a) > N || Math.abs(b) > N) continue; seen.add(k); if (walkFree(x + a * S, z + b * S) && !(wet(a, b) && !wet(i, j))) q.push([a, b]); } }
   return boxV = true; }
@@ -651,7 +664,7 @@ function frame() { if (hidden) return; requestAnimationFrame(frame);
   const ix = joy.x + ((keys.d || keys.arrowright) ? 1 : 0) - ((keys.a || keys.arrowleft) ? 1 : 0), iz = joy.y + ((keys.s || keys.arrowdown) ? 1 : 0) - ((keys.w || keys.arrowup) ? 1 : 0), mag = Math.min(1, Math.hypot(ix, iz));
   if (driving) stepCar(dt, ix, iz);
   else if (mag > 0.1) { const run = running || keys.shift, a = Math.atan2(ix, iz) + yaw + Math.PI, s = (run ? 9 : 4.6) * mag, nx = px + Math.sin(a) * s * dt, nz = pz + Math.cos(a) * s * dt;
-    const okAt = FARV && !wetAt(px, pz) ? (x, z) => walkFree(x, z) && !wetAt(x, z) : walkFree;   // test link: no walking on water
+    const okAt = !wetAt(px, pz) ? (x, z) => walkFree(x, z) && !wetAt(x, z) : walkFree;   // no walking on water (if you are somehow in it, you can walk out)
     const st = s * dt, ax = Math.abs(nx - px), az = Math.abs(nz - pz); let go = okAt(nx, nz) ? [nx, nz] : null;
     if (!go) { const sx = ax > 0.02 * st && okAt(nx, pz), sz = az > 0.02 * st && okAt(px, nz);   // slide along the wall
       go = sx && ax >= 0.4 * st ? [nx, pz] : sz && az >= 0.4 * st ? [px, nz] : sidestep(a, st, okAt) || (sx ? [nx, pz] : sz ? [px, nz] : null); }   // 27 Nov: walking straight into a lamp post, a bin or a corner: step round it
@@ -667,7 +680,7 @@ function frame() { if (hidden) return; requestAnimationFrame(frame);
   sky.position.set(px, 0, pz); stars.position.copy(sky.position); disc.position.set(px + SUND.x * 520, SUND.y * 520, pz + SUND.z * 520);
   sun.position.set(px + SUND.x * 170, SUND.y * 170, pz + SUND.z * 170); sun.target.position.set(px, 0, pz); sun.target.updateMatrixWorld();
   peopleT -= dt; if (peopleT <= 0) { peopleT = 1; refreshPeople(); } stepPeople(dt);
-  drawSmoke(dt); lifeT += dt; if (!RM) stepLife(dt, lifeT); else buntU.uT.value = 0;
+  drawSmoke(dt); lifeT += dt; WT.value = WT.fix != null ? WT.fix : RM ? 0 : lifeT % 3600; if (!RM) stepLife(dt, lifeT); else buntU.uT.value = 0;
   R3.render(S3, CAM);
   drawTags(); drawPeopleTags();
   frames++; fpsT += dt; if (fpsT > 1) { $('czFps').textContent = Math.round(frames / fpsT) + ' fps · ' + R3.info.render.calls + ' draws · ' + Math.round(R3.info.render.triangles / 1000) + 'k tris · ' + [...tiles.values()].filter(Boolean).length + ' squares'; frames = 0; fpsT = 0; } }
@@ -681,5 +694,5 @@ CZ.inspect = (x, z) => { const k = tkey(x, z), list = tilePlaces.get(k) || [], p
   const topShapes = {}; for (const i of list) { const id = PL.s[i]; topShapes[id] = (topShapes[id] || 0) + shapes[id].n / 3; }
   const top = Object.entries(topShapes).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id, t]) => id + ':' + Math.round(t) + 't/' + shapes[id].n / 3 + 'per r' + shapes[id].r.toFixed(1));
   return JSON.stringify({ placeTris: Math.round(pl), pieceTris: Math.round(pc), places: list.length, bySize, piecesByBucket: byB, top }); };
-CZ.api = { pos: () => [Math.round(px * 10) / 10, Math.round(pz * 10) / 10], probe: (x, z) => (wetAt(x, z) ? 'W' : '') + (walkFree(x, z) ? '' : 'X') + (CZ.greenAt && CZ.greenAt(x, z) ? 'g' : '') + '.', pitch: v => { pitch = v; first = true; }, cam: (f, d) => { LFOV = f; LDIST = d; CAM.fov = camFov(); CAM.updateProjectionMatrix(); first = true; }, drive: () => enterCar(), out: () => leaveCar(), car: () => [CAR.x, CAR.z, CAR.a, CAR.v], keys, floor: (x, z) => { const f = fget(x, z); return f ? [f[0], f[1], f[2], Math.round(floorAt(x, z, footY) * 100)] : null; }, foot: () => Math.round(footY * 100), home: u => { const h = homes.find(h => h.user === u || h.n === u); return h ? [Math.round(h.x), Math.round(h.z), h.n] : null; }, go: (x, z, y) => { px = x; pz = z; if (y != null) yaw = y; first = true; stream(px, pz, true); streamNature(px, pz, true); }, setTime: h => { fixedHour = h; tick(); }, renderer: R3, tiles, scene: S3 };
+CZ.api = { pos: () => [Math.round(px * 10) / 10, Math.round(pz * 10) / 10], probe: (x, z) => (wetAt(x, z) ? 'W' : '') + (walkFree(x, z) ? '' : 'X') + (CZ.greenAt && CZ.greenAt(x, z) ? 'g' : '') + '.', pitch: v => { pitch = v; first = true; }, cam: (f, d) => { LFOV = f; LDIST = d; CAM.fov = camFov(); CAM.updateProjectionMatrix(); first = true; }, drive: () => enterCar(), out: () => leaveCar(), car: () => [CAR.x, CAR.z, CAR.a, CAR.v], keys, floor: (x, z) => { const f = fget(x, z); return f ? [f[0], f[1], f[2], Math.round(floorAt(x, z, footY) * 100)] : null; }, foot: () => Math.round(footY * 100), home: u => { const h = homes.find(h => h.user === u || h.n === u); return h ? [Math.round(h.x), Math.round(h.z), h.n] : null; }, go: (x, z, y) => { px = x; pz = z; if (y != null) yaw = y; first = true; stream(px, pz, true); streamNature(px, pz, true); }, setTime: h => { fixedHour = h; tick(); }, wt: v => { WT.fix = v; }, renderer: R3, tiles, scene: S3 };
 })().catch(e => { console.error('cozy', e); const l = document.getElementById('czLt'); if (l) l.textContent = 'Could not build: ' + e.message; });
