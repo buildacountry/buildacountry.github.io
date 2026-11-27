@@ -46,6 +46,8 @@ renderer.domElement.style.visibility = 'hidden';
 lt.textContent = 'cutting the country into squares';
 await wait(30);
 
+// test link ?cozy&far (27 Nov): see far, a game camera that looks ahead (landscape) and the map-walk fixes. Normal players keep the old game until Dev says OK.
+const FARV = /[?&]far(=|&|$)/.test(location.search);
 // ---------- 2. copy the map: each shape once, each place it stands, cut into squares ----------
 const TILE = 128, KOFF = 1000, kOf = (ix, iz) => (ix + KOFF) * 10000 + (iz + KOFF), tkey = (x, z) => kOf(Math.floor(x / TILE), Math.floor(z / TILE)), kX = k => Math.floor(k / 10000) - KOFF, kZ = k => k % 10000 - KOFF;   // square numbers are always positive
 const B_MAIN = 0, B_MAIND = 1, B_GLASS = 2, B_WARM = 3, B_LAMP = 4, B_WATER = 5, B_TEX = 16;
@@ -76,7 +78,7 @@ function shapeId(g, gi, start, count, withUv) { const k = g.uuid + ':' + gi + ':
     if (U) { U[i * 2] = uv.getX(v); U[i * 2 + 1] = uv.getY(v); } }
   let r2 = 0; for (let i = 0; i < count; i++) r2 = Math.max(r2, P[i * 3] ** 2 + P[i * 3 + 1] ** 2 + P[i * 3 + 2] ** 2);
   const id = shapes.length; shapes.push({ P, C, U, n: count, r: Math.sqrt(r2) }); shapeOf.set(k, id); return id; }
-const V = new T.Vector3(), M4 = new T.Matrix4(), CL = new T.Color();
+const V = new T.Vector3(), CEN = new T.Vector3(), M4 = new T.Matrix4(), CL = new T.Color();
 const colScale = a => !a ? 1 : a.normalized ? (a.array instanceof Uint8Array || a.array instanceof Uint8ClampedArray ? 1 / 255 : a.array instanceof Uint16Array ? 1 / 65535 : a.array instanceof Int8Array ? 1 / 127 : 1) : 1;   // colours stored as small whole numbers (0-255) are read as 0-1
 function worldPieces(g, start, count, mw, rgb, b, withUv) {   // a mesh that covers a big area: its triangles go to the squares they sit in
   const pos = g.attributes.position, idx = g.index, col = g.attributes.color, uv = g.attributes.uv, n = count / 3; const cs = colScale(col);
@@ -109,9 +111,10 @@ for (const o of keep) {
     continue;
   }
   if (!g.boundingSphere) g.computeBoundingSphere(); const rad = g.boundingSphere.radius * o.matrixWorld.getMaxScaleOnAxis();
+  const bc = CEN.copy(g.boundingSphere.center).applyMatrix4(o.matrixWorld), mw = o.matrixWorld.elements, baked = Math.hypot(bc.x - mw[12], bc.z - mw[14]) > 20;   // a baked group: shapes far from the mesh's own centre (test link: they go to the squares they cover, not all to the plaza's square)
   for (const gr of groups) { const m = mats[gr.materialIndex] || mats[0]; if (!m || m.visible === false) continue; const cnt = Math.min(gr.count, total - gr.start); if (cnt < 3) continue;
     let rgb = m.color ? hex(m.color) : 0xffffff; rgb = REMAP[rgb] || rgb; const b = bucketOf(rgb, m);
-    if (rad > 30) worldPieces(g, gr.start, cnt, o.matrixWorld, rgb, b, !!m.map);
+    if (rad > 30 || FARV && baked) worldPieces(g, gr.start, cnt, o.matrixWorld, rgb, b, !!m.map);
     else addPlace(shapeId(g, gr.materialIndex, gr.start, cnt, !!m.map), b, rgb, o.matrixWorld.elements); }
 }
 // places grouped by square
@@ -128,8 +131,6 @@ CZ.phase = 'copied';
 
 // ---------- 3. our renderer, light, sky ----------
 const PH = PHONE;
-// test link ?cozy&far (27 Nov): see far + a game camera that looks ahead (landscape). Normal players keep the old view until Dev says OK.
-const FARV = /[?&]far(=|&|$)/.test(location.search);
 let LFOV = 50, LDIST = 22;   // landscape camera on the test link: wider view, a bit closer
 const camFov = () => innerWidth > innerHeight ? (FARV ? LFOV : 40) : 46;
 // haze by real distance, not by depth on screen: with a wide, low camera the edge of the built world would show at the sides
