@@ -231,6 +231,9 @@
     // a fighter out in front of each hangar, white stall box, trucks beside
     HX.forEach((hx, i) => { const z = NAP[2] + 20; put(B, 'jet_fighter', hx, z, 0, KJ, null, 0.54); M(hx - 14, hx + 14, z + 15, z + 15.4, WHITE, 0.58); M(hx - 14, hx - 13.6, z - 14, z + 15.4, WHITE, 0.58); M(hx + 13.6, hx + 14, z - 14, z + 15.4, WHITE, 0.58);
       if (!fast || i % 2 === 0) put(B, i % 2 ? 'support_truck_fuel' : 'support_truck_cargo', hx + 22, z + 4, 0, KT, null, 0.54); });
+    if (!fast) HX.forEach((hx, i) => { put(B, i % 2 ? 'gpu_power_cart' : 'aircraft_tow_tug', hx - 20, NAP[2] + 28, Math.PI / 2, KT, null, 0.54); });
+    [[-36, NAP[2] + 8], [250, NAP[2] + 8]].forEach(([x, z]) => put(B, 'floodlight_tower', x, z, 0, 2.6, null, 0.54)); if (!fast) put(B, 'cargo_crates_pallet', 128, NAP[2] + 12, 0.3, 2.4, null, 0.54);
+    put(B, 'windsock_flagpole', 60, -52, 0, 2.6);
     // ---- radar / comms corner, behind hangars 3-4, inside the fence ----
     put(B, 'radar_dome', 152, -270, 0, 4.6); put(B, 'satellite_dish', 196, -262, 0.5, 3.4); put(B, 'satellite_dish', 226, -276, -0.3, 3.4); put(B, 'comms_tower', 258, -262, 0, 4.6);
     [[152, -270, 13], [196, -262, 8], [226, -276, 8], [258, -262, 7]].forEach(([x, z, r]) => L(x - r, x + r, z - r, z + r, PAVE2, 0.4));
@@ -244,6 +247,8 @@
       M(bx, bx + 0.4, bz - BD / 2 + 4, bz + BD / 2 - 2, WHITE, 0.58); M(bx + BW, bx + BW + 0.4, bz - BD / 2 + 4, bz + BD / 2 - 2, WHITE, 0.58); M(bx, bx + BW + 0.4, bz + BD / 2 - 2.4, bz + BD / 2 - 2, WHITE, 0.58);
       put(B, 'jet_fighter', x, z, NOSE, KJ, null, 0.54); yline([[x - 30, STZ], [x, STZ], [x, z - 8]], 10);
       put(B, (k + row) % 2 ? 'support_truck_fuel' : 'support_truck_cargo', bx + BW - 5, bz + 12, Math.PI, KT, null, 0.54); }
+    [[SAP[0] + 6, SAP[3] - 8], [SAP[1] - 6, SAP[3] - 8], [SAP[1] - 6, SAP[2] + 14]].forEach(([x, z]) => put(B, 'floodlight_tower', x, z, 0, 2.6, null, 0.54));
+    if (!fast) [[-150, 128], [-100, 128], [-40, 126]].forEach(([x, z], i) => put(B, i === 2 ? 'cargo_crates_pallet' : 'gpu_power_cart', x, z, 0, KT, null, 0.54));
     // cargo plane taxiing on the lower runway
     put(B, 'cargo_plane', 110, (RW1[2] + RW1[3]) / 2, -Math.PI / 2, KC, null, 0.5);
     // ---- support zone (bottom-right): 2-storey admin, maintenance warehouse, white utility blocks, yellow buses/trucks on an inner road ----
@@ -251,14 +256,13 @@
     L(SUP[0] - 24, SUP[0] - 14, SAP[3] - 6, FZ1 - 1, '#4f5256', 0.46); L(GATE2[0] - 6, SUP[0] - 14, FZ1 - 13, FZ1 - 3, '#4f5256', 0.46); L(SUP[0] - 14, SUP[1] - 4, 74, 84, '#4f5256', 0.47);   // inner road from the gate
     for (let x = GATE2[0]; x < SUP[0] - 20; x += 14) M(x, x + 7, FZ1 - 8.2, FZ1 - 7.8, WHITE, 0.5);
     put(B, 'admin_building', 232, 46, 0, 3.4, null, 0.44);
-    { const wb = at(C.x + 150, 0.44, C.z + 112, 0); box(B, '#cdbf9f', wb, 62, 11, 30, 0, 0, 0); box(B, '#5f6266', wb, 63, 0.8, 31, 0, 11, 0); box(B, '#bcae8e', wb, 62.4, 1.0, 30.4, 0, 9.5, 0);
-      for (let i = 0; i < 4; i++) { box(B, '#8e9295', wb, 9, 7, 0.2, -22 + i * 14.6, 0, -15.05); for (let k = 1; k < 6; k++) box(B, '#7b7f83', wb, 9, 0.12, 0.25, -22 + i * 14.6, k * 1.2, -15.1); } }
-    [[110, 40], [126, 40], [262, 112]].forEach(([x, z], i) => { const ub = at(C.x + x, 0.44, C.z + z, 0); box(B, '#eceae4', ub, 12, 4.5, 9, 0, 0, 0); box(B, '#8e9295', ub, 12.6, 0.5, 9.6, 0, 4.5, 0); box(B, '#3b4652', ub, 1.4, 2.4, 0.15, 0, 0, 4.55); box(B, '#5a6b7a', ub, 2.4, 1.2, 0.15, 3.2, 2, 4.55); });
-    for (let i = 0; i < (fast ? 3 : 5); i++) put(B, 'support_truck_cargo', 200 + i * 10, 92, 0, KT, null, 0.47);
+    put(B, 'maintenance_warehouse', 152, 112, Math.PI, 6.4, null, 0.44); [[112, 40], [130, 40], [262, 118]].forEach(([x, z], i) => put(B, 'utility_shed', x, z, i === 2 ? -Math.PI / 2 : 0, 2.6, null, 0.44));
+    put(B, 'fuel_storage_tanks', 245, 96, -Math.PI / 2, 3.4, null, 0.44);
+    for (let i = 0; i < (fast ? 2 : 4); i++) put(B, 'crew_bus', 190 + i * 9, 130, 0, KT, null, 0.44); if (!fast) [[170, 60, 0.3], [182, 62, 0.2]].forEach(([x, z, a]) => put(B, 'utility_pickup', x, z, a, KT, null, 0.44));
     // ---- gate: Dev's guardhouse + its barrier, a second red/white arm, a watchtower, the sign ----
     L(GATE2[0] - 6, GATE2[0] + 6, SAP[3], FZ1 + 2, '#4f5256', 0.46); put(B, 'guardhouse', GATE2[0] + 12, FZ1 - 5, Math.PI, 2.6);
     { const bb = at(C.x + GATE2[0] - 6.5, 0.3, C.z + FZ1 + 4, 0); box(B, '#d0c6aa', bb, 0.8, 1.3, 0.8, 0, 0, 0); for (let i = 0; i < 8; i++) box(B, i % 2 ? '#f2f1ea' : '#d6302a', bb, 1.5, 0.25, 0.25, 0.9 + i * 1.5, 1.05, 0); }
-    put(B, 'watchtower', GATE2[0] - 20, FZ1 - 6, 0, KW);
+    put(B, 'watchtower', GATE2[0] - 20, FZ1 - 6, 0, KW); put(B, 'jersey_barrier_bollards', GATE2[0] - 14, FZ1 + 14, 0, 2.2); put(B, 'jersey_barrier_bollards', GATE2[0] + 14, FZ1 + 14, 0, 2.2);
     { const tex = signTex([['VINLAND AIR FORCE BASE', 0.36, 0.42], ['AUTHORISED ENTRY ONLY', 0.2, 0.78]], 1024, 256, '#2e3f55', '#f4efe2'), gx = C.x + GATE2[0] + 30, gz = C.z + FZ1 + 12;
       box(B, '#8f9294', null, 0.3, 4.6, 0.3, gx - 7, 0.3, gz); box(B, '#8f9294', null, 0.3, 4.6, 0.3, gx + 7, 0.3, gz); box(B, '#2e3f55', null, 14.2, 3.6, 0.2, gx, 2.4, gz - 0.15);
       if (tex) { const sm = new T.Mesh(new T.PlaneGeometry(14, 3.5), new T.MeshLambertMaterial({ map: tex })); sm.position.set(gx, 4.2, gz + 0.02); g.add(sm); } }
@@ -266,32 +270,19 @@
     [[FX0, FZ0], [FX1, FZ0], [FX1, FZ1], [FX0, FZ1], [0, FZ0], [FX0, -75], [FX1, -75], [90, FZ1]].forEach(([x, z]) => put(B, 'watchtower', x + (x <= FX0 ? 5 : x >= FX1 ? -5 : 0), z + (z <= FZ0 ? 5 : z >= FZ1 ? -5 : 0), 0, KW));
     let tris = B.build(g);
     // ---- fence: Dev's panel along the outer line + the support zone's own fence (instanced), gaps at the gate and the inner road ----
-    { const F = [], step = fast ? 24 : 12.5, lines = [[[FX0, FZ0], [FX1, FZ0], [FX1, FZ1], [FX0, FZ1], [FX0, FZ0]], [[SUP[0] - 6, FZ1], [SUP[0] - 6, SUP[2] - 6], [FX1, SUP[2] - 6]]];
+    { const F = [], step = fast ? 30 : 12.5, lines = [[[FX0, FZ0], [FX1, FZ0], [FX1, FZ1], [FX0, FZ1], [FX0, FZ0]], [[SUP[0] - 6, FZ1], [SUP[0] - 6, SUP[2] - 6], [FX1, SUP[2] - 6]]];
       lines.forEach(P => { for (let k = 0; k < P.length - 1; k++) { const [x0, z0] = P[k], [x1, z1] = P[k + 1], Ln = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(Ln / step)), a = Math.atan2(z0 - z1, x1 - x0);
         for (let i = 0; i < n; i++) { const t = (i + 0.5) / n, x = x0 + (x1 - x0) * t, z = z0 + (z1 - z0) * t; if (Math.abs(x - GATE2[0]) < 9 && Math.abs(z - FZ1) < 1) continue; if (Math.abs(x - (SUP[0] - 6)) < 1 && z > 66 && z < 92) continue; F.push({ x: C.x + x, z: C.z + z, r: a, sx: (Ln / n) / 6.11, sy: 1.2, sz: 1 }); } } });
       many(g, 'fencing', F, fast, false); tris += F.length * 276; }
-    // ---- rolling hills + rocky mountains round the base (never inside the fence, on the road, the farms or the shore) ----
-    const PEAKS = [[520, -470, 260, 95], [330, -560, 200, 60], [-560, -420, 260, 55], [560, 330, 220, 70], [-600, 260, 230, 40], [80, -620, 240, 45], [-200, 420, 200, 30]];
-    const farm = (x, z) => z > 500 && x > -6680 && x < -5180;
-    const hmask = (x, z) => { const lx = x - C.x, lz = z - C.z, d = Math.hypot(Math.max(FX0 - lx, lx - FX1, 0), Math.max(FZ0 - lz, lz - FZ1, 0)); let m = sst((d - 45) / 110);
-      m *= sst((z + 720) / 80); if (farm(x, z)) m = 0; else m *= sst((Math.min(Math.abs(z - 500), 999) - 0) / 60) || 1; return m; };
-    const HR = []; { let cnt = 0; for (let i = 0; i < RP.length; i++) if (Math.abs(RP[i][0] - C.x) < 900) HR.push(RP[i]); }
-    const roadD = (x, z) => { let d = 1e9; for (const [a, b] of HR) { const q = Math.abs(a - x) + Math.abs(b - z); if (q < d * 1.5) d = Math.min(d, Math.hypot(a - x, b - z)); } return d; };
-    const hh = (x, z) => { let h = 0; PEAKS.forEach(([px, pz, r, ph]) => { const d = Math.hypot(x - C.x - px, (z - C.z - pz) * 1.1) / r; if (d < 1) h += ph * Math.pow(Math.cos(d * Math.PI / 2), 1.6); });
-      h += 7 * noise(x / 90, z / 90, 4); return h * hmask(x, z) * sst((roadD(x, z) - 14) / 40); };
-    { const X0 = C.x - 760, X1 = C.x + 760, ZA = Math.max(-800, C.z - 760), ZB = C.z + 640, CELL = fast ? 34 : 22, nx = Math.round((X1 - X0) / CELL), nz = Math.round((ZB - ZA) / CELL), pos = [], col = [], idx = [], HH = [];
-      const gr = new T.Color('#8fae55'), gr2 = new T.Color('#7d9e48'), dry = new T.Color('#b5b06a'), rock = new T.Color('#9a958c'), rock2 = new T.Color('#7f7a72'), snow = new T.Color('#e9ecef'), cc = new T.Color();
-      for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) { const x = X0 + (X1 - X0) * i / nx + (i % nx && j % nz ? (noise(i, j, 9) - 0.5) * CELL * 0.5 : 0), z = ZA + (ZB - ZA) * j / nz, h = hh(x, z); HH.push(h); pos.push(x, 0.32 + h, z);
-        const n = noise(x / 60, z / 60, 13); cc.copy(gr).lerp(gr2, n * 0.7).lerp(dry, sst((noise(x / 120, z / 120, 3) - 0.6) * 3) * 0.4); if (h > 38) cc.copy(rock).lerp(rock2, n); if (h > 78) cc.lerp(snow, Math.min(1, (h - 78) / 12)); col.push(cc.r, cc.g, cc.b); }
-      for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const a = j * (nx + 1) + i, b2 = a + 1, c = a + nx + 1, d = c + 1; if (Math.max(HH[a], HH[b2], HH[c], HH[d]) < 0.05) continue; idx.push(a, c, b2, b2, c, d); }
-      const G3 = new T.BufferGeometry(); G3.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); G3.setAttribute('color', new T.Float32BufferAttribute(col, 3)); G3.setIndex(idx); G3.computeVertexNormals();
-      const hm = new T.Mesh(G3.toNonIndexed(), new T.MeshLambertMaterial({ vertexColors: true, flatShading: true })); hm.geometry.computeVertexNormals(); hm.userData.ground = true; g.add(hm); tris += idx.length / 3; }
+    // (Dev, 28 Nov: no mountains, no hills) the land round the base stays flat
+    const farm = (x, z) => z > 500 && x > -6680 && x < -5180, hh = () => 0;
+    const HR = RP.filter(([a]) => Math.abs(a - C.x) < 900), roadD = (x, z) => { let d = 1e9; for (const [a, b] of HR) { if (Math.abs(a - x) > d || Math.abs(b - z) > d) continue; d = Math.min(d, Math.hypot(a - x, b - z)); } return d; };
     // ---- forest: Dev's pines + broadleaf trees packed into solid woods all round (jittered grid, clearings by noise), up the hills ----
-    { const TP = [], TB = [], SP = fast ? 22 : 14, RING = fast ? 230 : 330;
+    { const TP = [], TB = [], SP = fast ? 30 : 14, RING = fast ? 220 : 330;
       const dB = (x, z) => { const lx = x - C.x, lz = z - C.z; return Math.hypot(Math.max(FX0 - lx, lx - FX1, 0), Math.max(FZ0 - lz, lz - FZ1, 0)); };
       for (let z = C.z + FZ0 - RING; z < C.z + FZ1 + RING; z += SP) for (let x = C.x + FX0 - RING; x < C.x + FX1 + RING; x += SP) {
         const px = x + (R2() - 0.5) * SP * 0.9, pz = z + (R2() - 0.5) * SP * 0.9, d = dB(px, pz); if (d < 34 || d > RING) continue; if (pz < -770 || farm(px, pz) || roadD(px, pz) < 11) continue;
-        if (noise(px / 70, pz / 70, 7) < 0.30 + d / 1400) continue; const h = hh(px, pz); if (h > 60) continue;
+        if (noise(px / 70, pz / 70, 7) < 0.30 + d / 1400) continue; const h = 0;
         (noise(px / 40, pz / 40, 17) > 0.45 ? TP : TB).push({ x: px, y: 0.3 + h - 0.3, z: pz, r: R2() * 6.28, s: 4.4 + R2() * 1.8 }); }
       many(g, 'pine_tree', TP, fast, true); many(g, 'broadleaf_tree', TB, fast, true); tris += TP.length * 108 + TB.length * 144; g.userData.treeCount = TP.length + TB.length; }
     // ---- soft look on the base (Dev's picture): lift the shaded sides with a little of each colour as glow, so models read smooth, not as flat cut-outs ----
