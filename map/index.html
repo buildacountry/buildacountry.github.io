@@ -356,6 +356,8 @@ body.walking .topbar { pointer-events: none; }
 @media (max-width: 720px) { body.walking .topbar { display: none; } }
 </style>
 <div class="loading" id="loading">Loading the land…</div>
+<script>/* 28 Nov: ?cozy&hud (test link): show the game's own loading screen from the very first moment, so you never see the map first. cozy2.js removes it. */
+if (/[?&]cozy\b/.test(location.search) && /[?&]hud\b/.test(location.search)) document.write('<div id="czCover" style="position:fixed;inset:0;z-index:100000;display:grid;place-items:center;background:linear-gradient(#b6d8ef,#f1f4ee);color:#1c2238;font:800 22px/1.3 Poppins,system-ui,sans-serif;text-align:center">Building cozy Vinland…<small style="display:block;font-size:14px;font-weight:600;opacity:.7">loading the country</small></div>'), setTimeout(() => { const c = document.getElementById('czCover'); if (c) c.remove(); }, 90000);</script>
 <div id="scene" aria-label="3D map of the land on Day 0. Drag to rotate, scroll or pinch to zoom, right-drag or two fingers to move around, tap the flag or the land to learn about it."></div>
 <div id="labels"></div>
 <header class="topbar"><a class="mbtn" id="backBtn" href="../" aria-label="Back to Vinland">←<span>Vinland</span></a><div class="brand"><h1 id="countryName">Build a Country</h1><p>Day <span id="dayNum">0</span> · <b id="citizenCount">0</b> citizens<span id="goalTxt"></span></p><div class="pbar" id="pbar" hidden><div></div></div></div>
@@ -1399,7 +1401,8 @@ function bakeGroup(g, place) {
   g.traverse(o => { if (o.geometry) o.geometry.dispose(); });
   scene.add(out); return out;
 }
-function bench(p, x, z, ry) { const g = new THREE.Group(); g.position.set(x, 0.42, z); g.rotation.y = ry; p.add(g);
+const BENCHES = [];   // 28 Nov: every bench, so the cozy game can let you sit on any of them
+function bench(p, x, z, ry) { const g = new THREE.Group(); g.position.set(x, 0.42, z); g.rotation.y = ry; p.add(g); BENCHES.push(g);
   B(g, 2.4, 0.16, 0.8, C.wood, 0, 0.55, 0); B(g, 2.4, 0.7, 0.14, C.wood, 0, 0.75, -0.36);
   B(g, 0.14, 0.55, 0.7, C.iron, -1.0, 0, 0, NE0); B(g, 0.14, 0.55, 0.7, C.iron, 1.0, 0, 0, NE0); }
 const NE0 = { edge: false };
@@ -6969,8 +6972,8 @@ if (PHONE && !OLDP) { const note = () => { if (BOOT && BOOT.toast) BOOT.toast('B
 // REEL STUDIO (22 Nov): /map/?reel=<name> plays an animated reel scene for Dev to screen-record; /map/?film adds smooth camera sliders. reel.js is downloaded only then. Visitors never load it.
 if (/[?&](reel|film)\b/.test(location.search)) { const runR = code => eval(code); (function wR() { if (RUN.homes && homes.length) fetch('reel.js?v=1', { cache: 'no-cache' }).then(r => r.text()).then(t => runR(t + '\n//# sourceURL=reel.js')).catch(e => console.error(e)); else setTimeout(wR, 300); })(); }
 // LIFE IN VINLAND (24 Nov): /map/?life (the /play page sends you here) opens the map straight into walking, with the game's screen on top. life.js is downloaded only then.
-if (/[?&]cozy\b/.test(location.search)) { const runC = code => eval(code);   // ?cozy (27 Nov): the whole country redrawn in the cozy low-poly style, on its own screen (cozy.js). The normal map is unchanged.
-  (function wC() { if (RUN.homes && homes.length) fetch('cozy.js?v=1', { cache: 'no-cache' }).then(r => r.text()).then(t => runC(t + '\n//# sourceURL=cozy.js')).catch(e => console.error(e)); else setTimeout(wC, 300); })(); }
+if (/[?&]cozy\b/.test(location.search)) { const runC = code => eval(code);   /* 28 Nov: ?cozy&hud = TEST LINK for the new sideways game screen (cozy2.js); plain ?cozy unchanged */ // ?cozy (27 Nov): the whole country redrawn in the cozy low-poly style, on its own screen (cozy.js). The normal map is unchanged.
+  (function wC() { if (RUN.homes && homes.length) fetch((/[?&]hud\b/.test(location.search) ? 'cozy2' : 'cozy') + '.js?v=1', { cache: 'no-cache' }).then(r => r.text()).then(t => runC(t + '\n//# sourceURL=cozy.js')).catch(e => console.error(e)); else setTimeout(wC, 300); })(); }
 if (/[?&]life\b/.test(location.search)) { const runL = code => eval(code); window.VGAME = /[?&]game\b/.test(location.search);   // ?life&game (26 Nov) = the game layer on top: Kenney citizens (kenney/kenney.js) + game.js. Plain ?life is unchanged.
   const getRun = f => fetch(f, { cache: 'no-cache' }).then(r => r.text()).then(t => runL(t + '\n//# sourceURL=' + f.split('?')[0]));
   (function wL() { if (RUN.homes && homes.length && (!window.VGAME || walkers.batches)) getRun('life.js?v=1').then(() => { if (window.VGAME && !window.VLIFE.phone) return getRun('kenney/kenney.js?v=3').then(() => getRun('game.js?v=1')); }).catch(e => console.error(e)); else setTimeout(wL, 300); })(); }
