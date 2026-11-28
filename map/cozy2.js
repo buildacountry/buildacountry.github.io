@@ -33,7 +33,7 @@ const css = document.createElement('style'); css.textContent = `
 #czTodayH i { font-style: normal; font-size: 12px; transition: transform .2s; }
 #czToday.fold { padding-bottom: 2px; } #czToday.fold ol { display: none; } #czToday.fold #czTodayH i { transform: rotate(-90deg); }
 #czTasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
-#czTasks li { display: flex; gap: 8px; align-items: center; font: 600 13px/1.25 Poppins, system-ui, sans-serif; }
+#czTasks li { cursor: pointer; display: flex; gap: 8px; align-items: center; font: 600 13px/1.25 Poppins, system-ui, sans-serif; }
 #czTasks li::before { content: ''; flex: none; width: 17px; height: 17px; box-sizing: border-box; border-radius: 50%; border: 2px solid #b9ad97; }
 #czTasks li.ok { opacity: .6; } #czTasks li.ok span { text-decoration: line-through; }
 #czTasks li.ok::before { border: 0; background: #2e9c8a url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/12px no-repeat; }
@@ -46,7 +46,8 @@ const css = document.createElement('style'); css.textContent = `
 #cozy .rb { position: absolute; z-index: 3; width: 50px; height: 50px; padding: 0; border: 0; border-radius: 50%; background: var(--cr); color: var(--ink); box-shadow: var(--sh); display: grid; place-items: center; cursor: pointer; }
 #cozy .rb[aria-pressed=true] { background: var(--gold); box-shadow: 0 3px 0 var(--goldD); }
 #cozy .rb[hidden] { display: none; }
-#czRun { right: calc(128px + var(--r)); bottom: calc(26px + var(--b)); } #czCarB { right: calc(120px + var(--r)); bottom: calc(98px + var(--b)); } #czPhoto { right: calc(42px + var(--r)); bottom: calc(124px + var(--b)); }
+#czRun { right: calc(128px + var(--r)); bottom: calc(26px + var(--b)); } #czJump { right: calc(196px + var(--r)); bottom: calc(26px + var(--b)); }
+@media (max-height: 500px) { #czTasks li.ok { display: none; } #czTasks li:nth-child(n+5) { display: none; } } #czCarB { right: calc(120px + var(--r)); bottom: calc(98px + var(--b)); } #czPhoto { right: calc(42px + var(--r)); bottom: calc(124px + var(--b)); }
 #czAct { position: absolute; z-index: 3; right: calc(26px + var(--r)); bottom: calc(22px + var(--b)); width: 88px; height: 88px; padding: 0; border: 0; border-radius: 50%; background: var(--gold); color: var(--ink); box-shadow: 0 5px 0 var(--goldD), 0 0 0 6px rgba(255,196,70,.35); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; cursor: pointer; font: 800 17px/1.1 Poppins, system-ui, sans-serif; }
 #czAct small { font: 600 10px/1.2 Poppins, system-ui, sans-serif; max-width: 74px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } #czAct small:empty { display: none; }
 #czAct:active, #cozy .rb:active, #czMe:active { transform: translateY(2px); }
@@ -78,7 +79,7 @@ const css = document.createElement('style'); css.textContent = `
 document.head.appendChild(css);
 const root = document.createElement('div'); root.id = 'cozy';
 const SVG = d => `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
-const IC = { menu: SVG('M5 7h14M5 12h14M5 17h14'), run: SVG('M14 3.5a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M6 20l3.5-5 3 2.5V22M9.5 15l1.5-6.5 4 3.5h3.5M11 8.5L7 10l-2 3'), car: SVG('M3 16v-4l2.2-5h13.6l2.2 5v4zM3 16v2.5h3V16M18 16v2.5h3V16M6.5 12.5h.01M17.5 12.5h.01'),
+const IC = { jump: SVG('M12 19V6M6.5 11.5L12 6l5.5 5.5M7 21h10'), menu: SVG('M5 7h14M5 12h14M5 17h14'), run: SVG('M14 3.5a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M6 20l3.5-5 3 2.5V22M9.5 15l1.5-6.5 4 3.5h3.5M11 8.5L7 10l-2 3'), car: SVG('M3 16v-4l2.2-5h13.6l2.2 5v4zM3 16v2.5h3V16M18 16v2.5h3V16M6.5 12.5h.01M17.5 12.5h.01'),
   walk: SVG('M11 3.5a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M9 21l2.5-6 2.5 2v4M11.5 15l1-6 3 3h3M12.5 9L9 10.5 7.5 14'), cam: SVG('M4 8h3l2-3h6l2 3h3v11H4zM8.5 13a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0'), home: SVG('M4 11l8-6 8 6v9H4zM10 20v-5h4v5') };
 root.innerHTML = `<div id="czLoad"><div>Building cozy Vinland…<small id="czLt">copying our homes, plaza and streets</small></div></div>
 <button class="pill" id="czMe" type="button" aria-label="Menu"><span class="av">${IC.menu}</span><span id="czMeName">Find your home</span><kbd>M</kbd></button>
@@ -86,7 +87,7 @@ root.innerHTML = `<div id="czLoad"><div>Building cozy Vinland…<small id="czLt"
 <div id="czMap" aria-hidden="true"><canvas id="czMapC"></canvas><b id="czN">N</b><span id="czWhere"></span></div>
 <div id="czToday"><button type="button" id="czTodayH" aria-expanded="true"><span>Today</span><small id="czTodayN"></small><i aria-hidden="true">▾</i></button><ol id="czTasks"></ol></div>
 <div class="chip" id="czFps">…</div><div id="czStick"><div id="czKnob"></div></div><div class="pill" id="czKeys">WASD walk · drag to look</div>
-<button class="rb" id="czRun" type="button" aria-pressed="false" aria-label="Run">${IC.run}<kbd>⇧</kbd></button>
+<button class="rb" id="czJump" type="button" aria-label="Jump">${IC.jump}<kbd>␣</kbd></button><button class="rb" id="czRun" type="button" aria-pressed="false" aria-label="Run">${IC.run}<kbd>⇧</kbd></button>
 <button class="rb" id="czCarB" type="button" aria-pressed="false" aria-label="Drive a car">${IC.car}<kbd>C</kbd></button>
 <button class="rb" id="czPhoto" type="button" aria-label="Take a photo">${IC.cam}<kbd>P</kbd></button>
 <button id="czAct" type="button"><b id="czActL">Wave</b><small id="czActS"></small><kbd>E</kbd></button>
@@ -100,7 +101,7 @@ root.innerHTML = `<div id="czLoad"><div>Building cozy Vinland…<small id="czLt"
   <h3>Time of day</h3>
   <div id="czTimes" role="group" aria-label="Time of day"><button type="button" data-h="live" aria-pressed="true">Live</button><button type="button" data-h="12" aria-pressed="false">Noon</button><button type="button" data-h="17.4" aria-pressed="false">Sunset</button><button type="button" data-h="21" aria-pressed="false">Night</button></div>
 </div></div><div id="czFade"></div><div id="czFlash"></div>`;
-document.body.appendChild(root);
+document.body.appendChild(root); { const cv = document.getElementById('czCover'); if (cv) cv.remove(); } /* 28 Nov: one loading screen only */
 const $ = id => document.getElementById(id), lt = $('czLt');
 
 // ---------- 1. wait until the map has built everything (homes, street life, downtown, looks) ----------
@@ -754,16 +755,20 @@ function whereNow() { const q = placeAt(px, pz); if (q) return q[0]; if (pz < CO
 let where = '';
 // --- today's tasks: 4 a day from a small list, each one something you can really do in the game today. Ticked here, saved on this phone.
 let sitting = null, wavedNear = false, photoTaken = false, visitedHome = false;
-const TASKS = { plaza: ["Walk to Citizens' Plaza", () => where === "Citizens' Plaza"], drive: ['Take a drive', () => driving], beach: ['Walk down to the beach', () => !driving && pz < COAST.beach0 + 2],
-  bridge: ['Cross the river on a bridge', () => px > 395 && px < 545 && decked(px, pz)], bench: ['Sit on a bench', () => !!sitting], wave: ['Wave to a citizen', () => wavedNear],
-  market: ['Visit the Market', () => where === 'Market'], photo: ['Take a photo', () => photoTaken], home: ['Find a home and visit it', () => visitedHome] };
+const TASKS = { plaza: ["Walk to Citizens' Plaza", () => where === "Citizens' Plaza", 'Menu, then Free bus to Citizens\' Plaza'], drive: ['Take a drive', () => driving, 'Walk to a road and tap the car button'],
+  beach: ['Walk down to the beach', () => !driving && pz < COAST.beach0 + 2, 'Menu, then Free bus to Beach shops, and walk to the sand'], bridge: ['Cross the river on a bridge', () => px > 395 && px < 545 && decked(px, pz), 'The river is east of town: drive there and over a bridge'],
+  bench: ['Sit on a bench', () => !!sitting, 'Walk right up to a bench: the big button turns into Sit'], wave: ['Wave to a citizen', () => wavedNear, 'Walk up to someone: the big button says Wave to @name'],
+  market: ['Visit the Market', () => where === 'Market', 'Menu, then Free bus to Market'], photo: ['Take a photo', () => photoTaken, 'Tap the camera button'], home: ['Find a home and visit it', () => visitedHome, 'Menu, then type an Instagram name'],
+  jump: ['Jump 3 times', () => jumps >= 3, 'Tap the jump button (space bar on a laptop)'] };
+const NTASK = 6;
 const dayKey = new Date().toLocaleDateString('en-CA');
 let TD = LS.get('vin_today'); if (!TD || TD.d !== dayKey || !Array.isArray(TD.list)) { const ids = Object.keys(TASKS); let h = hashS(dayKey);
   for (let i = ids.length - 1; i > 0; i--) { h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0; const j = h % (i + 1); [ids[i], ids[j]] = [ids[j], ids[i]]; }
-  TD = { d: dayKey, list: LS.get('vin_seen') ? ids.slice(0, 4) : ['plaza', 'bench', 'drive', 'photo'], done: [] }; LS.set('vin_today', TD); LS.set('vin_seen', 1); }
+  TD = { d: dayKey, list: LS.get('vin_seen') ? ids.slice(0, NTASK) : ['plaza', 'bench', 'wave', 'jump', 'drive', 'photo'], done: [] }; LS.set('vin_today', TD); LS.set('vin_seen', 1); }
+if (TD.list.length < NTASK) { for (const id of Object.keys(TASKS)) if (TD.list.length < NTASK && !TD.list.includes(id)) TD.list.push(id); LS.set('vin_today', TD); }   /* 28 Nov: 6 a day (was 4) */
 const todayEl = $('czToday'), tasksEl = $('czTasks');
-function renderTasks(fresh) { tasksEl.textContent = ''; TD.list.forEach(id => { const t = TASKS[id]; if (!t) return; const li = document.createElement('li'), sp = document.createElement('span'); sp.textContent = t[0]; li.appendChild(sp);
-  if (TD.done.includes(id)) li.className = 'ok' + (id === fresh ? ' new' : ''); tasksEl.appendChild(li); });
+function renderTasks(fresh) { tasksEl.textContent = ''; [...TD.list.filter(id => !TD.done.includes(id)), ...TD.list.filter(id => TD.done.includes(id))].forEach(id => { const t = TASKS[id]; if (!t) return; const li = document.createElement('li'), sp = document.createElement('span'); sp.textContent = t[0]; li.appendChild(sp);
+  li.title = t[2] || ''; li.onclick = () => toast(t[2] || t[0]); if (TD.done.includes(id)) li.className = 'ok' + (id === fresh ? ' new' : ''); tasksEl.appendChild(li); });   /* not done first; tap a task for how to do it */
   $('czTodayN').textContent = TD.done.length + ' of ' + TD.list.length + ' done'; }
 renderTasks();
 const setFold = f => { todayEl.classList.toggle('fold', f); $('czTodayH').setAttribute('aria-expanded', !f); };
@@ -777,7 +782,7 @@ const homeOf = u => { u = String(u || '').trim().replace(/^@/, '').toLowerCase()
 function showMe() { meHome = homeOf(meName); if (!meHome) meName = null; $('czMeName').textContent = meName ? '@' + meHome.user : 'Find your home'; $('czFindT').textContent = meName ? 'Find a friend\'s home' : 'Find your home'; renderBus(); }
 // --- the big button: what you can do right here
 const benches = []; try { const bp = new T.Vector3(), bq = new T.Quaternion(), bs = new T.Vector3(); (LIFE.mats && LIFE.mats.bench || []).forEach(m => { m.decompose(bp, bq, bs); benches.push({ x: bp.x, z: bp.z, ry: new T.Euler().setFromQuaternion(bq, 'YXZ').y }); }); } catch (e) {}
-const nearBench = () => { let b = null, bd = 2.4; for (const q of benches) { const d = Math.hypot(q.x - px, q.z - pz); if (d < bd && ![...placed.keys()].some(sp => sp.pose === 'sit' && Math.hypot(sp.x - q.x, sp.z - q.z) < 0.5)) { bd = d; b = q; } } return b; };
+const nearBench = () => { let b = null, bd = 3.6; for (const q of benches) { const d = Math.hypot(q.x - px, q.z - pz); if (d < bd && ![...placed.keys()].some(sp => sp.pose === 'sit' && Math.hypot(sp.x - q.x, sp.z - q.z) < 0.5)) { bd = d; b = q; } } return b; };
 function nearPerson() { let best = null, bd = 5; for (const [sp, c] of placed) { const p = c.root.position, d = Math.hypot(p.x - px, p.z - pz); if (d < bd) { bd = d; best = { name: sp.user, c, sp }; } }
   for (const w of walkersK) { if (!w.c) continue; const p = w.c.root.position, d = Math.hypot(p.x - px, p.z - pz); if (d < bd) { bd = d; best = { name: w.user, c: null }; } } return best; }
 let act = ['wave', 'Wave', ''], actK = '', actT = 0;
@@ -817,7 +822,7 @@ const STOPS = [["Citizens' Plaza", "Citizens' Plaza"], ['Market', 'Market'], ['N
   .map(([n, t]) => { const q = MDX.places.find(q => q[0] === n); if (q) return { t, x: q[1] + q[3] / 2, z: q[2] + q[4] / 2, place: n }; const m = MKT.find(m => m.t === n); return m ? { t, x: m.x, z: m.z } : null; }).filter(Boolean);
 function renderBus() { const box = $('czBus'); box.textContent = ''; const list = (meHome ? [{ t: 'My home', home: meHome }] : []).concat(STOPS);
   list.forEach(s => { const bt = document.createElement('button'); bt.type = 'button'; bt.textContent = s.t;
-    bt.onclick = () => { if (s.home) return busTo(s.home.x, s.home.z + 9, 'Welcome home, @' + s.home.user); const p = s.place === "Citizens' Plaza" ? [s.x, s.z + 18] : roadNear(s.x, s.z); busTo(p[0], p[1], 'Free bus: ' + s.t); };
+    bt.onclick = () => { if (s.home) return busTo(s.home.x, s.home.z + 9, 'Welcome home, @' + s.home.user); const p = s.place === "Citizens' Plaza" ? [0, 32] : roadNear(s.x, s.z); busTo(p[0], p[1], 'Free bus: ' + s.t); };
     box.appendChild(bt); }); }
 $('czFind').onsubmit = e => { e.preventDefault(); const raw = $('czFindI').value.trim().replace(/^@/, ''), h = homeOf(raw), msg = $('czFindMsg');
   if (!raw) { msg.textContent = 'Type an Instagram name, like your own.'; return; }
@@ -827,12 +832,18 @@ $('czFind').onsubmit = e => { e.preventDefault(); const raw = $('czFindI').value
 showMe();
 // --- keys on laptops: E action, C car, P photo, M menu, Esc closes
 addEventListener('keydown', e => { if (e.target && e.target.tagName === 'INPUT') { if (e.key === 'Escape') closeMenu(); return; } if (e.repeat) return; const k = e.key.toLowerCase();
-  if (k === 'escape' && !menuEl.hidden) closeMenu(); else if (k === 'm') menuEl.hidden ? openMenu(!meName) : closeMenu(); else if (!menuEl.hidden) return; else if (k === 'e' || ((k === ' ' || k === 'enter') && (e.target === document.body || e.target === R3.domElement))) { e.preventDefault(); doAct(); } else if (k === 'c') driveBtn.click(); else if (k === 'p') photo(); });
+  if (k === 'escape' && !menuEl.hidden) closeMenu(); else if (k === 'm') menuEl.hidden ? openMenu(!meName) : closeMenu(); else if (!menuEl.hidden) return; else if (k === ' ') { e.preventDefault(); jump(); } else if (k === 'e' || (k === 'enter' && (e.target === document.body || e.target === R3.domElement))) { e.preventDefault(); doAct(); } else if (k === 'c') driveBtn.click(); else if (k === 'p') photo(); });
 // --- phones held upright: a gentle hint to turn sideways (the game still works upright)
 const turnEl = $('czTurn'); let turnT = 0;
 function turnHint() { const up = TOUCH && innerHeight > innerWidth * 1.15; clearTimeout(turnT); turnEl.classList.toggle('off', !up); if (up) turnT = setTimeout(() => turnEl.classList.add('off'), 6000); }
 addEventListener('resize', () => { turnHint(); mapK = ''; });
 let hudT = 0, whereT = 0;
+// --- jump (Dev, 28 Nov: "add jump, it gets stuck sometimes"): a hop that clears benches and kerbs; if you land somewhere you can't stand, you step out to the nearest free spot
+let jumpT = 0, jumpD = 0, jumps = 0; const JUMP = 0.55;
+function jump() { if (driving || jumpT > 0) return; if (sitting) standUp(); jumpT = JUMP; jumpD = 0; jumps++; me.busy = 0; }
+function land() { jumpT = 0; if (!walkFree(px, pz) || wetAt(px, pz)) { const a = me.root.rotation.y, f = findFree(px + Math.sin(a) * 0.8, pz + Math.cos(a) * 0.8); px = f[0]; pz = f[1]; } }
+const jumpY = () => { if (jumpT <= 0) return 0; const t = 1 - jumpT / JUMP; return 3.6 * t * (1 - t); };
+$('czJump').onclick = jump;
 function hudStep(dt) { mapT -= dt; if (mapT <= 0) { mapT = 0.12; drawMap(); }
   whereT -= dt; if (whereT <= 0) { whereT = 0.5; const w = whereNow(); if (w !== where) { where = w; whereEl.textContent = w; } if (meHome && Math.hypot(meHome.x - px, meHome.z - pz) < 14) visitedHome = true; }
   hudT -= dt; if (hudT <= 0) { hudT = 0.25; checkTasks(); }
@@ -863,16 +874,17 @@ function frame() { if (hidden) return; requestAnimationFrame(frame);
   const ix = joy.x + ((keys.d || keys.arrowright) ? 1 : 0) - ((keys.a || keys.arrowleft) ? 1 : 0), iz = joy.y + ((keys.s || keys.arrowdown) ? 1 : 0) - ((keys.w || keys.arrowup) ? 1 : 0), mag = Math.min(1, Math.hypot(ix, iz));
   if (sitting && mag > 0.1 && menuEl.hidden) standUp();   // 28 Nov: push the stick to stand up from a bench
   if (me.busy > 0) me.busy -= dt;
+  if (jumpT > 0 && (jumpT -= dt) <= 0) land();
   if (driving) stepCar(dt, ix, iz);
   else if (mag > 0.1 && !sitting) { me.busy = 0; const run = running || keys.shift, a = Math.atan2(ix, iz) + yaw + Math.PI, s = (run ? 9 : 4.6) * mag, nx = px + Math.sin(a) * s * dt, nz = pz + Math.cos(a) * s * dt;
-    const okAt = !wetAt(px, pz) ? (x, z) => walkFree(x, z) && !wetAt(x, z) : walkFree;   // no walking on water (if you are somehow in it, you can walk out)
+    const okAt = jumpT > 0 && jumpD < 1.6 ? (x, z) => x > BUILT.x0 && x < BUILT.x1 && z > COAST.shore + 6 && z < BUILT.z1 : !wetAt(px, pz) ? (x, z) => walkFree(x, z) && !wetAt(x, z) : walkFree;   // no walking on water (if you are somehow in it, you can walk out)
     const st = s * dt, ax = Math.abs(nx - px), az = Math.abs(nz - pz); let go = okAt(nx, nz) ? [nx, nz] : null;
     if (!go) { const sx = ax > 0.02 * st && okAt(nx, pz), sz = az > 0.02 * st && okAt(px, nz);   // slide along the wall
       go = sx && ax >= 0.4 * st ? [nx, pz] : sz && az >= 0.4 * st ? [px, nz] : sidestep(a, st, okAt) || (sx ? [nx, pz] : sz ? [px, nz] : null); }   // 27 Nov: walking straight into a lamp post, a bin or a corner: step round it
-    if (go) { px = go[0]; pz = go[1]; stuckT = 0; }
+    if (go) { if (jumpT > 0) jumpD += Math.hypot(go[0] - px, go[1] - pz); px = go[0]; pz = go[1]; stuckT = 0; }
     else if ((stuckT += dt) > 0.5 && boxedIn(px, pz) && (walkFree(nx, nz) || !walkFree(px, pz))) { px = nx; pz = nz; }   // 27 Nov: never stuck. Pushing for half a second with no way out from here: he walks out
     let d = a - me.root.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); me.root.rotation.y += d * Math.min(1, dt * 12); me.play(run ? 'sprint' : 'walk'); } else if (!sitting && !(me.busy > 0)) me.play('idle');
-  if (!driving) { footY += (floorAt(px, pz, footY) - footY) * Math.min(1, dt * 12); me.root.position.set(px, (sitting ? 0.22 : 0.12) + Math.max(0, footY - GND), pz); me.step(dt); }
+  if (!driving) { footY += (floorAt(px, pz, footY) - footY) * Math.min(1, dt * 12); me.root.position.set(px, (sitting ? 0.22 : 0.12) + Math.max(0, footY - GND) + jumpY(), pz); me.step(dt); }
   stream(px, pz, false); streamNature(px, pz, false);
   const dist = (innerWidth > innerHeight ? (FARV ? LDIST : 24) : 30) * (driving ? 1.25 : 1), cp = Math.cos(pitch);
   const rise = Math.max(0, (driving ? carY : footY) - GND); camPos.set(px - Math.sin(yaw) * dist * cp, 1.5 + rise + Math.sin(pitch) * dist, pz - Math.cos(yaw) * dist * cp);
@@ -895,5 +907,5 @@ CZ.inspect = (x, z) => { const k = tkey(x, z), list = tilePlaces.get(k) || [], p
   const topShapes = {}; for (const i of list) { const id = PL.s[i]; topShapes[id] = (topShapes[id] || 0) + shapes[id].n / 3; }
   const top = Object.entries(topShapes).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id, t]) => id + ':' + Math.round(t) + 't/' + shapes[id].n / 3 + 'per r' + shapes[id].r.toFixed(1));
   return JSON.stringify({ placeTris: Math.round(pl), pieceTris: Math.round(pc), places: list.length, bySize, piecesByBucket: byB, top }); };
-CZ.api = { hud: () => ({ act: act.slice(0, 3), where, tasks: TD, me: meName, sitting: !!sitting, benches: benches.length, stops: STOPS.map(s => s.t) }), act: () => doAct(), bench: i => benches[i] && [Math.round(benches[i].x * 10) / 10, Math.round(benches[i].z * 10) / 10, Math.round(benches[i].ry * 100) / 100], bus: i => STOPS[i] && $('czBus').children[i + (meHome ? 1 : 0)].click(), find: u => { $('czFindI').value = u; $('czFind').requestSubmit(); }, menu: o => o ? openMenu(false) : closeMenu(), pos: () => [Math.round(px * 10) / 10, Math.round(pz * 10) / 10], probe: (x, z) => (wetAt(x, z) ? 'W' : '') + (walkFree(x, z) ? '' : 'X') + (CZ.greenAt && CZ.greenAt(x, z) ? 'g' : '') + '.', pitch: v => { pitch = v; first = true; }, cam: (f, d) => { LFOV = f; LDIST = d; CAM.fov = camFov(); CAM.updateProjectionMatrix(); first = true; }, drive: () => enterCar(), out: () => leaveCar(), car: () => [Math.round(CAR.x * 10) / 10, Math.round(CAR.z * 10) / 10, Math.round(CAR.a * 100) / 100, Math.round(CAR.v * 10) / 10, Math.round(carY * 100)], carAt: (x, z, a) => { CAR.x = x; CAR.z = z; CAR.a = a; CAR.v = 0; }, keys, floor: (x, z) => { const f = fget(x, z); return f ? [f[0], f[1], f[2], Math.round(floorAt(x, z, footY) * 100)] : null; }, foot: () => Math.round(footY * 100), home: u => { const h = homes.find(h => h.user === u || h.n === u); return h ? [Math.round(h.x), Math.round(h.z), h.n] : null; }, go: (x, z, y) => { px = x; pz = z; if (y != null) yaw = y; first = true; stream(px, pz, true); streamNature(px, pz, true); }, setTime: h => { fixedHour = h; tick(); }, wt: v => { WT.fix = v; }, renderer: R3, tiles, scene: S3 };
+CZ.api = { hud: () => ({ act: act.slice(0, 3), where, tasks: TD, me: meName, sitting: !!sitting, benches: benches.length, stops: STOPS.map(s => s.t) }), act: () => doAct(), jump: () => jump(), bench: i => benches[i] && [Math.round(benches[i].x * 10) / 10, Math.round(benches[i].z * 10) / 10, Math.round(benches[i].ry * 100) / 100], bus: i => STOPS[i] && $('czBus').children[i + (meHome ? 1 : 0)].click(), find: u => { $('czFindI').value = u; $('czFind').requestSubmit(); }, menu: o => o ? openMenu(false) : closeMenu(), pos: () => [Math.round(px * 10) / 10, Math.round(pz * 10) / 10], probe: (x, z) => (wetAt(x, z) ? 'W' : '') + (walkFree(x, z) ? '' : 'X') + (CZ.greenAt && CZ.greenAt(x, z) ? 'g' : '') + '.', pitch: v => { pitch = v; first = true; }, cam: (f, d) => { LFOV = f; LDIST = d; CAM.fov = camFov(); CAM.updateProjectionMatrix(); first = true; }, drive: () => enterCar(), out: () => leaveCar(), car: () => [Math.round(CAR.x * 10) / 10, Math.round(CAR.z * 10) / 10, Math.round(CAR.a * 100) / 100, Math.round(CAR.v * 10) / 10, Math.round(carY * 100)], carAt: (x, z, a) => { CAR.x = x; CAR.z = z; CAR.a = a; CAR.v = 0; }, keys, floor: (x, z) => { const f = fget(x, z); return f ? [f[0], f[1], f[2], Math.round(floorAt(x, z, footY) * 100)] : null; }, foot: () => Math.round(footY * 100), home: u => { const h = homes.find(h => h.user === u || h.n === u); return h ? [Math.round(h.x), Math.round(h.z), h.n] : null; }, go: (x, z, y) => { px = x; pz = z; if (y != null) yaw = y; first = true; stream(px, pz, true); streamNature(px, pz, true); }, setTime: h => { fixedHour = h; tick(); }, wt: v => { WT.fix = v; }, renderer: R3, tiles, scene: S3 };
 })().catch(e => { console.error('cozy', e); const l = document.getElementById('czLt'); if (l) l.textContent = 'Could not build: ' + e.message; });
