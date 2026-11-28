@@ -1401,7 +1401,8 @@ function bakeGroup(g, place) {
   g.traverse(o => { if (o.geometry) o.geometry.dispose(); });
   scene.add(out); return out;
 }
-function bench(p, x, z, ry) { const g = new THREE.Group(); g.position.set(x, 0.42, z); g.rotation.y = ry; p.add(g);
+const BENCHES = [];   // 28 Nov: every bench, so the cozy game can let you sit on any of them
+function bench(p, x, z, ry) { const g = new THREE.Group(); g.position.set(x, 0.42, z); g.rotation.y = ry; p.add(g); BENCHES.push(g);
   B(g, 2.4, 0.16, 0.8, C.wood, 0, 0.55, 0); B(g, 2.4, 0.7, 0.14, C.wood, 0, 0.75, -0.36);
   B(g, 0.14, 0.55, 0.7, C.iron, -1.0, 0, 0, NE0); B(g, 0.14, 0.55, 0.7, C.iron, 1.0, 0, 0, NE0); }
 const NE0 = { edge: false };
